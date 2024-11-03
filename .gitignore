@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Production build
+dist/
+build/
+release/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Electron specific
+*.log
+.DS_Store
+Thumbs.db
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE specific
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+temp/
+tmp/
+.temp/
+.tmp/
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# Coverage directory
+coverage/
+
+# Optional: Exclude user data/settings
+userData/
