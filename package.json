@@ -23,7 +23,9 @@
       {
         "from": "node_modules/sqlite3/lib/binding/napi-v6-win32-x64",
         "to": "sqlite3",
-        "filter": ["*.node"]
+        "filter": [
+          "*.node"
+        ]
       }
     ],
     "win": {
@@ -35,7 +37,8 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
@@ -47,6 +50,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "auto-launch": "^5.0.6",
     "electron-store": "^8.1.0",
     "node-schedule": "^2.1.1",
     "node-window-manager": "^2.2.4",

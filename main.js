@@ -15,6 +15,7 @@ const store = new Store({
 });
 const { windowManager } = require('node-window-manager');
 const sqlite3 = require('sqlite3').verbose();
+const AutoLaunch = require('auto-launch');
 
 let mainWindow;
 let isTracking = false;
@@ -30,6 +31,12 @@ let db;
 
 // Add this global variable with your other ones
 let lastActiveTime = Date.now();
+
+// Add this near other global variables
+const autoLauncher = new AutoLaunch({
+    name: 'WhatDidIDo',
+    path: app.getPath('exe'),
+});
 
 // Initialize database
 function initializeDatabase() {
@@ -255,7 +262,7 @@ async function captureAndAnalyze() {
             - Games, videos, or casual browsing or scrolling or social media consuming would be "ENTERTAINMENT"
             - Coding, documents, or professional tasks would be "WORK"
             - Online courses, tutorials, or research would be "LEARN"
-            - Meetings, chat apps, or social media interacting would be "SOCIAL"
+            - Meetings, chat apps, or any social interactions would be "SOCIAL" (just browsing social media is not social)
 
             Example response: {"category": "WORK", "activity": "software development"}`;
 
@@ -594,8 +601,26 @@ function initializeIdleMonitor() {
     }
 }
 
+// Add this function to handle first-run setup
+async function handleFirstRun() {
+    const store = new Store();
+    const hasRunBefore = store.get('hasRunBefore');
+    
+    if (!hasRunBefore) {
+        try {
+            // Enable auto-launch by default
+            await autoLauncher.enable();
+            // Mark as run
+            store.set('hasRunBefore', true);
+        } catch (error) {
+            console.error('Error setting up first run:', error);
+        }
+    }
+}
+
 app.whenReady().then(async () => {
     try {
+        await handleFirstRun();
         await initializeDatabase();
         createWindow();
         initializeIdleMonitor();
@@ -643,5 +668,31 @@ app.on('will-quit', () => {
                 console.error('Error closing database:', err);
             }
         });
+    }
+});
+
+// Add these IPC handlers
+ipcMain.handle('get-auto-launch', async () => {
+    try {
+        const isEnabled = await autoLauncher.isEnabled();
+        return isEnabled;
+    } catch (error) {
+        console.error('Error checking auto-launch status:', error);
+        // Return true as default if there's an error checking status
+        return true;
+    }
+});
+
+ipcMain.handle('toggle-auto-launch', async (event, enable) => {
+    try {
+        if (enable) {
+            await autoLauncher.enable();
+        } else {
+            await autoLauncher.disable();
+        }
+        return true;
+    } catch (error) {
+        console.error('Error toggling auto-launch:', error);
+        return false;
     }
 });

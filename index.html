@@ -1227,6 +1227,30 @@
             background: var(--color-bg-elevated);
             color: var(--color-text-primary);
         }
+
+        .settings-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+        }
+
+        .switch-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .setting-text {
+            font-size: 14px;
+            color: var(--color-text-primary);
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1283,6 +1307,16 @@
                 <div class="api-key-actions">
                     <button onclick="initializeAPI()" id="saveApiKeyBtn">Save API Key</button>
                     <button class="delete-key" onclick="deleteAPIKey()">Delete API Key</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Startup Options</h3>
+                <div class="setting-item">
+                    <label class="switch-label">
+                        <input type="checkbox" id="autoLaunchToggle">
+                        <span class="setting-text">Start on Windows startup</span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -1606,6 +1640,12 @@
             document.getElementById('close-btn').addEventListener('click', () => {
                 ipcRenderer.send('window-close');
             });
+
+            // Initialize auto-launch toggle
+            await initializeAutoLaunch();
+            
+            // Add event listener for auto-launch toggle
+            document.getElementById('autoLaunchToggle').addEventListener('change', toggleAutoLaunch);
         });
 
         function toggleSettings() {
@@ -1843,6 +1883,20 @@
         // Add this function to your script section
         function openExternalLink(url) {
             shell.openExternal(url);
+        }
+
+        async function initializeAutoLaunch() {
+            const isEnabled = await ipcRenderer.invoke('get-auto-launch');
+            document.getElementById('autoLaunchToggle').checked = isEnabled;
+        }
+
+        async function toggleAutoLaunch(event) {
+            const enable = event.target.checked;
+            const success = await ipcRenderer.invoke('toggle-auto-launch', enable);
+            if (!success) {
+                event.target.checked = !enable;
+                // Optionally show an error message
+            }
         }
     </script>
 </body>
