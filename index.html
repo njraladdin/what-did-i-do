@@ -1,41 +1,51 @@
 <!-- File: index.html -->
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>What Did I Do</title>
     <style>
-        
-        
-        
         :root {
             /* Modern SaaS color palette */
-            --color-primary: #6366F1;          /* Indigo */
-            --color-primary-hover: #4F46E5;    /* Darker indigo */
-            
+            --color-primary: #6366F1;
+            /* Indigo */
+            --color-primary-hover: #4F46E5;
+            /* Darker indigo */
+
             /* Neutral backgrounds - flatter, more corporate */
-            --color-bg-main: #F9FAFB;          /* Light gray background */
-            --color-bg-surface: #FFFFFF;       /* White surface */
-            --color-bg-elevated: #F3F4F6;      /* Slightly darker surface */
-            
+            --color-bg-main: #F9FAFB;
+            /* Light gray background */
+            --color-bg-surface: #FFFFFF;
+            /* White surface */
+            --color-bg-elevated: #F3F4F6;
+            /* Slightly darker surface */
+
             /* Border colors - more defined */
             --color-border: #E5E7EB;
             --color-border-light: #D1D5DB;
-            
+
             /* Text colors - higher contrast */
-            --color-text-primary: #111827;     /* Near black */
-            --color-text-secondary: #4B5563;   /* Medium gray */
-            --color-text-muted: #6B7280;       /* Light gray */
-            
+            --color-text-primary: #111827;
+            /* Near black */
+            --color-text-secondary: #4B5563;
+            /* Medium gray */
+            --color-text-muted: #6B7280;
+            /* Light gray */
+
             /* Updated category colors */
-            --color-work: #6366F1;      /* Indigo */
-            --color-learn: #8B5CF6;     /* Purple */
-            --color-social: #10B981;    /* Emerald */
-            --color-entertainment: #EC4899;  /* Pink */
+            --color-work: #6366F1;
+            /* Indigo */
+            --color-learn: #8B5CF6;
+            /* Purple */
+            --color-social: #10B981;
+            /* Emerald */
+            --color-entertainment: #EC4899;
+            /* Pink */
         }
-        
-        
-        
-        
+
+
+
+
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -45,9 +55,9 @@
             margin: 0;
             padding: 0;
         }
-        
-        
-        
+
+
+
         .container {
             max-width: 1200px;
             margin: 40px auto;
@@ -57,9 +67,9 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             border: 1px solid var(--color-border);
         }
-        
-        
-        
+
+
+
 
         .main-content {
             margin-left: 0;
@@ -67,9 +77,9 @@
             max-width: 900px;
             padding: 24px;
         }
-        
-        
-        
+
+
+
 
         .sidebar {
             position: static;
@@ -82,9 +92,9 @@
             z-index: 100;
             flex-shrink: 0;
         }
-        
-        
-        
+
+
+
 
         .tracking-controls {
             display: flex;
@@ -92,22 +102,22 @@
             gap: 12px;
             padding: 24px;
         }
-        
-        
-        
+
+
+
         .tracking-controls button,
         .tracking-controls select {
             width: 100%;
         }
-        
-        
-        
+
+
+
         .stats {
             margin-top: 20px;
         }
-        
-        
-        
+
+
+
 
         .stats-section {
             background: var(--color-bg-surface);
@@ -116,9 +126,9 @@
             padding: 32px;
             margin-bottom: 32px;
         }
-        
-        
-        
+
+
+
 
         h2 {
             color: var(--color-text-primary);
@@ -126,9 +136,9 @@
             font-size: 24px;
             margin-bottom: 24px;
         }
-        
-        
-        
+
+
+
 
 
 
@@ -145,9 +155,9 @@
             padding: 0;
             cursor: pointer;
         }
-        
-        
-        
+
+
+
         .category {
             margin: 12px 0;
             padding: 16px;
@@ -155,17 +165,17 @@
             border-radius: 8px;
             border: 1px solid var(--color-border);
         }
-        
-        
-        
+
+
+
 
         .api-key-form {
             position: relative;
         }
-        
-        
-        
-     
+
+
+
+
         .progress {
             margin-top: 8px;
             background: var(--color-bg-surface);
@@ -174,33 +184,41 @@
             overflow: hidden;
             border: 1px solid var(--color-border);
         }
-        
-        
-        
+
+
+
         .progress-bar {
             height: 100%;
             border-radius: 4px;
             transition: width 0.3s ease;
         }
-        
-        
-        
-        .progress-bar.WORK { background: var(--color-work); }
-        
-        
-        
-        .progress-bar.LEARN { background: var(--color-learn); }
-        
-        
-        
-        .progress-bar.SOCIAL { background: var(--color-social); }
-        
-        
-        
-        .progress-bar.ENTERTAINMENT { background: var(--color-entertainment); }
-        
-        
-        
+
+
+
+        .progress-bar.WORK {
+            background: var(--color-work);
+        }
+
+
+
+        .progress-bar.LEARN {
+            background: var(--color-learn);
+        }
+
+
+
+        .progress-bar.SOCIAL {
+            background: var(--color-social);
+        }
+
+
+
+        .progress-bar.ENTERTAINMENT {
+            background: var(--color-entertainment);
+        }
+
+
+
         button {
             background: var(--color-bg-surface);
             color: var(--color-text-primary);
@@ -213,16 +231,16 @@
             height: 40px;
             cursor: pointer;
         }
-        
-        
-        
+
+
+
         button:hover {
             background: var(--color-bg-elevated);
             border-color: var(--color-border-light);
         }
-        
-        
-        
+
+
+
         input {
             background: var(--color-bg-surface);
             border: 1px solid var(--color-border);
@@ -231,16 +249,16 @@
             border-radius: 6px;
             height: 40px;
         }
-        
-        
-        
+
+
+
         input:focus {
             border-color: var(--color-primary);
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
-        
-        
-        
+
+
+
         .screenshot-item {
             display: flex;
             align-items: center;
@@ -251,24 +269,24 @@
             margin: 0;
             transition: all 0.2s ease;
         }
-        
-        
-        
+
+
+
 
         .screenshot-item:last-child {
             border-bottom: none;
         }
-        
-        
-        
+
+
+
 
         .screenshot-item:hover {
             transform: none;
             background: rgba(46, 92, 255, 0.03);
         }
-        
-        
-        
+
+
+
 
         .screenshot-thumbnail {
             width: 160px;
@@ -277,9 +295,9 @@
             border-radius: 6px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
-        
-        
-        
+
+
+
 
         .screenshot-info {
             flex: 1;
@@ -287,9 +305,9 @@
             flex-direction: column;
             gap: 6px;
         }
-        
-        
-        
+
+
+
 
         .screenshot-activity {
             font-size: 15px;
@@ -297,9 +315,9 @@
             color: var(--color-text-primary);
             letter-spacing: -0.2px;
         }
-        
-        
-        
+
+
+
 
         .screenshot-category {
             font-size: 13px;
@@ -307,9 +325,9 @@
             font-weight: 500;
             letter-spacing: -0.1px;
         }
-        
-        
-        
+
+
+
 
         .screenshot-time {
             font-size: 13px;
@@ -317,9 +335,9 @@
             letter-spacing: -0.1px;
             margin-top: 2px;
         }
-        
-        
-        
+
+
+
 
         .titlebar {
             -webkit-app-region: drag;
@@ -340,25 +358,25 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
         }
-        
-        
-        
 
-        .titlebar > div:first-child {
+
+
+
+        .titlebar>div:first-child {
             padding-left: 8px;
         }
-        
-        
-        
+
+
+
 
         .titlebar-buttons {
             -webkit-app-region: no-drag;
             display: flex;
             gap: 8px;
         }
-        
-        
-        
+
+
+
 
         .titlebar-button {
             height: 42px;
@@ -374,24 +392,24 @@
             border-radius: 0;
             cursor: pointer;
         }
-        
-        
-        
+
+
+
 
         .titlebar-button:hover {
             background-color: var(--color-border-light);
         }
-        
-        
-        
+
+
+
 
         .settings-button:hover {
             background: none;
             transform: translateY(-1px);
         }
-        
-        
-        
+
+
+
 
         .settings-notification {
             position: absolute;
@@ -403,9 +421,9 @@
             border-radius: 50%;
             border: 2px solid var(--color-text-primary);
         }
-        
-        
-        
+
+
+
 
         .modal {
             display: none;
@@ -414,14 +432,14 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0, 0, 0, 0.5);
             z-index: 1001;
             align-items: center;
             justify-content: center;
         }
-        
-        
-        
+
+
+
 
         .modal-content {
             background: var(--color-bg-surface);
@@ -440,9 +458,9 @@
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
         }
-        
-        
-        
+
+
+
 
         .tracking-button {
             display: flex;
@@ -450,62 +468,67 @@
             gap: 8px;
             min-width: 160px;
         }
-        
-        
-        
+
+
+
 
         .tracking-button.active {
-            background-color: #DC2626;  /* Red */
+            background-color: #DC2626;
+            /* Red */
             color: white;
             border: none;
         }
-        
-        
-        
+
+
+
 
         .tracking-button.active:hover {
-            background-color: #9C4444;  /* Slightly lighter muted red for hover */
+            background-color: #9C4444;
+            /* Slightly lighter muted red for hover */
         }
-        
-        
-        
+
+
+
 
         .tracking-button.inactive {
-            background-color: #059669;  /* Green */
+            background-color: #059669;
+            /* Green */
             color: white;
             border: none;
         }
-        
-        
-        
+
+
+
 
         .tracking-button.inactive:hover {
             background-color: #248940;
         }
-        
-        
-        
 
-        .tracking-button, 
+
+
+
+        .tracking-button,
         #testScreenshotBtn {
-            flex: 0 0 auto; /* Prevent buttons from growing/shrinking */
+            flex: 0 0 auto;
+            /* Prevent buttons from growing/shrinking */
             min-width: 180px;
-            height: 44px; /* Consistent height */
+            height: 44px;
+            /* Consistent height */
             justify-content: center;
             align-items: center;
         }
-        
-        
-        
+
+
+
 
         /* Countdown text spacing */
         #countdown {
             margin: 0;
             padding: 0 24px;
         }
-        
-        
-        
+
+
+
 
         .api-instructions {
             background: var(--color-bg-elevated);
@@ -517,31 +540,31 @@
             box-sizing: border-box;
             color: var(--color-text-primary);
         }
-        
-        
-        
+
+
+
 
         .api-instructions ol {
             margin: 0;
             padding-left: 20px;
         }
-        
-        
-        
+
+
+
 
         .api-instructions li {
             margin: 8px 0;
         }
-        
-        
-        
+
+
+
 
         .api-instructions a {
             color: var(--color-primary);
         }
-        
-        
-        
+
+
+
 
         .warning-message {
             color: var(--color-error);
@@ -556,27 +579,27 @@
             width: 100%;
             box-sizing: border-box;
         }
-        
-        
-        
+
+
+
 
         .api-key-input-wrapper {
             position: relative;
             margin-bottom: 16px;
             width: 100%;
         }
-        
-        
-        
+
+
+
 
         .api-key-input-wrapper input {
             width: 100%;
             box-sizing: border-box;
             padding: 12px 40px 12px 12px;
         }
-        
-        
-        
+
+
+
 
         .validation-spinner {
             display: none;
@@ -591,9 +614,9 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
-        
-        
+
+
+
 
         .validation-message {
             margin-top: 8px;
@@ -601,27 +624,27 @@
             border-radius: 4px;
             display: none;
         }
-        
-        
-        
+
+
+
 
         .validation-message.error {
             background-color: var(--color-error-bg);
             color: var(--color-error);
             display: block;
         }
-        
-        
-        
+
+
+
 
         .validation-message.success {
             background-color: var(--color-success-bg);
             color: var(--color-success);
             display: block;
         }
-        
-        
-        
+
+
+
 
         .api-key-actions {
             display: flex;
@@ -629,18 +652,18 @@
             width: 100%;
             box-sizing: border-box;
         }
-        
-        
-        
+
+
+
 
         .api-key-actions button {
             flex: 1;
             justify-content: center;
             height: 44px;
         }
-        
-        
-        
+
+
+
 
         .modal-close {
             position: absolute;
@@ -656,24 +679,24 @@
             justify-content: center;
             cursor: pointer;
         }
-        
-        
-        
+
+
+
 
         .modal-close:hover {
             color: var(--color-text-primary);
         }
-        
-        
-        
+
+
+
 
         .api-instructions h3 {
             margin: 0 0 12px 0;
             font-size: 16px;
         }
-        
-        
-        
+
+
+
 
         .window-control {
             width: 46px;
@@ -684,88 +707,97 @@
             cursor: pointer;
             cursor: pointer;
         }
-        
-        
-        
+
+
+
 
         .window-control:hover {
             background: rgba(255, 255, 255, 0.1);
         }
-        
-        
-        
+
+
+
 
         #close-btn:hover {
-            background-color: #DC2626;  /* Bright red */
-            color: white;  /* White text */
+            background-color: #DC2626;
+            /* Bright red */
+            color: white;
+            /* White text */
         }
-        
-        
-        
+
+
+
 
         /* Custom scrollbar styles */
         ::-webkit-scrollbar {
             width: 8px;
         }
-        
-        
-        
+
+
+
 
         ::-webkit-scrollbar-track {
             background: var(--color-bg-surface);
         }
-        
-        
-        
+
+
+
 
         ::-webkit-scrollbar-thumb {
             background: var(--color-border);
             border-radius: 4px;
         }
-        
-        
-        
+
+
+
 
         ::-webkit-scrollbar-thumb:hover {
             background: var(--color-primary);
         }
-        
-        
-        
+
+
+
 
         /* For Firefox */
         * {
             scrollbar-width: thin;
             scrollbar-color: var(--color-border) transparent;
         }
-        
-        
-        
+
+
+
 
         @keyframes spin {
-            0% { transform: translateY(-50%) rotate(0deg); }
-            100% { transform: translateY(-50%) rotate(360deg); }
+            0% {
+                transform: translateY(-50%) rotate(0deg);
+            }
+
+            100% {
+                transform: translateY(-50%) rotate(360deg);
+            }
         }
-        
-        
-        
+
+
+
 
         /* Add this to ensure all elements respect border-box */
-        *, *:before, *:after {
+        *,
+        *:before,
+        *:after {
             box-sizing: border-box;
         }
-        
-        
-        
+
+
+
 
         #validationMessage {
             max-width: 100%;
             overflow-wrap: break-word;
             white-space: normal;
         }
-        
-        
-        
+
+
+
 
         .interval-select {
             width: 100%;
@@ -778,34 +810,34 @@
             color: var(--color-text-primary);
             font-size: 14px;
         }
-        
-        
-        
+
+
+
 
         .interval-select:hover {
             border-color: var(--color-border-light);
             background-color: var(--color-hover);
         }
-        
-        
-        
+
+
+
 
         .interval-select:focus {
             outline: none;
             border-color: var(--color-primary);
             box-shadow: 0 0 0 2px var(--color-focus-shadow);
         }
-        
-        
-        
+
+
+
 
         .show-more-wrapper {
             text-align: center;
             margin: 20px 0;
         }
-        
-        
-        
+
+
+
 
         .show-more-btn {
             background: transparent;
@@ -818,26 +850,26 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
-        
-        
-        
+
+
+
 
         .show-more-btn:hover {
             background: var(--color-hover);
             transform: none;
         }
-        
-        
-        
+
+
+
 
         .show-more-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
-        
-        
-        
+
+
+
 
         .top-bar {
             display: flex;
@@ -849,29 +881,29 @@
             margin-bottom: 24px;
             backdrop-filter: none;
         }
-        
-        
-        
+
+
+
 
         .controls-group {
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        
-        
-        
 
-        .tracking-button, 
-        .interval-select, 
+
+
+
+        .tracking-button,
+        .interval-select,
         #testScreenshotBtn {
             height: 36px;
             min-width: auto;
             font-size: 13px;
         }
-        
-        
-        
+
+
+
 
         #countdown {
             margin-top: 12px;
@@ -880,27 +912,35 @@
             color: var(--color-text-muted);
             text-align: center;
         }
-        
-        
-        
+
+
+
 
         /* Add category label colors */
-        .category-label.WORK { color: var(--color-work); }
-        
-        
-        
-        .category-label.LEARN { color: var(--color-learn); }
-        
-        
-        
-        .category-label.SOCIAL { color: var(--color-social); }
-        
-        
-        
-        .category-label.ENTERTAINMENT { color: var(--color-entertainment); }
-        
-        
-        
+        .category-label.WORK {
+            color: var(--color-work);
+        }
+
+
+
+        .category-label.LEARN {
+            color: var(--color-learn);
+        }
+
+
+
+        .category-label.SOCIAL {
+            color: var(--color-social);
+        }
+
+
+
+        .category-label.ENTERTAINMENT {
+            color: var(--color-entertainment);
+        }
+
+
+
 
         .date-navigation {
             display: flex;
@@ -908,9 +948,9 @@
             gap: 8px;
             font-size: 14px;
         }
-        
-        
-        
+
+
+
 
         .nav-button {
             background: none;
@@ -926,25 +966,25 @@
             justify-content: center;
             cursor: pointer;
         }
-        
-        
-        
+
+
+
 
         .nav-button:hover {
             background: var(--color-hover);
             color: var(--color-text-primary);
         }
-        
-        
-        
+
+
+
 
         .nav-button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        
-        
-        
+
+
+
 
         .current-date {
             color: var(--color-text-secondary);
@@ -953,9 +993,9 @@
             min-width: 200px;
             text-align: center;
         }
-        
-        
-        
+
+
+
 
         .section-header {
             display: flex;
@@ -963,16 +1003,16 @@
             justify-content: space-between;
             margin-bottom: 24px;
         }
-        
-        
-        
+
+
+
 
         .section-header h2 {
             margin: 0;
         }
-        
-        
-        
+
+
+
 
         /* Update the nav-button styles */
         .nav-button {
@@ -991,9 +1031,9 @@
             font-size: 13px;
             cursor: pointer;
         }
-        
-        
-        
+
+
+
 
         /* Add new sidebar styles */
         .layout-container {
@@ -1002,9 +1042,9 @@
             min-height: calc(100vh - 42px);
             padding-top: 42px;
         }
-        
-        
-        
+
+
+
 
         .sidebar button {
             display: flex;
@@ -1014,44 +1054,45 @@
             justify-content: flex-start;
             padding: 0 12px;
         }
-        
-        
-        
+
+
+
 
         .sidebar button i {
             width: 20px;
             text-align: center;
         }
-        
-        
-        
+
+
+
 
         .button-text {
             display: inline;
         }
-        
-        
-        
+
+
+
 
         .select-wrapper {
             position: relative;
             width: 100%;
         }
-        
-        
-        
+
+
+
 
         /* Update select wrapper to show icon */
         .select-wrapper {
             position: relative;
             width: 100%;
         }
-        
-        
-        
+
+
+
 
         .select-wrapper::before {
-            content: '\f017'; /* Clock icon */
+            content: '\f017';
+            /* Clock icon */
             font-family: 'Font Awesome 6 Free';
             font-weight: 900;
             position: absolute;
@@ -1061,9 +1102,9 @@
             color: var(--color-text-secondary);
             z-index: 1;
         }
-        
-        
-        
+
+
+
 
         /* Adjust button text size */
         .sidebar button {
@@ -1073,11 +1114,12 @@
             width: 100%;
             justify-content: flex-start;
             padding: 0 12px;
-            font-size: 13px; /* Smaller text size */
+            font-size: 13px;
+            /* Smaller text size */
         }
-        
-        
-        
+
+
+
 
         /* Move settings button to bottom */
         .settings-wrapper {
@@ -1086,32 +1128,34 @@
             right: 8px;
             z-index: 101;
         }
-        
-        
-        
+
+
+
 
         .settings-button i {
             font-size: 20px;
         }
-        
-        
-        
+
+
+
 
         /* Remove any border or background on hover */
         .settings-button:hover {
             border: none;
             background: none;
         }
-        
-        
-        
+
+
+
 
         /* Update the test screenshot button style */
         #testScreenshotBtn {
-            justify-content: flex-start;  /* Align content to the left */
-            padding: 0 12px;             /* Match padding of other buttons */
+            justify-content: flex-start;
+            /* Align content to the left */
+            padding: 0 12px;
+            /* Match padding of other buttons */
         }
-        
+
 
         .no-screenshots {
             text-align: center;
@@ -1122,7 +1166,8 @@
 
         /* Add contact section styles */
         .contact-section {
-            margin-top: 50px; /* Generous top margin */
+            margin-top: 50px;
+            /* Generous top margin */
             padding: 24px;
             border-top: 1px solid var(--color-border);
         }
@@ -1185,15 +1230,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="titlebar">
         <div style="display: flex; align-items: center;">
-            <div class="settings-wrapper">
-                <button class="settings-button" onclick="toggleSettings()">
-                    <i class="fas fa-cog"></i>
-                    <div class="settings-notification" id="settingsNotification"></div>
-                </button>
-            </div>
+            <img src="assets/icon.ico" style="width: 24px; height: 24px; margin-right: 12px; border-radius: 6px;" />
             <div>What Did I Do</div>
         </div>
         <div class="titlebar-buttons">
@@ -1207,14 +1248,14 @@
             <button class="modal-close" onclick="toggleSettings()">
                 <i class="fas fa-times"></i>
             </button>
-            
+
             <h2>Settings</h2>
-            
+
             <div class="warning-message" id="apiKeyWarning">
                 <i class="fas fa-exclamation-triangle"></i>
                 <span>API Key required: Your app won't work without a FREE Google AI Studio API key</span>
             </div>
-            
+
             <div class="api-instructions">
                 <h3>How to get your API Key:</h3>
                 <ol>
@@ -1225,15 +1266,15 @@
                     <li>Copy and paste your key below</li>
                 </ol>
             </div>
-            
+
             <div class="api-key-form">
                 <div class="api-key-input-wrapper">
                     <input type="text" id="apiKey" placeholder="Paste your Google AI Studio API Key">
                     <div class="validation-spinner" id="validationSpinner"></div>
                 </div>
-                
+
                 <div class="validation-message" id="validationMessage"></div>
-                
+
                 <div class="api-key-actions">
                     <button onclick="initializeAPI()" id="saveApiKeyBtn">Save API Key</button>
                     <button class="delete-key" onclick="deleteAPIKey()">Delete API Key</button>
@@ -1249,7 +1290,7 @@
                     <i class="fas fa-pause"></i>
                     <span class="button-text">Pause Recording</span>
                 </button>
-                
+
                 <div class="select-wrapper">
                     <select id="intervalSelect" class="interval-select" onchange="updateInterval()">
                         <option value="1">Every 1 minute</option>
@@ -1259,7 +1300,7 @@
                         <option value="10">Every 10 minutes</option>
                     </select>
                 </div>
-                
+
                 <button id="testScreenshotBtn" onclick="testScreenshot()">
                     <i class="fas fa-camera"></i>
                     <span class="button-text">Test Screenshot</span>
@@ -1301,13 +1342,14 @@
                     </div>
                     <div id="categoryStats"></div>
                 </div>
-                
+
                 <!-- History Section -->
                 <div class="stats-section">
                     <h2>Screenshot History</h2>
                     <div id="screenshotHistory"></div>
                     <div class="show-more-wrapper">
-                        <button id="showMoreBtn" class="show-more-btn" onclick="loadMoreScreenshots()" style="display: none;">
+                        <button id="showMoreBtn" class="show-more-btn" onclick="loadMoreScreenshots()"
+                            style="display: none;">
                             Show More
                         </button>
                     </div>
@@ -1340,7 +1382,7 @@
             document.getElementById('settingsNotification').style.display = hasKey ? 'none' : 'block';
             document.getElementById('mainScreenWarning').style.display = hasKey ? 'none' : 'block';
             document.getElementById('apiKeyWarning').style.display = hasKey ? 'none' : 'block';
-            
+
             // Disable tracking controls if no API key
             document.getElementById('toggleTracking').disabled = !hasKey;
             document.getElementById('testScreenshotBtn').disabled = !hasKey;
@@ -1355,13 +1397,13 @@
 
             const spinner = document.getElementById('validationSpinner');
             const saveButton = document.getElementById('saveApiKeyBtn');
-            
+
             spinner.style.display = 'block';
             saveButton.disabled = true;
-            
+
             try {
                 const result = await ipcRenderer.invoke('initialize-api', apiKey);
-                
+
                 if (result.success) {
                     showValidationMessage('API key validated successfully!', 'success');
                     updateApiKeyUI(true);
@@ -1382,7 +1424,7 @@
             const messageElement = document.getElementById('validationMessage');
             messageElement.textContent = message;
             messageElement.className = `validation-message ${type}`;
-            
+
             // Ensure the message is visible
             messageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
@@ -1393,7 +1435,7 @@
             isTracking = !isTracking;
             const tracking = await ipcRenderer.invoke('toggle-tracking', isTracking);
             const button = document.getElementById('toggleTracking');
-            
+
             if (tracking) {
                 button.innerHTML = `<i class="fas fa-pause"></i><span>Pause Recording</span>`;
                 button.className = 'tracking-button active';
@@ -1439,16 +1481,16 @@
         function displayScreenshots() {
             const historyContainer = document.getElementById('screenshotHistory');
             const showMoreBtn = document.getElementById('showMoreBtn');
-            
+
             // Clear existing screenshots
             historyContainer.innerHTML = '';
-            
+
             if (allScreenshots.length === 0) {
                 historyContainer.innerHTML = '<div class="no-screenshots">No screenshots available for this date.</div>';
                 showMoreBtn.style.display = 'none';
                 return;
             }
-            
+
             // Calculate range for current page
             const endIndex = currentPage * SCREENSHOTS_PER_PAGE;
             const screenshotsToShow = allScreenshots.slice(0, endIndex);
@@ -1456,7 +1498,7 @@
             screenshotsToShow.forEach(screenshot => {
                 try {
                     const date = new Date(screenshot.timestamp);
-                    
+
                     const screenshotDiv = document.createElement('div');
                     screenshotDiv.className = 'screenshot-item';
                     screenshotDiv.innerHTML = `
@@ -1501,17 +1543,17 @@
         async function testScreenshot() {
             const button = document.getElementById('testScreenshotBtn');
             const countdownElement = document.getElementById('countdown');
-            
+
             console.log('Starting screenshot test...');
             button.disabled = true;
-            
+
             try {
                 const result = await ipcRenderer.invoke('test-screenshot');
                 console.log('Screenshot test completed:', result);
             } catch (error) {
                 console.error('Error during screenshot test:', error);
             }
-            
+
             button.disabled = false;
             countdownElement.textContent = '';
         }
@@ -1529,16 +1571,16 @@
                 // Initialize date display
                 document.getElementById('currentDate').textContent = formatDate(currentDate);
                 document.getElementById('nextDateBtn').disabled = true;
-                
+
                 // Initialize data
                 const data = await ipcRenderer.invoke('get-stats');
                 console.log('Initial data load:', data); // Debug log
-                
+
                 if (data) {
                     // Ensure we're using the correct data structure
                     const stats = data.stats.stats || data.stats;
                     const timeInHours = data.stats.timeInHours || {};
-                    
+
                     // Update category stats with both pieces of data
                     updateCategoryStats(stats, timeInHours);
 
@@ -1578,13 +1620,13 @@
                 document.getElementById('apiKey').value = '';
                 updateApiKeyUI(false);
                 toggleSettings();
-                
+
                 // Reset tracking button state
                 const button = document.getElementById('toggleTracking');
                 button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
                 button.className = 'tracking-button inactive';
                 button.disabled = true;
-                
+
                 // Disable test screenshot button
                 document.getElementById('testScreenshotBtn').disabled = true;
             }
@@ -1636,18 +1678,18 @@
 
         async function changeDate(offset) {
             currentDate.setDate(currentDate.getDate() + offset);
-            
+
             // Disable next button if we're at today
             document.getElementById('nextDateBtn').disabled = isToday(currentDate);
-            
+
             // Update displayed date
             document.getElementById('currentDate').textContent = formatDate(currentDate);
-            
+
             try {
                 // Send the new date to main process and update stats
                 const data = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
                 console.log('Received data for date change:', data); // Debug log
-                
+
                 // Update the UI with the filtered data
                 const statsContainer = document.getElementById('categoryStats');
                 statsContainer.innerHTML = '';
@@ -1691,7 +1733,7 @@
         // Initialize date navigation on page load
         document.addEventListener('DOMContentLoaded', () => {
             // ... existing DOMContentLoaded code ...
-            
+
             document.getElementById('currentDate').textContent = formatDate(currentDate);
             document.getElementById('nextDateBtn').disabled = true; // Disabled for today
         });
@@ -1703,9 +1745,9 @@
                 if (data) {
                     const stats = data.stats.stats || data.stats;
                     const timeInHours = data.stats.timeInHours || {};
-                    
+
                     updateCategoryStats(stats, timeInHours);
-                    
+
                     allScreenshots = data.screenshots || [];
                     currentPage = 1;
                     displayScreenshots();
@@ -1720,9 +1762,9 @@
             if (data) {
                 const stats = data.stats.stats || data.stats;
                 const timeInHours = data.stats.timeInHours || {};
-                
+
                 updateCategoryStats(stats, timeInHours);
-                
+
                 allScreenshots = data.screenshots || [];
                 currentPage = 1;
                 displayScreenshots();
@@ -1732,14 +1774,14 @@
         // Update the changeDate function to use the same helper
         async function changeDate(offset) {
             currentDate.setDate(currentDate.getDate() + offset);
-            
+
             document.getElementById('nextDateBtn').disabled = isToday(currentDate);
             document.getElementById('currentDate').textContent = formatDate(currentDate);
-            
+
             try {
                 const data = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
                 console.log('Received data for date change:', data);
-                
+
                 // Pass both stats and timeInHours to the update function
                 updateCategoryStats(data.stats, data.timeInHours);
 
@@ -1764,21 +1806,21 @@
         function updateCategoryStats(stats, timeInHours = {}) {
             const statsContainer = document.getElementById('categoryStats');
             statsContainer.innerHTML = '';
-            
+
             const sortedCategories = Object.entries(stats)
                 .sort(([, a], [, b]) => b - a);
 
             sortedCategories.forEach(([category, percentage]) => {
                 const hours = timeInHours[category] || 0;
                 const formattedHours = hours.toFixed(1);
-                
+
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'category';
                 categoryDiv.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>${formatCategoryName(category)}</span>
                         <span>
-                            <span>(${formattedHours}h)</span>
+                            <span style="color: var(--color-text-muted)">(${formattedHours}h)</span>
                             <span style="margin-left: 4px">${percentage.toFixed(1)}%</span>
                         </span>
                     </div>
@@ -1799,4 +1841,5 @@
         }
     </script>
 </body>
-</html> 
+
+</html>

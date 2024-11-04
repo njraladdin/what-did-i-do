@@ -78,6 +78,7 @@ function createWindow() {
     focusable: true,
     show: false,
     titleBarStyle: 'hidden',
+    icon: path.join(__dirname, 'assets/icon.ico'),
   });
 
   mainWindow.loadFile('index.html');

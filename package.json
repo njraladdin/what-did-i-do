@@ -5,19 +5,58 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "build": "electron-builder --win",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "build": {
+    "appId": "com.whatdidido.app",
+    "productName": "What Did I Do",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/sqlite3/lib/binding/napi-v6-win32-x64",
+        "to": "sqlite3",
+        "filter": ["*.node"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "compression": "maximum",
+    "asar": true
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "active-win": "^9.0.0",
-    "better-sqlite3": "^11.5.0",
-    "desktop-idle": "^1.3.0",
-    "electron": "^28.0.0",
     "electron-store": "^8.1.0",
     "node-schedule": "^2.1.1",
     "node-window-manager": "^2.2.4",
     "screenshot-desktop": "^1.15.0",
     "sharp": "^0.33.5",
     "sqlite3": "^5.1.7"
-  }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "author": "@aladdinnjr"
 }
