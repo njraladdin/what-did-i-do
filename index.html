@@ -154,6 +154,7 @@
             justify-content: center;
             padding: 0;
             cursor: pointer;
+            position: relative;
         }
 
 
@@ -413,13 +414,13 @@
 
         .settings-notification {
             position: absolute;
-            top: -4px;
-            right: -4px;
-            width: 12px;
-            height: 12px;
-            background-color: var(--color-error);
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background-color: #DC2626;
             border-radius: 50%;
-            border: 2px solid var(--color-text-primary);
+            display: none;
         }
 
 
@@ -1238,6 +1239,10 @@
             <div>What Did I Do</div>
         </div>
         <div class="titlebar-buttons">
+            <button class="settings-button" onclick="toggleSettings()">
+                <i class="fas fa-cog"></i>
+                <div id="settingsNotification" class="settings-notification"></div>
+            </button>
             <button class="titlebar-button" id="minimize-btn">─</button>
             <button class="titlebar-button" id="close-btn">✕</button>
         </div>
