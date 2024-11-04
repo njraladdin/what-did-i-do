@@ -1,5 +1,5 @@
 // File: main.js
-const { app, BrowserWindow, ipcMain, screen, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, powerMonitor, Tray, Menu } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const schedule = require('node-schedule');
@@ -37,6 +37,13 @@ const autoLauncher = new AutoLaunch({
     name: 'WhatDidIDo',
     path: app.getPath('exe'),
 });
+
+// Add these global variables near the top
+let tray = null;
+let isQuitting = false;
+
+// Add this near your other global variables
+let hasShownMinimizeNotification = false;
 
 // Initialize database
 function initializeDatabase() {
@@ -107,6 +114,22 @@ function createWindow() {
       console.error('Error loading initial data:', error);
       mainWindow.show();
     }
+  });
+
+  // Add these window event handlers
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+      showTrayNotification();
+      return false;
+    }
+    return true;
+  });
+
+  mainWindow.on('minimize', (event) => {
+    event.preventDefault();
+    mainWindow.hide();
   });
 }
 
@@ -618,11 +641,56 @@ async function handleFirstRun() {
     }
 }
 
+// Add this function to create the tray
+function createTray() {
+    tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
+    
+    const contextMenu = Menu.buildFromTemplate([
+        {
+            label: 'Open What Did I Do',
+            click: () => {
+                mainWindow.show();
+            }
+        },
+        {
+            type: 'separator'
+        },
+        {
+            label: 'Quit',
+            click: () => {
+                isQuitting = true;
+                app.quit();
+            }
+        }
+    ]);
+
+    tray.setToolTip('What Did I Do - Running in Background');
+    tray.setContextMenu(contextMenu);
+
+    tray.on('double-click', () => {
+        mainWindow.show();
+    });
+}
+
+// Add this function to show the notification
+function showTrayNotification() {
+    if (!hasShownMinimizeNotification) {
+        tray.displayBalloon({
+            title: 'What Did I Do is still running',
+            content: 'The app will continue running in the background. You can access it anytime from the system tray.',
+            icon: path.join(__dirname, 'assets/icon.ico'),
+            iconType: 'custom'
+        });
+        hasShownMinimizeNotification = true;
+    }
+}
+
 app.whenReady().then(async () => {
     try {
         await handleFirstRun();
         await initializeDatabase();
         createWindow();
+        createTray();
         initializeIdleMonitor();
         
         // Only start tracking if API key exists
@@ -657,7 +725,7 @@ ipcMain.on('window-minimize', () => {
 });
 
 ipcMain.on('window-close', () => {
-  if (mainWindow) mainWindow.close();
+  if (mainWindow) mainWindow.hide();
 });
 
 // Add cleanup on app quit
@@ -668,6 +736,9 @@ app.on('will-quit', () => {
                 console.error('Error closing database:', err);
             }
         });
+    }
+    if (tray) {
+        tray.destroy();
     }
 });
 
