@@ -282,10 +282,10 @@ async function captureAndAnalyze() {
             ${categories.join(', ')}. 
             Focus on the purpose of the activity rather than the specific application.
             For example:
-            - Games, videos, or casual browsing or scrolling or social media consuming would be "ENTERTAINMENT"
+            - Games, videos, entertainment live streams, YouTube, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
             - Coding, documents, or professional tasks would be "WORK"
             - Online courses, tutorials, or research would be "LEARN"
-            - Meetings, chat apps, or any social interactions would be "SOCIAL" (just browsing social media is not social)
+            - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
 
             Example response: {"category": "WORK", "activity": "software development"}`;
 
@@ -766,4 +766,24 @@ ipcMain.handle('toggle-auto-launch', async (event, enable) => {
         console.error('Error toggling auto-launch:', error);
         return false;
     }
+});
+
+// Add this new IPC handler with your other handlers
+ipcMain.handle('delete-screenshot', async (event, id) => {
+    return new Promise((resolve, reject) => {
+        db.run('DELETE FROM screenshots WHERE id = ?', [id], function(err) {
+            if (err) {
+                console.error('Error deleting screenshot:', err);
+                resolve(false);
+                return;
+            }
+            resolve(true);
+        });
+    });
+});
+
+// Add this IPC handler near your other IPC handlers
+ipcMain.handle('quit-app', () => {
+    isQuitting = true;
+    app.quit();
 });
