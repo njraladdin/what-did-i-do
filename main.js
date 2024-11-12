@@ -16,6 +16,8 @@ const store = new Store({
 const { windowManager } = require('node-window-manager');
 const sqlite3 = require('sqlite3').verbose();
 const AutoLaunch = require('auto-launch');
+const winston = require('winston');
+const { format } = winston;
 
 let mainWindow;
 let isTracking = false;
@@ -179,20 +181,19 @@ function ensureScreenshotDirectory() {
 async function captureAndAnalyze() {
     try {
         const idleTime = powerMonitor.getSystemIdleTime();
-        const idleMinutes = idleTime / 60; // Convert seconds to minutes
+        const idleMinutes = idleTime / 60;
         const interval = store.get('interval');
 
-        // If user has been idle for longer than the screenshot interval, skip
         if (idleMinutes >= interval) {
-            console.log(`User idle for ${idleMinutes.toFixed(1)} minutes. Skipping screenshot.`);
+            logger.info(`User idle for ${idleMinutes.toFixed(1)} minutes. Skipping screenshot.`);
             return;
         }
 
-        console.log('Starting capture and analyze process...');
+        logger.info('Starting capture and analyze process...');
         
         const now = new Date();
         const timestamp = now.toISOString();
-        console.log('Created timestamp:', timestamp);
+        logger.info('Created timestamp:', timestamp);
 
         // Get active window and display information
         const activeWindow = windowManager.getActiveWindow();
@@ -245,7 +246,7 @@ async function captureAndAnalyze() {
             .resize(200, 150, { fit: 'inside' })
             .toBuffer();
         
-        console.log('Processing screenshot with Gemini...');
+        logger.info('Processing screenshot with Gemini...');
         
         // Create a temporary file with a safe filename
         const safeTimestamp = timestamp.replace(/[:.]/g, '-');
@@ -255,18 +256,15 @@ async function captureAndAnalyze() {
         );
 
         try {
-            // Ensure the temp directory exists
             fs.mkdirSync(path.dirname(tempFilePath), { recursive: true });
-            // Write the file
             fs.writeFileSync(tempFilePath, imgBuffer);
 
-            // Upload image to Gemini using the temporary file
             const uploadResult = await fileManager.uploadFile(tempFilePath, {
                 mimeType: 'image/png',
                 displayName: `screenshot-${safeTimestamp}.png`
             });
 
-            console.log('Upload successful');
+            logger.info('Gemini file upload successful');
 
             const generationConfig = {
                 temperature: 1,
@@ -274,33 +272,43 @@ async function captureAndAnalyze() {
                 responseMimeType: "application/json"
             };
 
-            console.log('Starting Gemini analysis...');
-            const chatSession = model.startChat({ generationConfig });
-            
-            const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
-            Return a JSON object with "category" and "activity" fields, where category must be one of: 
-            ${categories.join(', ')}. 
-            Focus on the purpose of the activity rather than the specific application.
-            For example:
-            - Games, videos, entertainment live streams, YouTube, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
-            - Coding, documents, or professional tasks would be "WORK"
-            - Online courses, tutorials, or research would be "LEARN"
-            - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
+            logger.info('Starting Gemini analysis...');
+            let response;
+            try {
+                const chatSession = model.startChat({ generationConfig });
+                
+                const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
+                Return a JSON object with "category" and "activity" fields, where category must be one of: 
+                ${categories.join(', ')}. 
+                Focus on the purpose of the activity rather than the specific application.
+                For example:
+                - Games, videos, entertainment live streams, YouTube, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
+                - Coding, documents, or professional tasks would be "WORK"
+                - Online courses, tutorials, or research would be "LEARN"
+                - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
 
-            Example response: {"category": "WORK", "activity": "software development"}`;
+                Example response: {"category": "WORK", "activity": "software development"}`;
 
-            const result = await chatSession.sendMessage([
-                {
-                    fileData: {
-                        mimeType: 'image/png',
-                        fileUri: uploadResult.file.uri
-                    }
-                },
-                { text: prompt }
-            ]);
+                const result = await chatSession.sendMessage([
+                    {
+                        fileData: {
+                            mimeType: 'image/png',
+                            fileUri: uploadResult.file.uri
+                        }
+                    },
+                    { text: prompt }
+                ]);
 
-            console.log('Received Gemini response:', result.response.text());
-            const response = JSON.parse(result.response.text());
+                logger.info('Received Gemini response:', result.response.text());
+                response = JSON.parse(result.response.text());
+                
+            } catch (geminiError) {
+                logger.error('Error in Gemini analysis:', geminiError);
+                response = {
+                    category: 'WORK',
+                    activity: 'unknown (analysis failed)'
+                };
+            }
 
             // Store in database
             return new Promise((resolve, reject) => {
@@ -320,41 +328,38 @@ async function captureAndAnalyze() {
                     thumbnailBuffer
                 ], async function(err) {
                     if (err) {
-                        console.error('Error saving to database:', err);
+                        logger.error('Error saving to database:', err);
                         reject(err);
                         return;
                     }
                     
                     try {
-                        // Get updated stats for current date
                         const updatedData = await getActivityStats();
                         
-                        // Send both notifications
                         if (mainWindow && !mainWindow.isDestroyed()) {
                             mainWindow.webContents.send('activity-updated', updatedData);
-                            // Add a small delay before triggering refresh
                             setTimeout(() => {
                                 mainWindow.webContents.send('refresh-ui');
                             }, 100);
                         }
                         resolve();
                     } catch (error) {
-                        console.error('Error updating UI:', error);
+                        logger.error('Error updating UI:', error);
                         reject(error);
                     }
                 });
             });
 
         } finally {
-            // Clean up temporary file
             if (fs.existsSync(tempFilePath)) {
                 fs.unlinkSync(tempFilePath);
             }
         }
 
     } catch (error) {
-        console.error('Error in capture and analyze:', error);
-        console.error(error.stack);
+        logger.error('Error in capture and analyze:', error);
+        logger.error('Stack trace:', error.stack);
+        // Don't reject here to ensure schedule continues running
     }
 }
 
@@ -685,8 +690,82 @@ function showTrayNotification() {
     }
 }
 
+// Add after other global variables
+let logger;
+
+// Add this function near the top of the file
+function initializeLogger() {
+    const logPath = path.join(app.getPath('userData'), 'logs');
+    if (!fs.existsSync(logPath)) {
+        fs.mkdirSync(logPath);
+    }
+
+    logger = winston.createLogger({
+        format: format.combine(
+            format.timestamp(),
+            format.printf(({ level, message, timestamp }) => {
+                return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+            })
+        ),
+        transports: [
+            new winston.transports.File({ 
+                filename: path.join(logPath, 'error.log'), 
+                level: 'error' 
+            }),
+            new winston.transports.File({ 
+                filename: path.join(logPath, 'combined.log'),
+                maxsize: 5242880, // 5MB
+                maxFiles: 5,
+                tailable: true
+            })
+        ]
+    });
+
+    // Also log to console in development
+    if (DEBUG) {
+        logger.add(new winston.transports.Console({
+            format: format.simple()
+        }));
+    }
+
+    // Replace console.log and console.error with logger
+    console.log = (...args) => logger.info(args.join(' '));
+    console.error = (...args) => logger.error(args.join(' '));
+}
+
+// Add these IPC handlers
+ipcMain.handle('open-logs', () => {
+    const logPath = path.join(app.getPath('userData'), 'logs', 'combined.log');
+    if (fs.existsSync(logPath)) {
+        require('electron').shell.openPath(logPath);
+        return true;
+    }
+    return false;
+});
+
+ipcMain.handle('get-recent-logs', async () => {
+    try {
+        const logPath = path.join(app.getPath('userData'), 'logs', 'combined.log');
+        if (!fs.existsSync(logPath)) {
+            return [];
+        }
+
+        // Read last 1000 lines of logs
+        const logs = fs.readFileSync(logPath, 'utf8')
+            .split('\n')
+            .filter(Boolean)
+            .slice(-1000);
+        
+        return logs;
+    } catch (error) {
+        logger.error('Error reading logs:', error);
+        return [];
+    }
+});
+
 app.whenReady().then(async () => {
     try {
+        initializeLogger();
         await handleFirstRun();
         await initializeDatabase();
         createWindow();

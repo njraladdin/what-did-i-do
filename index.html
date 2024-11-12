@@ -1292,6 +1292,51 @@
             background: none;
             transform: translateY(-50%) scale(1.1);
         }
+
+        /* Add these new styles */
+        .logs-container {
+            margin-top: 16px;
+        }
+
+        .logs-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .logs-actions button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 36px;
+        }
+
+        .recent-logs {
+            margin-top: 16px;
+            background: var(--color-bg-elevated);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .logs-content {
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            color: var(--color-text-secondary);
+        }
+
+        .logs-content div {
+            padding: 2px 0;
+        }
+
+        .logs-content div:hover {
+            background: var(--color-bg-surface);
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1358,6 +1403,25 @@
                         <input type="checkbox" id="autoLaunchToggle">
                         <span class="setting-text">Start on Windows startup</span>
                     </label>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Logs</h3>
+                <div class="logs-container">
+                    <div class="logs-actions">
+                        <button onclick="openLogsFile()">
+                            <i class="fas fa-file-alt"></i>
+                            Open Logs File
+                        </button>
+                        <button onclick="showRecentLogs()">
+                            <i class="fas fa-history"></i>
+                            View Recent Logs
+                        </button>
+                    </div>
+                    <div id="recentLogs" class="recent-logs" style="display: none;">
+                        <div class="logs-content"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2030,6 +2094,24 @@
 
         // Update the close button in the modal HTML
         document.querySelector('#minimizeModal .modal-close').onclick = () => closeMinimizeModal(false);
+
+        async function openLogsFile() {
+            await ipcRenderer.invoke('open-logs');
+        }
+
+        async function showRecentLogs() {
+            const logsContainer = document.getElementById('recentLogs');
+            const logsContent = logsContainer.querySelector('.logs-content');
+            
+            // Toggle visibility
+            if (logsContainer.style.display === 'none') {
+                const logs = await ipcRenderer.invoke('get-recent-logs');
+                logsContent.innerHTML = logs.map(log => `<div>${log}</div>`).join('');
+                logsContainer.style.display = 'block';
+            } else {
+                logsContainer.style.display = 'none';
+            }
+        }
     </script>
 </body>
 

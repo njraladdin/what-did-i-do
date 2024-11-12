@@ -56,7 +56,8 @@
     "node-window-manager": "^2.2.4",
     "screenshot-desktop": "^1.15.0",
     "sharp": "^0.33.5",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "electron": "^28.0.0",
