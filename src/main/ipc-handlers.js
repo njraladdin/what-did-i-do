@@ -1,6 +1,5 @@
 const { ipcMain, dialog } = require('electron');
 const fs = require('fs');
-const schedule = require('node-schedule');
 
 /**
  * Initialize all IPC handlers for the application
@@ -21,7 +20,11 @@ function initializeIpcHandlers(dependencies) {
         getIsTracking,
         setIsTracking,
         setIsQuitting,
-        sleep
+        sleep,
+        startTracking,
+        stopTracking,
+        updateSchedulerInterval,
+        getSchedulerStatus
     } = dependencies;
 
     // API-related handlers
@@ -126,14 +129,12 @@ function initializeIpcHandlers(dependencies) {
             return false;
         }
         
-        setIsTracking(shouldTrack);
-        if (getIsTracking()) {
-            const interval = store.get('interval');
-            schedule.scheduleJob(`*/${interval} * * * *`, captureAndAnalyze);
+        if (shouldTrack) {
+            return startTracking();
         } else {
-            schedule.gracefulShutdown();
+            stopTracking();
+            return false;
         }
-        return getIsTracking();
     });
 
     ipcMain.handle('test-screenshot', async () => {
@@ -158,15 +159,16 @@ function initializeIpcHandlers(dependencies) {
     // Settings handlers
     ipcMain.handle('update-interval', async (event, interval) => {
         store.set('interval', interval);
-        if (getIsTracking()) {
-            schedule.gracefulShutdown();
-            schedule.scheduleJob(`*/${interval} * * * *`, captureAndAnalyze);
-        }
+        updateSchedulerInterval(interval);
         return true;
     });
 
     ipcMain.handle('get-interval', () => {
         return store.get('interval');
+    });
+
+    ipcMain.handle('get-scheduler-status', () => {
+        return getSchedulerStatus();
     });
 
     // Auto-launch handlers

@@ -51,7 +51,6 @@
     "@google/genai": "^1.6.0",
     "auto-launch": "^5.0.6",
     "electron-store": "^8.1.0",
-    "node-schedule": "^2.1.1",
     "node-window-manager": "^2.2.4",
     "screenshot-desktop": "^1.15.0",
     "sharp": "^0.33.5",

@@ -1,8 +1,7 @@
-// File: main.js
+
 const { app, BrowserWindow, ipcMain, screen, powerMonitor, Tray, Menu } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
-const schedule = require('node-schedule');
 const { GoogleGenAI, Type } = require('@google/genai');
 const fs = require('fs');
 const store = new Store({
@@ -14,15 +13,14 @@ const AutoLaunch = require('auto-launch');
 const database = require('./database');
 const logger = require('./logger');
 const ScreenshotCapture = require('./screenshot');
+const SimpleRobustScheduler = require('./scheduler');
 const { initializeIpcHandlers } = require('./ipc-handlers');
 
-// Remove archiver - not needed anymore
-const { dialog } = require('electron');
 
 let mainWindow;
 let isTracking = false;
 let ai;
-
+let scheduler;
 
 // Get categories from database module
 const { categories } = database;
@@ -140,15 +138,6 @@ async function initializeGeminiAPI(apiKey) {
 // Modify the captureAndAnalyze function
 async function captureAndAnalyze() {
     try {
-        const idleTime = powerMonitor.getSystemIdleTime();
-        const idleMinutes = idleTime / 60;
-        const interval = store.get('interval');
-
-        if (idleMinutes >= interval) {
-            appLogger.info(`User idle for ${idleMinutes.toFixed(1)} minutes. Skipping screenshot.`);
-            return;
-        }
-
         appLogger.info('Starting capture and analyze process...');
         
         const now = new Date();
@@ -364,15 +353,9 @@ async function captureAndAnalyze() {
 }
 
 
-// Add this helper function for the countdown
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 // Add this helper function
 function pauseTracking() {
-  isTracking = false;
-  schedule.gracefulShutdown();
+  stopTracking();
   ai = null;
   if (mainWindow) {
     mainWindow.webContents.send('tracking-paused');
@@ -398,6 +381,39 @@ function setIsTracking(tracking) {
 
 function setIsQuitting(quitting) {
   isQuitting = quitting;
+}
+
+// Scheduler management functions
+function startTracking() {
+  if (!scheduler || !ai) {
+    return false;
+  }
+  
+  isTracking = true;
+  scheduler.start(captureAndAnalyze);
+  return true;
+}
+
+function stopTracking() {
+  if (scheduler) {
+    scheduler.stop();
+  }
+  isTracking = false;
+}
+
+function updateSchedulerInterval(newInterval) {
+  if (scheduler) {
+    scheduler.updateInterval(newInterval);
+  }
+}
+
+function getSchedulerStatus() {
+  return scheduler ? scheduler.getStatus() : null;
+}
+
+// Add this helper function for the countdown
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Add this near your other initialization code (in app.whenReady())
@@ -486,6 +502,14 @@ app.whenReady().then(async () => {
     try {
         appLogger = logger.createLogger();
         screenshotCapture = new ScreenshotCapture(appLogger);
+        
+        // Initialize the simple robust scheduler
+        scheduler = new SimpleRobustScheduler(appLogger, {
+            intervalMinutes: store.get('interval'),
+            maxRetries: 2,
+            idleThresholdMinutes: store.get('interval') // Skip if idle for interval duration
+        });
+        
         await handleFirstRun();
         await database.initializeDatabase();
         createWindow();
@@ -507,15 +531,18 @@ app.whenReady().then(async () => {
             getIsTracking,
             setIsTracking,
             setIsQuitting,
-            sleep
+            sleep,
+            startTracking,
+            stopTracking,
+            updateSchedulerInterval,
+            getSchedulerStatus
         });
         
         // Only start tracking if API key exists
         const apiKey = store.get('apiKey');
         if (apiKey) {
-            isTracking = true;
-            const interval = store.get('interval');
-            schedule.scheduleJob(`*/${interval} * * * *`, captureAndAnalyze);
+            await initializeGeminiAPI(apiKey);
+            startTracking();
         } else {
             pauseTracking();
         }
@@ -540,6 +567,9 @@ app.on('activate', () => {
 
 // Add cleanup on app quit
 app.on('will-quit', async () => {
+    if (scheduler) {
+        scheduler.stop();
+    }
     await database.closeDatabase();
     if (tray) {
         tray.destroy();
