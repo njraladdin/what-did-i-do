@@ -22,7 +22,6 @@ let genAI;
 let model;
 let fileManager;
 
-const DEBUG = true;
 
 // Get categories from database module
 const { categories } = database;
@@ -685,4 +684,23 @@ ipcMain.handle('load-more-screenshots', async (event, offset = 0, limit = 50) =>
         console.error('Error loading more screenshots:', error);
         return { success: false, screenshots: [] };
     }
+});
+
+// Add this IPC handler near the other IPC handlers
+ipcMain.handle('get-monthly-averages', async () => {
+  try {
+    const data = await database.getMonthlyAverages(currentDate, store.get('interval'));
+    return {
+      monthlyAverages: data.monthlyAverages,
+      monthlyTimeInHours: data.monthlyTimeInHours,
+      daysWithData: data.daysWithData
+    };
+  } catch (error) {
+    console.error('Error getting monthly averages:', error);
+    return {
+      monthlyAverages: {},
+      monthlyTimeInHours: {},
+      daysWithData: 0
+    };
+  }
 });

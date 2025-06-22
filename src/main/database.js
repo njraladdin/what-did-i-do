@@ -274,6 +274,93 @@ function closeDatabase() {
     });
 }
 
+// Get monthly averages for each category
+function getMonthlyAverages(currentDate, intervalMinutes) {
+    return new Promise((resolve, reject) => {
+        const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        
+        const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+
+        // Get statistics using aggregation for the entire month
+        db.all(`
+            SELECT 
+                category,
+                COUNT(*) as count,
+                strftime('%Y-%m-%d', timestamp) as day
+            FROM screenshots 
+            WHERE timestamp BETWEEN ? AND ?
+            GROUP BY category, day
+        `, [
+            startOfMonth.toISOString(),
+            endOfMonth.toISOString()
+        ], (err, results) => {
+            if (err) {
+                console.error('Error getting monthly averages:', err);
+                reject(err);
+                return;
+            }
+
+            // Initialize stats objects
+            const monthlyAverages = {};
+            const monthlyTimeInHours = {};
+            categories.forEach(category => {
+                monthlyAverages[category] = 0;
+                monthlyTimeInHours[category] = 0;
+            });
+
+            // Process results to get daily counts
+            const dailyTotals = {};
+            const categoryCounts = {};
+            categories.forEach(category => {
+                categoryCounts[category] = 0;
+            });
+
+            // Count unique days with data
+            const uniqueDays = new Set();
+            
+            if (results && results.length > 0) {
+                results.forEach(row => {
+                    uniqueDays.add(row.day);
+                    categoryCounts[row.category] = (categoryCounts[row.category] || 0) + row.count;
+                    
+                    // Track daily totals for percentage calculation
+                    if (!dailyTotals[row.day]) {
+                        dailyTotals[row.day] = 0;
+                    }
+                    dailyTotals[row.day] += row.count;
+                });
+                
+                // Calculate the average percentage and time for each category
+                const daysWithData = uniqueDays.size;
+                
+                if (daysWithData > 0) {
+                    // Calculate total screenshots across all categories
+                    const totalScreenshots = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0);
+                    
+                    categories.forEach(category => {
+                        const count = categoryCounts[category] || 0;
+                        // Calculate average percentage
+                        monthlyAverages[category] = totalScreenshots > 0 
+                            ? (count / totalScreenshots) * 100 
+                            : 0;
+                        
+                        // Calculate total hours for the month
+                        monthlyTimeInHours[category] = (count * intervalMinutes) / 60;
+                    });
+                }
+            }
+
+            resolve({
+                monthlyAverages,
+                monthlyTimeInHours,
+                daysWithData: uniqueDays.size
+            });
+        });
+    });
+}
+
 module.exports = {
     initializeDatabase,
     getActivityStats,
@@ -281,5 +368,6 @@ module.exports = {
     saveScreenshot,
     deleteScreenshot,
     closeDatabase,
-    categories
+    categories,
+    getMonthlyAverages
 }; 

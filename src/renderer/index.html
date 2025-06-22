@@ -155,6 +155,15 @@
                     <div id="categoryStats"></div>
                 </div>
 
+                <!-- Monthly Analytics Section -->
+                <div class="analytics-section">
+                    <div class="analytics-header">
+                        <h3>Monthly Analytics</h3>
+                        <div class="month-indicator" id="currentMonth"></div>
+                    </div>
+                    <div class="analytics-cards" id="monthlyAnalytics"></div>
+                </div>
+
                 <!-- History Section -->
                 <div class="stats-section">
                     <h2>Screenshot History</h2>
@@ -301,12 +310,73 @@
                 // Update category stats with both pieces of data
                 updateCategoryStats(stats, timeInHours);
 
+                // Update monthly averages
+                await updateMonthlyAverages();
+
                 // Store all screenshots and display initial page
                 allScreenshots = data.screenshots || [];
                 currentPage = 1;
                 displayScreenshots();
             } catch (error) {
                 console.error('Error updating stats:', error);
+            }
+        }
+
+        // Add this new function to fetch and display monthly analytics
+        async function updateMonthlyAverages() {
+            try {
+                const data = await ipcRenderer.invoke('get-monthly-averages');
+                console.log('Received monthly averages:', data);
+
+                // Update the month indicator
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                const monthName = monthNames[currentDate.getMonth()];
+                const year = currentDate.getFullYear();
+                document.getElementById('currentMonth').textContent = `${monthName} ${year} • ${data.daysWithData} days`;
+
+                // Update the analytics cards - show each category with total and average per day
+                const analyticsContainer = document.getElementById('monthlyAnalytics');
+                analyticsContainer.innerHTML = '';
+
+                // Sort categories by total hours (descending)
+                const categoryEntries = Object.entries(data.monthlyTimeInHours)
+                    .filter(([category, hours]) => hours > 0) // Only show categories with data
+                    .sort(([, a], [, b]) => b - a);
+
+                categoryEntries.forEach(([category, totalHours]) => {
+                    const avgPerDay = data.daysWithData > 0 ? totalHours / data.daysWithData : 0;
+                    
+                    const categoryCard = document.createElement('div');
+                    categoryCard.className = 'analytics-card';
+                    categoryCard.innerHTML = `
+                        <div class="card-header">
+                            <span class="card-title">${formatCategoryName(category)}</span>
+                            <span class="card-percentage">${data.monthlyAverages[category].toFixed(1)}%</span>
+                        </div>
+                        <div class="card-progress">
+                            <div class="progress-bar ${category}" style="width: ${data.monthlyAverages[category]}%"></div>
+                        </div>
+                        <div class="card-metrics">
+                            <div class="metric">
+                                <span class="metric-value">${totalHours.toFixed(1)}h</span>
+                                <span class="metric-label">total</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-value">${avgPerDay.toFixed(1)}h</span>
+                                <span class="metric-label">per day</span>
+                            </div>
+                        </div>
+                    `;
+                    analyticsContainer.appendChild(categoryCard);
+                });
+
+                // If no data, show a message
+                if (categoryEntries.length === 0) {
+                    analyticsContainer.innerHTML = '<div class="no-data">No activity data for this month</div>';
+                }
+            } catch (error) {
+                console.error('Error updating monthly averages:', error);
             }
         }
 
@@ -418,6 +488,9 @@
 
                     // Update category stats with both pieces of data
                     updateCategoryStats(stats, timeInHours);
+                    
+                    // Initialize monthly averages
+                    await updateMonthlyAverages();
 
                     // Initialize screenshots
                     allScreenshots = data.screenshots || [];
@@ -525,39 +598,18 @@
         async function changeDate(offset) {
             currentDate.setDate(currentDate.getDate() + offset);
 
-            // Disable next button if we're at today
             document.getElementById('nextDateBtn').disabled = isToday(currentDate);
-
-            // Update displayed date
             document.getElementById('currentDate').textContent = formatDate(currentDate);
 
             try {
-                // Send the new date to main process and update stats
                 const data = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
-                console.log('Received data for date change:', data); // Debug log
+                console.log('Received data for date change:', data);
 
-                // Update the UI with the filtered data
-                const statsContainer = document.getElementById('categoryStats');
-                statsContainer.innerHTML = '';
+                // Pass both stats and timeInHours to the update function
+                updateCategoryStats(data.stats, data.timeInHours);
 
-                // Update category stats
-                const sortedCategories = Object.entries(data.stats)
-                    .sort(([, a], [, b]) => b - a);
-
-                sortedCategories.forEach(([category, percentage]) => {
-                    const categoryDiv = document.createElement('div');
-                    categoryDiv.className = 'category';
-                    categoryDiv.innerHTML = `
-                        <div>
-                            <span>${formatCategoryName(category)}</span>: 
-                            <span>${percentage.toFixed(1)}%</span>
-                        </div>
-                        <div class="progress">
-                            <div class="progress-bar ${category}" style="width: ${percentage}%"></div>
-                        </div>
-                    `;
-                    statsContainer.appendChild(categoryDiv);
-                });
+                // Update monthly averages when date changes
+                await updateMonthlyAverages();
 
                 // Update screenshots
                 if (Array.isArray(data.screenshots)) {
@@ -593,6 +645,9 @@
                     const timeInHours = data.stats.timeInHours || {};
 
                     updateCategoryStats(stats, timeInHours);
+                    
+                    // Update monthly averages on refresh
+                    await updateMonthlyAverages();
 
                     allScreenshots = data.screenshots || [];
                     currentPage = 1;
@@ -604,49 +659,21 @@
         });
 
         // Add this near the top of your script section with other ipcRenderer listeners
-        ipcRenderer.on('initial-data', (event, data) => {
+        ipcRenderer.on('initial-data', async (event, data) => {
             if (data) {
                 const stats = data.stats.stats || data.stats;
                 const timeInHours = data.stats.timeInHours || {};
 
                 updateCategoryStats(stats, timeInHours);
+                
+                // Update monthly averages on initial load
+                await updateMonthlyAverages();
 
                 allScreenshots = data.screenshots || [];
                 currentPage = 1;
                 displayScreenshots();
             }
         });
-
-        // Update the changeDate function to use the same helper
-        async function changeDate(offset) {
-            currentDate.setDate(currentDate.getDate() + offset);
-
-            document.getElementById('nextDateBtn').disabled = isToday(currentDate);
-            document.getElementById('currentDate').textContent = formatDate(currentDate);
-
-            try {
-                const data = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
-                console.log('Received data for date change:', data);
-
-                // Pass both stats and timeInHours to the update function
-                updateCategoryStats(data.stats, data.timeInHours);
-
-                // Update screenshots
-                if (Array.isArray(data.screenshots)) {
-                    allScreenshots = data.screenshots;
-                    currentPage = 1;
-                    displayScreenshots();
-                } else {
-                    console.error('Invalid screenshots data:', data.screenshots);
-                    allScreenshots = [];
-                    displayScreenshots();
-                }
-            } catch (error) {
-                console.error('Error changing date:', error);
-                allScreenshots = [];
-                displayScreenshots();
-            }
-        }
 
         // Update the updateCategoryStats function in your script section
         function updateCategoryStats(stats, timeInHours = {}) {
@@ -663,12 +690,12 @@
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'category';
                 categoryDiv.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>${formatCategoryName(category)}</span>
-                        <span>
-                            <span style="color: var(--color-text-muted)">(${formattedHours}h)</span>
-                            <span style="margin-left: 4px">${percentage.toFixed(1)}%</span>
-                        </span>
+                    <div class="category-header">
+                        <span class="category-title">${formatCategoryName(category)}</span>
+                        <div class="category-metrics">
+                            <span class="category-hours">${formattedHours}h</span>
+                            <span class="category-percentage">${percentage.toFixed(1)}%</span>
+                        </div>
                     </div>
                     <div class="progress">
                         <div class="progress-bar ${category}" style="width: ${percentage}%"></div>
@@ -742,6 +769,8 @@
                         const data = await ipcRenderer.invoke('get-stats');
                         if (data) {
                             updateCategoryStats(data.stats.stats, data.stats.timeInHours);
+                            // Update monthly averages after deletion
+                            await updateMonthlyAverages();
                         }
                     }
                 } catch (error) {

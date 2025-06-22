@@ -28,13 +28,64 @@
     
      .settings-button { width: 44px; height: 44px; background: none; border: none; border-radius: 8px; color: var(--color-text-primary); display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; position: relative; }
     
-    .category { margin: 12px 0; padding: 16px; background-color: var(--color-bg-elevated); border-radius: 8px; border: 1px solid var(--color-border); }
+    .category { 
+        margin: 0 0 20px 0; 
+        padding: 20px; 
+        background-color: var(--color-bg-surface); 
+        border-radius: 12px; 
+        border: 1px solid var(--color-border);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 12px;
+    }
+
+    .category-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.2;
+    }
+
+    .category-metrics {
+        display: flex;
+        gap: 12px;
+        align-items: baseline;
+    }
+
+    .category-hours {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        font-feature-settings: 'tnum';
+    }
+
+    .category-percentage {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--color-text-muted);
+        font-feature-settings: 'tnum';
+    }
     
      .api-key-form { position: relative; }
     
-     .progress { margin-top: 8px; background: var(--color-bg-surface); height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid var(--color-border); }
-    
-    .progress-bar { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+         .progress { 
+        margin-top: 12px; 
+        background: var(--color-bg-elevated); 
+        height: 8px; 
+        border-radius: 4px; 
+        overflow: hidden; 
+    }
+
+    .progress-bar { 
+        height: 100%; 
+        border-radius: 4px; 
+        transition: width 0.3s ease; 
+    }
     
     .progress-bar.WORK { background: var(--color-work); }
     
@@ -195,7 +246,9 @@
      .nav-button:disabled { opacity: 0.5; cursor: not-allowed; }
     
      .current-date { color: var(--color-text-secondary); font-size: 14px; font-weight: 500; min-width: 200px; text-align: center; }
-    
+     
+     .month-indicator { color: var(--color-text-secondary); font-size: 14px; font-weight: 500; text-align: right; }
+
      .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     
      .section-header h2 { margin: 0; }
@@ -277,3 +330,123 @@
     .logs-content div { padding: 2px 0; }
     
     .logs-content div:hover { background: var(--color-bg-surface); }
+
+    /* Analytics section styles */
+    .analytics-section {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        padding: 32px;
+        margin-bottom: 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .analytics-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .analytics-header h3 {
+        color: var(--color-text-primary);
+        font-weight: 600;
+        font-size: 20px;
+        margin: 0;
+        letter-spacing: -0.3px;
+    }
+
+    .analytics-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+    }
+
+    .analytics-card {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 12px;
+    }
+
+    .card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.2;
+    }
+
+    .card-percentage {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        font-feature-settings: 'tnum';
+    }
+
+    .card-progress {
+        height: 8px;
+        background: var(--color-bg-elevated);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 16px;
+        position: relative;
+    }
+
+    .card-progress .progress-bar {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+        position: relative;
+    }
+
+    .card-metrics {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding-top: 4px;
+    }
+
+    .metric {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        flex: 1;
+    }
+
+    .metric-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--color-text-primary);
+        line-height: 1.1;
+        font-feature-settings: 'tnum';
+        margin-bottom: 2px;
+    }
+
+    .metric-label {
+        font-size: 12px;
+        color: var(--color-text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+
+    .no-data {
+        text-align: center;
+        color: var(--color-text-muted);
+        font-size: 14px;
+        padding: 20px;
+        grid-column: 1 / -1;
+    }
