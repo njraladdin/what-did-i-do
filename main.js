@@ -3,20 +3,18 @@ const { app, BrowserWindow, ipcMain, screen, powerMonitor, Tray, Menu } = requir
 const path = require('path');
 const Store = require('electron-store');
 const schedule = require('node-schedule');
-const screenshot = require('screenshot-desktop');
 const { GoogleGenerativeAI, Type } = require('@google/generative-ai');
 const { GoogleAIFileManager } = require('@google/generative-ai/server');
 const fs = require('fs');
-const sharp = require('sharp');
 const store = new Store({
     defaults: {
         interval: 1 // Default to 1 minute
     }
 });
-const { windowManager } = require('node-window-manager');
 const AutoLaunch = require('auto-launch');
 const database = require('./database');
 const logger = require('./logger');
+const ScreenshotCapture = require('./screenshot');
 
 let mainWindow;
 let isTracking = false;
@@ -48,6 +46,7 @@ let hasShownMinimizeNotification = false;
 
 // Initialize logger
 let appLogger;
+let screenshotCapture;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -157,56 +156,8 @@ async function captureAndAnalyze() {
         const timestamp = now.toISOString();
         appLogger.info('Created timestamp:', timestamp);
 
-        // Get active window and display information
-        const activeWindow = windowManager.getActiveWindow();
-        const displays = screen.getAllDisplays();
-        let imgBuffer;
-        
-        if (activeWindow) {
-            const windowBounds = activeWindow.getBounds();
-            
-            // Get all available displays from screenshot-desktop
-            const availableDisplays = await screenshot.listDisplays();
-
-            // Find the display with the most overlap
-            let maxOverlap = 0;
-            let targetDisplayId = null;
-
-            displays.forEach((display, index) => {
-                const dBounds = display.bounds;
-                const xOverlap = Math.max(0, 
-                    Math.min(windowBounds.x + windowBounds.width, dBounds.x + dBounds.width) - 
-                    Math.max(windowBounds.x, dBounds.x)
-                );
-                
-                const yOverlap = Math.max(0,
-                    Math.min(windowBounds.y + windowBounds.height, dBounds.y + dBounds.height) - 
-                    Math.max(windowBounds.y, dBounds.y)
-                );
-                
-                const overlapArea = xOverlap * yOverlap;
-
-                if (overlapArea > maxOverlap) {
-                    maxOverlap = overlapArea;
-                    targetDisplayId = availableDisplays[index].id;
-                }
-            });
-
-            if (targetDisplayId) {
-                imgBuffer = await screenshot({ screen: targetDisplayId });
-            }
-        }
-
-        // Fallback to primary display if needed
-        if (!imgBuffer) {
-            const displays = await screenshot.listDisplays();
-            imgBuffer = await screenshot({ screen: displays[0].id });
-        }
-
-        // Create thumbnail using sharp
-        const thumbnailBuffer = await sharp(imgBuffer)
-            .resize(200, 150, { fit: 'inside' })
-            .toBuffer();
+        // Capture screenshot and thumbnail using the new module
+        const { imgBuffer, thumbnailBuffer } = await screenshotCapture.captureWithThumbnail();
         
         appLogger.info('Processing screenshot with Gemini...');
         
@@ -632,6 +583,7 @@ ipcMain.handle('get-recent-logs', async () => {
 app.whenReady().then(async () => {
     try {
         appLogger = logger.createLogger();
+        screenshotCapture = new ScreenshotCapture(appLogger);
         await handleFirstRun();
         await database.initializeDatabase();
         createWindow();
