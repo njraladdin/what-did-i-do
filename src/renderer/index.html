@@ -95,6 +95,61 @@
         </div>
     </div>
 
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="toggleExportModal()">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <h2>Export Data</h2>
+
+            <div class="export-section">
+                <h3>Date Range</h3>
+                <div class="range-options">
+                    <label class="range-option">
+                        <input type="radio" name="dateRange" value="today" checked>
+                        <span class="range-text">Today</span>
+                    </label>
+                    <label class="range-option">
+                        <input type="radio" name="dateRange" value="last7days">
+                        <span class="range-text">Last 7 Days</span>
+                    </label>
+                    <label class="range-option">
+                        <input type="radio" name="dateRange" value="last30days">
+                        <span class="range-text">Last 30 Days</span>
+                    </label>
+                    <label class="range-option">
+                        <input type="radio" name="dateRange" value="alltime">
+                        <span class="range-text">All Time</span>
+                    </label>
+                    <label class="range-option grid-span-2">
+                        <input type="radio" name="dateRange" value="custom">
+                        <span class="range-text">Custom Range</span>
+                    </label>
+                </div>
+                
+                <div id="customRangeInputs" class="custom-range-inputs" style="display: none;">
+                    <div class="date-input-group">
+                        <label for="startDate">From:</label>
+                        <input type="date" id="startDate" name="startDate">
+                    </div>
+                    <div class="date-input-group">
+                        <label for="endDate">To:</label>
+                        <input type="date" id="endDate" name="endDate">
+                    </div>
+                </div>
+            </div>
+
+            <div class="export-actions">
+                <button onclick="exportData()" id="exportBtn" class="export-button">
+                    <i class="fas fa-download"></i>
+                    Export Data
+                </button>
+                <button onclick="toggleExportModal()" class="cancel-button">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div class="layout-container">
         <div class="sidebar">
             <div class="tracking-controls">
@@ -116,6 +171,11 @@
                 <button id="testScreenshotBtn" onclick="testScreenshot()">
                     <i class="fas fa-camera"></i>
                     <span class="button-text">Test Screenshot</span>
+                </button>
+
+                <button id="exportDataBtn" onclick="toggleExportModal()">
+                    <i class="fas fa-download"></i>
+                    <span class="button-text">Export Data</span>
                 </button>
 
                 <span id="countdown"></span>
@@ -660,6 +720,33 @@
             
             // Initialize month navigation
             updateNextMonthButtonState();
+
+            // Add event listeners for export modal
+            const rangeRadios = document.querySelectorAll('input[name="dateRange"]');
+            rangeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const customInputs = document.getElementById('customRangeInputs');
+                    if (this.value === 'custom') {
+                        customInputs.style.display = 'block';
+                        // Set default dates
+                        const today = new Date();
+                        const oneWeekAgo = new Date();
+                        oneWeekAgo.setDate(today.getDate() - 7);
+                        
+                        document.getElementById('startDate').value = oneWeekAgo.toISOString().split('T')[0];
+                        document.getElementById('endDate').value = today.toISOString().split('T')[0];
+                    } else {
+                        customInputs.style.display = 'none';
+                    }
+                });
+            });
+
+            // Close export modal when clicking outside
+            document.getElementById('exportModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('exportModal')) {
+                    toggleExportModal();
+                }
+            });
         });
 
         function toggleSettings() {
@@ -942,6 +1029,93 @@
                 logsContainer.style.display = 'block';
             } else {
                 logsContainer.style.display = 'none';
+            }
+        }
+
+        // Export Modal Functions
+        function toggleExportModal() {
+            const modal = document.getElementById('exportModal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        async function exportData() {
+            const exportBtn = document.getElementById('exportBtn');
+            const originalText = exportBtn.innerHTML;
+            
+            // Show loading state
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+            exportBtn.disabled = true;
+
+            try {
+                // Get selected range
+                const selectedRange = document.querySelector('input[name="dateRange"]:checked').value;
+                let startDate, endDate;
+
+                const today = new Date();
+                const yesterday = new Date();
+                yesterday.setDate(today.getDate() - 1);
+
+                switch (selectedRange) {
+                    case 'today':
+                        startDate = new Date(today);
+                        startDate.setHours(0, 0, 0, 0);
+                        endDate = new Date(today);
+                        endDate.setHours(23, 59, 59, 999);
+                        break;
+                    case 'last7days':
+                        startDate = new Date();
+                        startDate.setDate(today.getDate() - 6);
+                        startDate.setHours(0, 0, 0, 0);
+                        endDate = new Date(today);
+                        endDate.setHours(23, 59, 59, 999);
+                        break;
+                    case 'last30days':
+                        startDate = new Date();
+                        startDate.setDate(today.getDate() - 29);
+                        startDate.setHours(0, 0, 0, 0);
+                        endDate = new Date(today);
+                        endDate.setHours(23, 59, 59, 999);
+                        break;
+                    case 'alltime':
+                        startDate = new Date('1970-01-01');
+                        endDate = new Date();
+                        break;
+                    case 'custom':
+                        const startDateInput = document.getElementById('startDate').value;
+                        const endDateInput = document.getElementById('endDate').value;
+                        if (!startDateInput || !endDateInput) {
+                            alert('Please select both start and end dates for custom range.');
+                            return;
+                        }
+                        startDate = new Date(startDateInput);
+                        startDate.setHours(0, 0, 0, 0);
+                        endDate = new Date(endDateInput);
+                        endDate.setHours(23, 59, 59, 999);
+                        break;
+                }
+
+                // Call export function
+                const result = await ipcRenderer.invoke('export-data', {
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                    rangeType: selectedRange
+                });
+
+                if (result.success) {
+                    // Close modal and show success message
+                    toggleExportModal();
+                    // You could add a toast notification here
+                    console.log('Export successful:', result.filePath);
+                } else {
+                    alert('Export failed: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Export failed: ' + error.message);
+            } finally {
+                // Reset button state
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
             }
         }
     </script>

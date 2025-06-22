@@ -319,7 +319,7 @@
     
      .date-navigation { display: flex; align-items: center; gap: 8px; font-size: 14px; }
     
-     .nav-button { background: none; border: none; color: var(--color-text-secondary); padding: 4px 8px; cursor: pointer; border-radius: 4px; height: 28px; width: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+     .nav-button { background: none; border: none; color: var(--color-text-secondary); padding: 4px 12px; cursor: pointer; border-radius: 6px; height: 32px; min-width: 90px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; cursor: pointer; }
     
      .nav-button:hover { background: var(--color-hover); color: var(--color-text-primary); }
     
@@ -327,39 +327,244 @@
     
      .current-date { color: var(--color-text-secondary); font-size: 14px; font-weight: 500; min-width: 200px; text-align: center; }
      
-     .month-indicator { color: var(--color-text-secondary); font-size: 14px; font-weight: 500; text-align: right; }
+     .month-indicator {
+        color: var(--color-text-secondary);
+        font-size: 14px;
+        font-weight: 500;
+        min-width: 150px;
+        text-align: center;
+    }
 
-     .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    /* Export Modal Styles */
+    .export-section {
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .export-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .export-section h3 {
+        color: var(--color-text-primary);
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+    }
+
+    .range-options {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .range-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        padding: 8px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        background: var(--color-bg-surface);
+    }
+
+    .range-option:hover {
+        background: var(--color-bg-elevated);
+        border-color: var(--color-primary);
+    }
+
+    .range-option input[type="radio"] {
+        margin: 0;
+        width: 16px;
+        height: 16px;
+    }
+
+    .range-text {
+        font-size: 14px;
+        color: var(--color-text-primary);
+        font-weight: 500;
+    }
+
+    .custom-range-inputs {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .date-input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .date-input-group label {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        font-weight: 500;
+    }
+
+    .date-input-group input[type="date"] {
+        padding: 8px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        background: var(--color-bg-surface);
+        color: var(--color-text-primary);
+        font-size: 14px;
+    }
+
+    .export-options {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .export-option {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        cursor: pointer;
+        padding: 16px;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        background: var(--color-bg-surface);
+        transition: all 0.2s ease;
+    }
+
+    .export-option:hover {
+        background: var(--color-bg-elevated);
+        border-color: var(--color-primary);
+    }
+
+    .export-option input[type="checkbox"] {
+        display: none;
+    }
+
+    .export-option input[type="checkbox"] + .export-option-text::before {
+        content: '';
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--color-border);
+        border-radius: 3px;
+        margin-right: 12px;
+        vertical-align: middle;
+        transition: all 0.2s ease;
+        background: var(--color-bg-surface);
+    }
+
+    .export-option input[type="checkbox"]:checked + .export-option-text::before {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='m13.854 3.646-7.5 7.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6 10.293l7.146-7.147a.5.5 0 0 1 .708.708z'/%3e%3c/svg%3e");
+    }
+
+    .export-option-text {
+        font-size: 15px;
+        color: var(--color-text-primary);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+    }
+
+    .export-option-description {
+        font-size: 13px;
+        color: var(--color-text-muted);
+        margin-left: 30px;
+        line-height: 1.4;
+    }
+
+    .export-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+        padding-top: 24px;
+    }
+
+    .export-button {
+        flex: 1;
+        background: var(--color-primary);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+    }
+
+    .export-button:hover {
+        background: var(--color-primary-hover);
+        transform: translateY(-1px);
+    }
+
+    .export-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .cancel-button {
+        flex: 0 0 auto;
+        background: transparent;
+        color: var(--color-text-secondary);
+        border: 1px solid var(--color-border);
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-height: 44px;
+    }
+
+    .cancel-button:hover {
+        background: var(--color-bg-elevated);
+        color: var(--color-text-primary);
+    }
+
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     
-     .section-header h2 { margin: 0; }
+    .section-header h2 { margin: 0; }
     
-     /* Update the nav-button styles */ .nav-button { background: none; border: none; color: var(--color-text-secondary); padding: 4px 12px; cursor: pointer; border-radius: 6px; height: 32px; min-width: 90px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; cursor: pointer; }
+    /* Update the nav-button styles */ .nav-button { background: none; border: none; color: var(--color-text-secondary); padding: 4px 12px; cursor: pointer; border-radius: 6px; height: 32px; min-width: 90px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; cursor: pointer; }
     
-     /* Add new sidebar styles */ .layout-container { display: flex; margin: 0; min-height: calc(100vh - 42px); padding-top: 42px; }
+    /* Add new sidebar styles */ .layout-container { display: flex; margin: 0; min-height: calc(100vh - 42px); padding-top: 42px; }
     
-     .sidebar button { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: flex-start; padding: 0 12px; }
+    .sidebar button { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: flex-start; padding: 0 12px; }
     
-     .sidebar button i { width: 20px; text-align: center; }
+    .sidebar button i { width: 20px; text-align: center; }
     
-     .button-text { display: inline; }
+    .button-text { display: inline; }
     
-     .select-wrapper { position: relative; width: 100%; }
+    .select-wrapper { position: relative; width: 100%; }
     
-     /* Update select wrapper to show icon */ .select-wrapper { position: relative; width: 100%; }
+    /* Update select wrapper to show icon */ .select-wrapper { position: relative; width: 100%; }
     
-     .select-wrapper::before { content: '\f017'; /* Clock icon */ font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-secondary); z-index: 1; }
+    .select-wrapper::before { content: '\f017'; /* Clock icon */ font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-secondary); z-index: 1; }
     
-     /* Adjust button text size */ .sidebar button { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: flex-start; padding: 0 12px; font-size: 13px; /* Smaller text size */ }
+    /* Adjust button text size */ .sidebar button { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: flex-start; padding: 0 12px; font-size: 13px; /* Smaller text size */ }
     
-     /* Move settings button to bottom */ .settings-wrapper { position: absolute; top: 50px; right: 8px; z-index: 101; }
+    /* Move settings button to bottom */ .settings-wrapper { position: absolute; top: 50px; right: 8px; z-index: 101; }
     
-     .settings-button i { font-size: 20px; }
+    .settings-button i { font-size: 20px; }
     
     /* Remove any border or background on hover */ .settings-button:hover { border: none; background: none; }
     
-     /* Update the test screenshot button style */ #testScreenshotBtn { justify-content: flex-start; /* Align content to the left */ padding: 0 12px; /* Match padding of other buttons */ }
+    /* Update the test screenshot button style */ #testScreenshotBtn { justify-content: flex-start; /* Align content to the left */ padding: 0 12px; /* Match padding of other buttons */ }
     
-     .no-screenshots { text-align: center; padding: 20px; color: var(--color-text-muted); font-size: 14px; }
+    .no-screenshots { text-align: center; padding: 20px; color: var(--color-text-muted); font-size: 14px; }
     
     /* Add contact section styles */ .contact-section { margin-top: 50px; /* Generous top margin */ padding: 24px; border-top: 1px solid var(--color-border); }
     
@@ -529,10 +734,6 @@
         grid-column: 1 / -1;
     }
 
-    .month-indicator {
-        color: var(--color-text-secondary);
-        font-size: 14px;
-        font-weight: 500;
-        min-width: 150px;
-        text-align: center;
+    .grid-span-2 {
+        grid-column: span 2;
     }

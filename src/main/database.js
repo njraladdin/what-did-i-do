@@ -376,6 +376,95 @@ function getMonthlyAverages(currentDate, intervalMinutes) {
     });
 }
 
+// Export data for a specific date range with options
+function exportData(startDate, endDate, includeMedia, includeStats) {
+    return new Promise((resolve, reject) => {
+        let query = `
+            SELECT 
+                id,
+                timestamp,
+                category,
+                activity,
+                description
+        `;
+        
+        if (includeMedia) {
+            query += `, image_data, thumbnail_data`;
+        }
+        
+        query += `
+            FROM screenshots 
+            WHERE timestamp BETWEEN ? AND ?
+            ORDER BY timestamp DESC
+        `;
+
+        db.all(query, [startDate, endDate], (err, screenshots) => {
+            if (err) {
+                console.error('Error exporting screenshots:', err);
+                reject(err);
+                return;
+            }
+
+            let result = {
+                dateRange: {
+                    startDate,
+                    endDate
+                },
+                screenshots: screenshots || []
+            };
+
+            if (includeStats) {
+                // Get statistics for the date range
+                db.all(`
+                    SELECT 
+                        category,
+                        COUNT(*) as count,
+                        DATE(timestamp) as date
+                    FROM screenshots 
+                    WHERE timestamp BETWEEN ? AND ?
+                    GROUP BY category, date
+                    ORDER BY date DESC
+                `, [startDate, endDate], (err, statResults) => {
+                    if (err) {
+                        console.error('Error getting export stats:', err);
+                        reject(err);
+                        return;
+                    }
+
+                    // Process stats into a more usable format
+                    const dailyStats = {};
+                    const overallStats = {};
+                    categories.forEach(category => {
+                        overallStats[category] = 0;
+                    });
+
+                    if (statResults && statResults.length > 0) {
+                        statResults.forEach(row => {
+                            if (!dailyStats[row.date]) {
+                                dailyStats[row.date] = {};
+                                categories.forEach(category => {
+                                    dailyStats[row.date][category] = 0;
+                                });
+                            }
+                            dailyStats[row.date][row.category] = row.count;
+                            overallStats[row.category] += row.count;
+                        });
+                    }
+
+                    result.statistics = {
+                        overall: overallStats,
+                        daily: dailyStats
+                    };
+
+                    resolve(result);
+                });
+            } else {
+                resolve(result);
+            }
+        });
+    });
+}
+
 module.exports = {
     initializeDatabase,
     getActivityStats,
@@ -384,5 +473,6 @@ module.exports = {
     deleteScreenshot,
     closeDatabase,
     categories,
-    getMonthlyAverages
+    getMonthlyAverages,
+    exportData
 }; 

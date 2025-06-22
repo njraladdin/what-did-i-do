@@ -16,6 +16,9 @@ const database = require('./database');
 const logger = require('./logger');
 const ScreenshotCapture = require('./screenshot');
 
+// Remove archiver - not needed anymore
+const { dialog } = require('electron');
+
 let mainWindow;
 let isTracking = false;
 let genAI;
@@ -743,5 +746,78 @@ ipcMain.handle('update-current-month', async (event, year, month) => {
       monthlyTimeInHours: {},
       daysWithData: 0
     };
+  }
+});
+
+// Add export data IPC handler
+ipcMain.handle('export-data', async (event, options) => {
+  try {
+    appLogger.info('Starting data export with options:', options);
+    
+    const { startDate, endDate, rangeType } = options;
+    
+    // Show save dialog
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export What Did I Do Data',
+      defaultPath: `what-did-i-do-export-${rangeType}-${new Date().toISOString().split('T')[0]}.json`,
+      filters: [
+        { name: 'JSON Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+
+    if (result.canceled) {
+      return { success: false, error: 'Export canceled by user' };
+    }
+
+    const exportPath = result.filePath;
+    
+    // Get data from database (always include stats, never include media)
+    const exportData = await database.exportData(
+      startDate, 
+      endDate, 
+      false, // Never include media for JSON export
+      true   // Always include stats
+    );
+
+    appLogger.info(`Exporting ${exportData.screenshots.length} screenshots`);
+
+    // Create the export JSON structure
+    const exportJson = {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        dateRange: {
+          startDate,
+          endDate
+        },
+        rangeType,
+        screenshotCount: exportData.screenshots.length,
+        categories: database.categories,
+        version: "1.0"
+      },
+      screenshots: exportData.screenshots.map(screenshot => ({
+        id: screenshot.id,
+        timestamp: screenshot.timestamp,
+        category: screenshot.category,
+        activity: screenshot.activity,
+        description: screenshot.description
+      })),
+      statistics: exportData.statistics || {}
+    };
+
+    // Write JSON file
+    fs.writeFileSync(exportPath, JSON.stringify(exportJson, null, 2), 'utf8');
+    
+    appLogger.info(`Export completed: ${exportPath}`);
+    
+    return { 
+      success: true, 
+      filePath: exportPath,
+      screenshotCount: exportData.screenshots.length
+    };
+
+  } catch (error) {
+    appLogger.error('Export error:', error);
+    return { success: false, error: error.message };
   }
 });
