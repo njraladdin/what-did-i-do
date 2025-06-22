@@ -515,6 +515,15 @@
 
                     const screenshotDiv = document.createElement('div');
                     screenshotDiv.className = 'screenshot-item';
+                    
+                    // Only add tooltip if description exists
+                    const tooltipHTML = screenshot.description && screenshot.description.trim() 
+                        ? `<div class="screenshot-description-tooltip">
+                            <div class="description-title">Detailed Description</div>
+                            <div class="description-content">${screenshot.description}</div>
+                        </div>`
+                        : '';
+                    
                     screenshotDiv.innerHTML = `
                         <img src="${screenshot.thumbnail}" class="screenshot-thumbnail" />
                         <div class="screenshot-info">
@@ -525,6 +534,7 @@
                         <button class="delete-screenshot" onclick="deleteScreenshot(${screenshot.id})">
                             <i class="fas fa-trash"></i>
                         </button>
+                        ${tooltipHTML}
                     `;
                     historyContainer.appendChild(screenshotDiv);
                 } catch (error) {

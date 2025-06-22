@@ -32,6 +32,7 @@ function initializeDatabase() {
                     activity TEXT NOT NULL,
                     image_data BLOB NOT NULL,
                     thumbnail_data BLOB NOT NULL,
+                    description TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             `, (err) => {
@@ -41,28 +42,36 @@ function initializeDatabase() {
                     return;
                 }
                 
-                // Create index on timestamp for faster date filtering
-                db.run(`
-                    CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp 
-                    ON screenshots(timestamp)
-                `, (err) => {
-                    if (err) {
-                        console.error('Index creation error:', err);
-                        reject(err);
-                        return;
+                // Add description column if it doesn't exist (for existing databases)
+                db.run(`ALTER TABLE screenshots ADD COLUMN description TEXT`, (err) => {
+                    // Ignore error if column already exists
+                    if (err && !err.message.includes('duplicate column name')) {
+                        console.error('Column addition error:', err);
                     }
                     
-                    // Create composite index for timestamp and category aggregations
+                    // Create index on timestamp for faster date filtering
                     db.run(`
-                        CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp_category 
-                        ON screenshots(timestamp, category)
+                        CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp 
+                        ON screenshots(timestamp)
                     `, (err) => {
                         if (err) {
-                            console.error('Composite index creation error:', err);
+                            console.error('Index creation error:', err);
                             reject(err);
                             return;
                         }
-                        resolve();
+                        
+                        // Create composite index for timestamp and category aggregations
+                        db.run(`
+                            CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp_category 
+                            ON screenshots(timestamp, category)
+                        `, (err) => {
+                            if (err) {
+                                console.error('Composite index creation error:', err);
+                                reject(err);
+                                return;
+                            }
+                            resolve();
+                        });
                     });
                 });
             });
@@ -132,7 +141,8 @@ function getActivityStats(currentDate, intervalMinutes) {
                     timestamp,
                     category,
                     activity,
-                    thumbnail_data
+                    thumbnail_data,
+                    description
                 FROM screenshots 
                 WHERE timestamp BETWEEN ? AND ?
                 ORDER BY timestamp DESC
@@ -154,6 +164,7 @@ function getActivityStats(currentDate, intervalMinutes) {
                     timestamp: screenshot.timestamp,
                     category: screenshot.category,
                     activity: screenshot.activity,
+                    description: screenshot.description,
                     thumbnail: `data:image/png;base64,${screenshot.thumbnail_data.toString('base64')}`
                 }));
 
@@ -184,7 +195,8 @@ function getMoreScreenshots(currentDate, offset = 0, limit = 50) {
                 timestamp,
                 category,
                 activity,
-                thumbnail_data
+                thumbnail_data,
+                description
             FROM screenshots 
             WHERE timestamp BETWEEN ? AND ?
             ORDER BY timestamp DESC
@@ -208,6 +220,7 @@ function getMoreScreenshots(currentDate, offset = 0, limit = 50) {
                 timestamp: screenshot.timestamp,
                 category: screenshot.category,
                 activity: screenshot.activity,
+                description: screenshot.description,
                 thumbnail: `data:image/png;base64,${screenshot.thumbnail_data.toString('base64')}`
             }));
 
@@ -217,7 +230,7 @@ function getMoreScreenshots(currentDate, offset = 0, limit = 50) {
 }
 
 // Save a new screenshot to the database
-function saveScreenshot(timestamp, category, activity, imageBuffer, thumbnailBuffer) {
+function saveScreenshot(timestamp, category, activity, imageBuffer, thumbnailBuffer, description) {
     return new Promise((resolve, reject) => {
         db.run(`
             INSERT INTO screenshots (
@@ -225,14 +238,16 @@ function saveScreenshot(timestamp, category, activity, imageBuffer, thumbnailBuf
                 category, 
                 activity, 
                 image_data, 
-                thumbnail_data
-            ) VALUES (?, ?, ?, ?, ?)
+                thumbnail_data,
+                description
+            ) VALUES (?, ?, ?, ?, ?, ?)
         `, [
             timestamp,
             category,
             activity,
             imageBuffer,
-            thumbnailBuffer
+            thumbnailBuffer,
+            description
         ], function(err) {
             if (err) {
                 console.error('Error saving screenshot:', err);

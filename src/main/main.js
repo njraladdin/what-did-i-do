@@ -163,7 +163,8 @@ async function captureAndAnalyze() {
         // Default response in case of any failure
         let response = {
             category: 'WORK',
-            activity: 'screenshot captured (analysis unavailable)'
+            activity: 'screenshot captured (analysis unavailable)',
+            description: 'No description available due to analysis failure.'
         };
 
         // Try Gemini analysis with full error isolation
@@ -202,9 +203,13 @@ async function captureAndAnalyze() {
                         activity: {
                             type: "STRING",
                             description: "Brief description of the specific activity being performed (software development, browsing reddit, etc.)"
+                        },
+                        description: {
+                            type: "STRING",
+                            description: "Detailed description of what the user is doing, what's visible on screen, and context about the activity (150-200 words)"
                         }
                     },
-                    required: ["category", "activity"]
+                    required: ["category", "activity", "description"]
                 }
             };
 
@@ -212,7 +217,7 @@ async function captureAndAnalyze() {
             const chatSession = model.startChat({ generationConfig });
             
             const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
-            Return a JSON object with "category" and "activity" fields, where category must be EXACTLY one of these values: 
+            Return a JSON object with "category", "activity", and "description" fields, where category must be EXACTLY one of these values: 
             ${categories.join(', ')}. 
             Focus on the purpose of the activity rather than the specific application.
             For example:
@@ -221,7 +226,13 @@ async function captureAndAnalyze() {
             - Online courses, tutorials, or research or non-entertainment podcasts would be "LEARN"
             - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
 
-            Example response: {"category": "WORK", "activity": "software development"}`;
+            For the "description" field, provide a comprehensive description (150-200 words) of what the user is doing, what's visible on the screen, and any relevant context about the activity. This should be detailed enough to understand the user's behavior and the content they're interacting with.
+
+            Example response: {
+              "category": "WORK", 
+              "activity": "software development",
+              "description": "The user is engaged in software development work in an IDE. They appear to be writing JavaScript code for a web application, with multiple files open in tabs. The code seems to be related to data processing or API integration based on the function names visible. The user has a terminal open at the bottom of the screen showing recent command executions. There's also a browser window partially visible with what looks like documentation or Stack Overflow. The overall context suggests focused programming work on a professional project."
+            }`;
             
             try {
                 const result = await chatSession.sendMessage([
@@ -251,7 +262,8 @@ async function captureAndAnalyze() {
                             if (normalizedCategory) {
                                 response = {
                                     category: normalizedCategory,
-                                    activity: parsedResponse.activity
+                                    activity: parsedResponse.activity,
+                                    description: parsedResponse.description || 'No description available.'
                                 };
                             } else {
                                 // Keep default response if category not found
@@ -286,7 +298,8 @@ async function captureAndAnalyze() {
                 response.category,
                 response.activity,
                 imgBuffer,
-                thumbnailBuffer
+                thumbnailBuffer,
+                response.description
             );
             
             // Try to update UI, but don't let it break the process
