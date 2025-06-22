@@ -45,6 +45,9 @@ let hasShownMinimizeNotification = false;
 let appLogger;
 let screenshotCapture;
 
+// Add error tracking
+let lastAnalysisError = null;
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -327,12 +330,16 @@ async function captureAndAnalyze() {
                     response.description
                 );
                 
+                // Clear any previous analysis error on success
+                lastAnalysisError = null;
+                
                 // Try to update UI, but don't let it break the process
                 try {
                     const updatedData = await database.getActivityStats(currentDate, store.get('interval'));
                     
                     if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send('activity-updated', updatedData);
+                        mainWindow.webContents.send('analysis-error-cleared'); // Clear error in UI
                         setTimeout(() => {
                             mainWindow.webContents.send('refresh-ui');
                         }, 100);
@@ -346,7 +353,20 @@ async function captureAndAnalyze() {
                 appLogger.error('Database operation failed (non-critical):', dbError.message);
             }
         } else {
+            // Analysis failed - track the error and notify UI
+            const errorMessage = 'AI analysis failed - screenshot captured but could not be categorized';
+            lastAnalysisError = {
+                timestamp: new Date().toISOString(),
+                message: errorMessage,
+                type: 'analysis_failed'
+            };
+            
             appLogger.info('Screenshot capture completed, but analysis FAILED - skipping database insertion');
+            
+            // Send error to UI
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('analysis-error', lastAnalysisError);
+            }
         }
 
     } catch (error) {
@@ -413,6 +433,15 @@ function updateSchedulerInterval(newInterval) {
 
 function getSchedulerStatus() {
   return scheduler ? scheduler.getStatus() : null;
+}
+
+// Error tracking functions
+function getLastAnalysisError() {
+  return lastAnalysisError;
+}
+
+function clearAnalysisError() {
+  lastAnalysisError = null;
 }
 
 // Add this helper function for the countdown
@@ -539,7 +568,9 @@ app.whenReady().then(async () => {
             startTracking,
             stopTracking,
             updateSchedulerInterval,
-            getSchedulerStatus
+            getSchedulerStatus,
+            getLastAnalysisError,
+            clearAnalysisError
         });
         
         // Only start tracking if API key exists

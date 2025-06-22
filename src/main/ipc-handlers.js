@@ -24,7 +24,9 @@ function initializeIpcHandlers(dependencies) {
         startTracking,
         stopTracking,
         updateSchedulerInterval,
-        getSchedulerStatus
+        getSchedulerStatus,
+        getLastAnalysisError,
+        clearAnalysisError
     } = dependencies;
 
     // API-related handlers
@@ -361,6 +363,16 @@ function initializeIpcHandlers(dependencies) {
             console.error('Export error:', error);
             return { success: false, error: error.message };
         }
+    });
+
+    // Error tracking handlers
+    ipcMain.handle('get-analysis-error', () => {
+        return getLastAnalysisError();
+    });
+
+    ipcMain.handle('clear-analysis-error', () => {
+        clearAnalysisError();
+        return true;
     });
 }
 

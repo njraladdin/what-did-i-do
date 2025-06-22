@@ -737,3 +737,90 @@
     .grid-span-2 {
         grid-column: span 2;
     }
+
+    /* Error card styles */
+    .error-card {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        margin-bottom: 20px;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        position: relative;
+    }
+
+    .error-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #EC4899; /* Using the pink color from your theme */
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+
+    .error-card-content {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        position: relative;
+    }
+
+    .error-icon {
+        color: #EC4899;
+        font-size: 18px;
+        flex-shrink: 0;
+        opacity: 0.9;
+    }
+
+    .error-details {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .error-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: 3px;
+        letter-spacing: -0.2px;
+    }
+
+    .error-message {
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        line-height: 1.4;
+        margin-bottom: 3px;
+    }
+
+    .error-time {
+        font-size: 12px;
+        color: var(--color-text-muted);
+        font-feature-settings: 'tnum';
+    }
+
+    .error-dismiss {
+        background: none;
+        border: none;
+        color: var(--color-text-muted);
+        padding: 6px;
+        cursor: pointer;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+        margin-right: -6px;
+    }
+
+    .error-dismiss:hover {
+        background: var(--color-bg-elevated);
+        color: var(--color-text-primary);
+    }

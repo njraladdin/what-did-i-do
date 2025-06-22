@@ -197,6 +197,20 @@
                 <span>Please configure your API key in settings to start using the app</span>
             </div>
 
+            <div id="analysisErrorCard" class="error-card" style="display: none">
+                <div class="error-card-content">
+                    <i class="fas fa-exclamation-circle error-icon"></i>
+                    <div class="error-details">
+                        <div class="error-title">Analysis Failed</div>
+                        <div class="error-message" id="errorMessage"></div>
+                        <div class="error-time" id="errorTime"></div>
+                    </div>
+                    <button class="error-dismiss" onclick="dismissError()" title="Dismiss">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
             <div class="stats" id="statsContainer">
                 <!-- Activity Section -->
                 <div class="stats-section">
@@ -670,6 +684,9 @@
                 // Initialize next month button state
                 updateNextMonthButtonState();
 
+                // Check for existing analysis error
+                await checkExistingError();
+
                 // Initialize data
                 const data = await ipcRenderer.invoke('get-stats');
                 console.log('Initial data load:', data); // Debug log
@@ -896,6 +913,16 @@
                 displayScreenshots();
             }
         });
+       
+        
+        // Error handling listeners
+        ipcRenderer.on('analysis-error', (event, error) => {
+            showAnalysisError(error);
+        });
+
+        ipcRenderer.on('analysis-error-cleared', () => {
+            hideAnalysisError();
+        });
 
         // Update the updateCategoryStats function in your script section
         function updateCategoryStats(stats, timeInHours = {}) {
@@ -1116,6 +1143,49 @@
                 // Reset button state
                 exportBtn.innerHTML = originalText;
                 exportBtn.disabled = false;
+            }
+        }
+
+        // Error handling functions
+        function showAnalysisError(error) {
+            const errorCard = document.getElementById('analysisErrorCard');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorTime = document.getElementById('errorTime');
+            
+            errorMessage.textContent = error.message;
+            
+            // Format the timestamp more elegantly
+            const errorDate = new Date(error.timestamp);
+            const formattedDate = errorDate.toLocaleDateString(undefined, {
+                month: 'numeric',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            const formattedTime = errorDate.toLocaleTimeString(undefined, {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            errorTime.textContent = `Last occurred: ${formattedDate}, ${formattedTime}`;
+            
+            errorCard.style.display = 'block';
+        }
+
+        function hideAnalysisError() {
+            const errorCard = document.getElementById('analysisErrorCard');
+            errorCard.style.display = 'none';
+        }
+
+        async function dismissError() {
+            hideAnalysisError();
+            await ipcRenderer.invoke('clear-analysis-error');
+        }
+
+        // Check for existing error on load
+        async function checkExistingError() {
+            const error = await ipcRenderer.invoke('get-analysis-error');
+            if (error) {
+                showAnalysisError(error);
             }
         }
     </script>
