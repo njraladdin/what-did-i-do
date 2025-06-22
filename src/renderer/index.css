@@ -373,8 +373,6 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
-
-
     .card-header {
         display: flex;
         justify-content: space-between;
@@ -449,4 +447,12 @@
         font-size: 14px;
         padding: 20px;
         grid-column: 1 / -1;
+    }
+
+    .month-indicator {
+        color: var(--color-text-secondary);
+        font-size: 14px;
+        font-weight: 500;
+        min-width: 150px;
+        text-align: center;
     }

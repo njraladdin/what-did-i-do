@@ -159,7 +159,15 @@
                 <div class="analytics-section">
                     <div class="analytics-header">
                         <h3>Monthly Analytics</h3>
-                        <div class="month-indicator" id="currentMonth"></div>
+                        <div class="date-navigation">
+                            <button class="nav-button" onclick="changeMonth(-1)">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="month-indicator" id="currentMonth"></div>
+                            <button class="nav-button" onclick="changeMonth(1)" id="nextMonthBtn">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="analytics-cards" id="monthlyAnalytics"></div>
                 </div>
@@ -375,9 +383,113 @@
                 if (categoryEntries.length === 0) {
                     analyticsContainer.innerHTML = '<div class="no-data">No activity data for this month</div>';
                 }
+                
+                // Update the next month button state
+                updateNextMonthButtonState();
             } catch (error) {
                 console.error('Error updating monthly averages:', error);
             }
+        }
+        
+        // Add this function to handle month navigation
+        async function changeMonth(offset) {
+            // Create a new date object to avoid modifying the current date
+            const newDate = new Date(currentDate);
+            newDate.setMonth(newDate.getMonth() + offset);
+            
+            // Update the current date with the new month
+            currentDate = newDate;
+            
+            try {
+                // Update the monthly averages with the new month
+                const data = await ipcRenderer.invoke('update-current-month', 
+                    currentDate.getFullYear(), 
+                    currentDate.getMonth()
+                );
+                
+                // Update the month indicator
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                const monthName = monthNames[currentDate.getMonth()];
+                const year = currentDate.getFullYear();
+                document.getElementById('currentMonth').textContent = `${monthName} ${year} • ${data.daysWithData} days`;
+                
+                // Update the analytics cards
+                const analyticsContainer = document.getElementById('monthlyAnalytics');
+                analyticsContainer.innerHTML = '';
+                
+                // Sort categories by total hours (descending)
+                const categoryEntries = Object.entries(data.monthlyTimeInHours)
+                    .filter(([category, hours]) => hours > 0) // Only show categories with data
+                    .sort(([, a], [, b]) => b - a);
+                
+                categoryEntries.forEach(([category, totalHours]) => {
+                    const avgPerDay = data.daysWithData > 0 ? totalHours / data.daysWithData : 0;
+                    
+                    const categoryCard = document.createElement('div');
+                    categoryCard.className = 'analytics-card';
+                    categoryCard.innerHTML = `
+                        <div class="card-header">
+                            <span class="card-title">${formatCategoryName(category)}</span>
+                            <span class="card-percentage">${data.monthlyAverages[category].toFixed(1)}%</span>
+                        </div>
+                        <div class="card-progress">
+                            <div class="progress-bar ${category}" style="width: ${data.monthlyAverages[category]}%"></div>
+                        </div>
+                        <div class="card-metrics">
+                            <div class="metric">
+                                <span class="metric-value">${totalHours.toFixed(1)}h</span>
+                                <span class="metric-label">total</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-value">${avgPerDay.toFixed(1)}h</span>
+                                <span class="metric-label">per day</span>
+                            </div>
+                        </div>
+                    `;
+                    analyticsContainer.appendChild(categoryCard);
+                });
+                
+                // If no data, show a message
+                if (categoryEntries.length === 0) {
+                    analyticsContainer.innerHTML = '<div class="no-data">No activity data for this month</div>';
+                }
+                
+                // Update the next month button state
+                updateNextMonthButtonState();
+                
+                // Also update the daily view to match the month
+                document.getElementById('currentDate').textContent = formatDate(currentDate);
+                document.getElementById('nextDateBtn').disabled = isToday(currentDate);
+                
+                // Fetch updated data for the day view
+                const dayData = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
+                updateCategoryStats(dayData.stats, dayData.timeInHours);
+                
+                // Update screenshots
+                if (Array.isArray(dayData.screenshots)) {
+                    allScreenshots = dayData.screenshots;
+                    currentPage = 1;
+                    displayScreenshots();
+                } else {
+                    allScreenshots = [];
+                    displayScreenshots();
+                }
+            } catch (error) {
+                console.error('Error changing month:', error);
+            }
+        }
+        
+        // Function to check if the current month is the current month
+        function isCurrentMonth(date) {
+            const today = new Date();
+            return date.getMonth() === today.getMonth() && 
+                   date.getFullYear() === today.getFullYear();
+        }
+        
+        // Function to update the next month button state
+        function updateNextMonthButtonState() {
+            document.getElementById('nextMonthBtn').disabled = isCurrentMonth(currentDate);
         }
 
         function displayScreenshots() {
@@ -475,7 +587,10 @@
             try {
                 // Initialize date display
                 document.getElementById('currentDate').textContent = formatDate(currentDate);
-                document.getElementById('nextDateBtn').disabled = true;
+                document.getElementById('nextDateBtn').disabled = isToday(currentDate);
+                
+                // Initialize next month button state
+                updateNextMonthButtonState();
 
                 // Initialize data
                 const data = await ipcRenderer.invoke('get-stats');
@@ -520,6 +635,13 @@
             
             // Add event listener for auto-launch toggle
             document.getElementById('autoLaunchToggle').addEventListener('change', toggleAutoLaunch);
+
+            // Initialize date navigation on page load
+            document.getElementById('currentDate').textContent = formatDate(currentDate);
+            document.getElementById('nextDateBtn').disabled = isToday(currentDate);
+            
+            // Initialize month navigation
+            updateNextMonthButtonState();
         });
 
         function toggleSettings() {
@@ -610,6 +732,9 @@
 
                 // Update monthly averages when date changes
                 await updateMonthlyAverages();
+                
+                // Update next month button state in case the month changed
+                updateNextMonthButtonState();
 
                 // Update screenshots
                 if (Array.isArray(data.screenshots)) {
@@ -627,14 +752,6 @@
                 displayScreenshots();
             }
         }
-
-        // Initialize date navigation on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            // ... existing DOMContentLoaded code ...
-
-            document.getElementById('currentDate').textContent = formatDate(currentDate);
-            document.getElementById('nextDateBtn').disabled = true; // Disabled for today
-        });
 
         // Add this with your other ipcRenderer listeners
         ipcRenderer.on('refresh-ui', async () => {

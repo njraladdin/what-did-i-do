@@ -704,3 +704,31 @@ ipcMain.handle('get-monthly-averages', async () => {
     };
   }
 });
+
+// Add this new IPC handler for changing the month
+ipcMain.handle('update-current-month', async (event, year, month) => {
+  try {
+    // Create a new date with the specified year and month (keeping the day the same)
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(year);
+    newDate.setMonth(month);
+    
+    // Update the global currentDate
+    currentDate = newDate;
+    
+    // Get the monthly averages for the new month
+    const data = await database.getMonthlyAverages(currentDate, store.get('interval'));
+    return {
+      monthlyAverages: data.monthlyAverages,
+      monthlyTimeInHours: data.monthlyTimeInHours,
+      daysWithData: data.daysWithData
+    };
+  } catch (error) {
+    console.error('Error updating month:', error);
+    return {
+      monthlyAverages: {},
+      monthlyTimeInHours: {},
+      daysWithData: 0
+    };
+  }
+});
