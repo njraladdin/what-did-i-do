@@ -195,7 +195,7 @@ async function captureAndAnalyze() {
             - Online courses, tutorials, or research or podcasts and youtube videos (like tech / ai related  / psychology etc.) would be "LEARN"
             - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
 
-            For the "description" field, provide a comprehensive description (150-200 words) of what the user is doing, what's visible on the screen, and any relevant context about the activity. This should be detailed enough to understand the user's behavior and the content they're interacting with.
+            For the "description" field, provide a comprehensive description (max 150-300 words) of what the user is doing, what's visible on the screen, and any relevant context about the activity. This should be detailed enough to understand the user's behavior and the content they're interacting with.
 
             Example response: {
               "category": "WORK", 
