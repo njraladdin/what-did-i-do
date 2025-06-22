@@ -3,8 +3,7 @@ const { app, BrowserWindow, ipcMain, screen, powerMonitor, Tray, Menu } = requir
 const path = require('path');
 const Store = require('electron-store');
 const schedule = require('node-schedule');
-const { GoogleGenerativeAI, Type } = require('@google/generative-ai');
-const { GoogleAIFileManager } = require('@google/generative-ai/server');
+const { GoogleGenAI, Type } = require('@google/genai');
 const fs = require('fs');
 const store = new Store({
     defaults: {
@@ -22,9 +21,7 @@ const { dialog } = require('electron');
 
 let mainWindow;
 let isTracking = false;
-let genAI;
-let model;
-let fileManager;
+let ai;
 
 
 // Get categories from database module
@@ -109,22 +106,15 @@ function createWindow() {
 async function initializeGeminiAPI(apiKey) {
   try {
     appLogger.info('Initializing Gemini API...');
-    genAI = new GoogleGenerativeAI(apiKey);
-    
-    model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 8192
-      }
-    });
+    ai = new GoogleGenAI({apiKey: apiKey});
     
     // Test the API key with a simple request
-    const result = await model.generateContent('Hello, this is a test message.');
-    const response = await result.response;
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: 'Hello, this is a test message.'
+    });
     
-    if (response) {
-      fileManager = new GoogleAIFileManager(apiKey);
+    if (result && result.text) {
       store.set('apiKey', apiKey);
       return { success: true };
     }
@@ -132,7 +122,13 @@ async function initializeGeminiAPI(apiKey) {
     appLogger.error('Invalid API response received during initialization');
     return { success: false, error: 'Invalid API response' };
   } catch (error) {
-    appLogger.error('API validation error:', error.message);
+    appLogger.error('API validation error:', {
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText,
+      stack: error.stack,
+      fullError: error
+    });
     return { 
       success: false, 
       error: error.message || 'Invalid API key'
@@ -185,40 +181,18 @@ async function captureAndAnalyze() {
             fs.writeFileSync(tempFilePath, imgBuffer);
 
             // Try uploading to Gemini
-            const uploadResult = await fileManager.uploadFile(tempFilePath, {
+            appLogger.info('Attempting file upload to Gemini...', { filePath: tempFilePath });
+            const uploadResult = await ai.files.upload({
+                file: tempFilePath,
                 mimeType: 'image/png',
                 displayName: `screenshot-${safeTimestamp}.png`
             });
 
-            appLogger.info('Gemini file upload successful');
-
-            const generationConfig = {
-                temperature: 0.6, // Lower temperature for more consistent outputs
-                maxOutputTokens: 8192,
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: "OBJECT",
-                    properties: {
-                        category: {
-                            type: "STRING",
-                            enum: categories, // Enforce only valid categories
-                            description: "The category of the activity, must be one of: " + categories.join(", ")
-                        },
-                        activity: {
-                            type: "STRING",
-                            description: "Brief description of the specific activity being performed (software development, browsing reddit, etc.)"
-                        },
-                        description: {
-                            type: "STRING",
-                            description: "Detailed description of what the user is doing, what's visible on screen, and context about the activity (150-200 words)"
-                        }
-                    },
-                    required: ["category", "activity", "description"]
-                }
-            };
-
-            appLogger.info('Starting Gemini analysis...');
-            const chatSession = model.startChat({ generationConfig });
+            appLogger.info('Gemini file upload successful', { 
+                uri: uploadResult.uri,
+                name: uploadResult.name,
+                mimeType: uploadResult.mimeType
+            });
             
             const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
             Return a JSON object with "category", "activity", and "description" fields, where category must be EXACTLY one of these values: 
@@ -239,21 +213,55 @@ async function captureAndAnalyze() {
             }`;
             
             try {
-                const result = await chatSession.sendMessage([
-                    {
-                        fileData: {
-                            mimeType: 'image/png',
-                            fileUri: uploadResult.file.uri
+                appLogger.info('Starting Gemini analysis...');
+                
+                const result = await ai.models.generateContent({
+                    model: 'gemini-2.0-flash',
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    fileData: {
+                                        mimeType: 'image/png',
+                                        fileUri: uploadResult.uri
+                                    }
+                                },
+                                { text: prompt }
+                            ]
                         }
-                    },
-                    { text: prompt }
-                ]);
+                    ],
+                    config: {
+                        temperature: 0.6,
+                        maxOutputTokens: 8192,
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                category: {
+                                    type: "STRING",
+                                    enum: categories,
+                                    description: "The category of the activity, must be one of: " + categories.join(", ")
+                                },
+                                activity: {
+                                    type: "STRING",
+                                    description: "Brief description of the specific activity being performed (software development, browsing reddit, etc.)"
+                                },
+                                description: {
+                                    type: "STRING",
+                                    description: "Detailed description of what the user is doing, what's visible on screen, and context about the activity (150-200 words)"
+                                }
+                            },
+                            required: ["category", "activity", "description"]
+                        }
+                    }
+                });
 
                 appLogger.info('Received Gemini response');
                 
                 // Parse the response text
                 try {
-                    const parsedResponse = JSON.parse(result.response.text());
+                    appLogger.info('Raw Gemini response:', { responseText: result.text });
+                    const parsedResponse = JSON.parse(result.text);
                     
                     // Simple normalization to ensure consistent category casing
                     if (parsedResponse.category && parsedResponse.activity) {
@@ -266,19 +274,46 @@ async function captureAndAnalyze() {
                                 activity: parsedResponse.activity,
                                 description: parsedResponse.description || 'No description available.'
                             };
+                            appLogger.info('Successfully parsed Gemini response:', response);
                         } else {
                             // Keep default response if category not found
-                            appLogger.error('Invalid category in response:', parsedResponse.category);
+                            appLogger.error('Invalid category in response:', {
+                                receivedCategory: parsedResponse.category,
+                                validCategories: categories,
+                                fullResponse: parsedResponse
+                            });
                         }
+                    } else {
+                        appLogger.error('Missing required fields in response:', {
+                            hasCategory: !!parsedResponse.category,
+                            hasActivity: !!parsedResponse.activity,
+                            fullResponse: parsedResponse
+                        });
                     }
                 } catch (parseError) {
-                    appLogger.error('Error parsing JSON response:', parseError.message);
+                    appLogger.error('Error parsing JSON response:', {
+                        error: parseError.message,
+                        rawResponse: result.text,
+                        stack: parseError.stack
+                    });
                 }
             } catch (geminiError) {
-                appLogger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message || geminiError);
+                appLogger.error('Error in Gemini content generation:', {
+                    message: geminiError.message,
+                    status: geminiError.status,
+                    statusText: geminiError.statusText,
+                    stack: geminiError.stack,
+                    fullError: geminiError
+                });
             }
         } catch (geminiError) {
-            appLogger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message || geminiError);
+            appLogger.error('Error in Gemini analysis (outer catch):', {
+                message: geminiError.message,
+                status: geminiError.status,
+                statusText: geminiError.statusText,
+                stack: geminiError.stack,
+                fullError: geminiError
+            });
             // Keep the default response - don't throw error
         } finally {
             // Clean up temp file
@@ -338,9 +373,7 @@ function sleep(ms) {
 function pauseTracking() {
   isTracking = false;
   schedule.gracefulShutdown();
-  genAI = null;
-  model = null;
-  fileManager = null;
+  ai = null;
   if (mainWindow) {
     mainWindow.webContents.send('tracking-paused');
   }

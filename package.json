@@ -48,7 +48,7 @@
     "asar": true
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "@google/genai": "^1.6.0",
     "auto-launch": "^5.0.6",
     "electron-store": "^8.1.0",
     "node-schedule": "^2.1.1",
