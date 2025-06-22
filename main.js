@@ -4,7 +4,7 @@ const path = require('path');
 const Store = require('electron-store');
 const schedule = require('node-schedule');
 const screenshot = require('screenshot-desktop');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI, Type } = require('@google/generative-ai');
 const { GoogleAIFileManager } = require('@google/generative-ai/server');
 const fs = require('fs');
 const sharp = require('sharp');
@@ -26,6 +26,10 @@ let model;
 let fileManager;
 
 const DEBUG = true;
+
+// Get categories from database module
+const { categories } = database;
+
 
 // Add this near the top with other global variables
 let currentDate = new Date();
@@ -102,8 +106,16 @@ function createWindow() {
 // Initialize Gemini API with file manager
 async function initializeGeminiAPI(apiKey) {
   try {
+    logger.info('Initializing Gemini API...');
     genAI = new GoogleGenerativeAI(apiKey);
-    model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    
+    model = genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash",
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 8192
+      }
+    });
     
     // Test the API key with a simple request
     const result = await model.generateContent('Hello, this is a test message.');
@@ -114,9 +126,11 @@ async function initializeGeminiAPI(apiKey) {
       store.set('apiKey', apiKey);
       return { success: true };
     }
+    
+    logger.error('Invalid API response received during initialization');
     return { success: false, error: 'Invalid API response' };
   } catch (error) {
-    console.error('API validation error:', error);
+    logger.error('API validation error:', error.message);
     return { 
       success: false, 
       error: error.message || 'Invalid API key'
@@ -124,17 +138,6 @@ async function initializeGeminiAPI(apiKey) {
   }
 }
 
-// Get categories from database module
-const { categories } = database;
-
-// Add this function to create screenshots directory if it doesn't exist
-function ensureScreenshotDirectory() {
-  const screenshotDir = path.join(app.getPath('userData'), 'screenshots');
-  if (!fs.existsSync(screenshotDir)) {
-    fs.mkdirSync(screenshotDir);
-  }
-  return screenshotDir;
-}
 
 // Modify the captureAndAnalyze function
 async function captureAndAnalyze() {
@@ -235,39 +238,83 @@ async function captureAndAnalyze() {
             logger.info('Gemini file upload successful');
 
             const generationConfig = {
-                temperature: 1,
+                temperature: 0.2, // Lower temperature for more consistent outputs
                 maxOutputTokens: 8192,
-                responseMimeType: "application/json"
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        category: {
+                            type: "STRING",
+                            enum: categories, // Enforce only valid categories
+                            description: "The category of the activity, must be one of: " + categories.join(", ")
+                        },
+                        activity: {
+                            type: "STRING",
+                            description: "Brief description of the specific activity being performed (software development, browsing reddit, etc.)"
+                        }
+                    },
+                    required: ["category", "activity"]
+                }
             };
 
             logger.info('Starting Gemini analysis...');
             const chatSession = model.startChat({ generationConfig });
             
             const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
-            Return a JSON object with "category" and "activity" fields, where category must be one of: 
+            Return a JSON object with "category" and "activity" fields, where category must be EXACTLY one of these values: 
             ${categories.join(', ')}. 
             Focus on the purpose of the activity rather than the specific application.
             For example:
             - Games, videos, entertainment live streams, YouTube, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
             - Coding, documents, or professional tasks would be "WORK"
-            - Online courses, tutorials, or research would be "LEARN"
+            - Online courses, tutorials, or research or non-entertainment podcasts would be "LEARN"
             - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
 
             Example response: {"category": "WORK", "activity": "software development"}`;
-
-            const result = await chatSession.sendMessage([
-                {
-                    fileData: {
-                        mimeType: 'image/png',
-                        fileUri: uploadResult.file.uri
-                    }
-                },
-                { text: prompt }
-            ]);
-
-            logger.info('Received Gemini response:', result.response.text());
-            response = JSON.parse(result.response.text());
             
+            try {
+                const result = await chatSession.sendMessage([
+                    {
+                        fileData: {
+                            mimeType: 'image/png',
+                            fileUri: uploadResult.file.uri
+                        }
+                    },
+                    { text: prompt }
+                ]);
+
+                logger.info('Received Gemini response');
+                
+                // Access the structured response directly
+                if (result.response.functionResponse) {
+                    response = result.response.functionResponse;
+                } else {
+                    try {
+                        const parsedResponse = JSON.parse(result.response.text());
+                        
+                        // Simple normalization to ensure consistent category casing
+                        if (parsedResponse.category && parsedResponse.activity) {
+                            const normalizedCategory = categories.find(cat => 
+                                cat.toUpperCase() === parsedResponse.category.toUpperCase());
+                            
+                            if (normalizedCategory) {
+                                response = {
+                                    category: normalizedCategory,
+                                    activity: parsedResponse.activity
+                                };
+                            } else {
+                                // Keep default response if category not found
+                                logger.error('Invalid category in response:', parsedResponse.category);
+                            }
+                        }
+                    } catch (parseError) {
+                        logger.error('Error parsing JSON response:', parseError.message);
+                    }
+                }
+            } catch (geminiError) {
+                logger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
+            }
         } catch (geminiError) {
             logger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
             // Keep the default response - don't throw error
@@ -317,22 +364,6 @@ async function captureAndAnalyze() {
         // Don't throw - let the schedule continue regardless of any errors
     }
 }
-
-
-
-// Add this new function to get screenshot history
-function getScreenshotHistory() {
-  const activityData = store.get('activityData') || [];
-  return activityData.map(activity => ({
-    timestamp: activity.timestamp,
-    category: activity.category,
-    activity: activity.activity,
-    thumbnail: activity.screenshot.thumbnail
-  })).reverse(); // Most recent first
-}
-
-
-
 
 
 // IPC handlers
