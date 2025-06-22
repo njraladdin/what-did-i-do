@@ -14,8 +14,8 @@ const store = new Store({
     }
 });
 const { windowManager } = require('node-window-manager');
-const sqlite3 = require('sqlite3').verbose();
 const AutoLaunch = require('auto-launch');
+const database = require('./database');
 const winston = require('winston');
 const { format } = winston;
 
@@ -29,10 +29,6 @@ const DEBUG = true;
 
 // Add this near the top with other global variables
 let currentDate = new Date();
-let db;
-
-// Add this global variable with your other ones
-let lastActiveTime = Date.now();
 
 // Add this near other global variables
 const autoLauncher = new AutoLaunch({
@@ -47,39 +43,7 @@ let isQuitting = false;
 // Add this near your other global variables
 let hasShownMinimizeNotification = false;
 
-// Initialize database
-function initializeDatabase() {
-    return new Promise((resolve, reject) => {
-        const dbPath = path.join(app.getPath('userData'), 'screenshots.db');
-        db = new sqlite3.Database(dbPath, (err) => {
-            if (err) {
-                console.error('Database initialization error:', err);
-                reject(err);
-                return;
-            }
 
-            // Create screenshots table
-            db.run(`
-                CREATE TABLE IF NOT EXISTS screenshots (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    activity TEXT NOT NULL,
-                    image_data BLOB NOT NULL,
-                    thumbnail_data BLOB NOT NULL,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            `, (err) => {
-                if (err) {
-                    console.error('Table creation error:', err);
-                    reject(err);
-                    return;
-                }
-                resolve();
-            });
-        });
-    });
-}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -103,7 +67,7 @@ function createWindow() {
     try {
       currentDate = new Date();
       
-      const initialData = await getActivityStats();
+      const initialData = await database.getActivityStats(currentDate, store.get('interval'));
       console.log('Initial data loaded:', initialData);
       
       mainWindow.webContents.send('initial-data', initialData);
@@ -139,7 +103,7 @@ function createWindow() {
 async function initializeGeminiAPI(apiKey) {
   try {
     genAI = new GoogleGenerativeAI(apiKey);
-    model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     
     // Test the API key with a simple request
     const result = await model.generateContent('Hello, this is a test message.');
@@ -160,13 +124,8 @@ async function initializeGeminiAPI(apiKey) {
   }
 }
 
-// Categories for classification
-const categories = [
-  'WORK',           // Professional tasks, productivity
-  'LEARN',          // Education, tutorials, research
-  'SOCIAL',         // Meetings, chat, emails, social media
-  'ENTERTAINMENT'   // Games, videos, browsing for fun
-];
+// Get categories from database module
+const { categories } = database;
 
 // Add this function to create screenshots directory if it doesn't exist
 function ensureScreenshotDirectory() {
@@ -325,46 +284,27 @@ async function captureAndAnalyze() {
 
         // Store in database - wrap in try-catch to prevent database errors from breaking the schedule
         try {
-            await new Promise((resolve) => {
-                db.run(`
-                    INSERT INTO screenshots (
-                        timestamp, 
-                        category, 
-                        activity, 
-                        image_data, 
-                        thumbnail_data
-                    ) VALUES (?, ?, ?, ?, ?)
-                `, [
-                    timestamp,
-                    response.category,
-                    response.activity,
-                    imgBuffer,
-                    thumbnailBuffer
-                ], async function(err) {
-                    if (err) {
-                        logger.error('Error saving to database:', err);
-                        // Don't reject - just log and continue
-                        resolve();
-                        return;
-                    }
-                    
-                    // Try to update UI, but don't let it break the process
-                    try {
-                        const updatedData = await getActivityStats();
-                        
-                        if (mainWindow && !mainWindow.isDestroyed()) {
-                            mainWindow.webContents.send('activity-updated', updatedData);
-                            setTimeout(() => {
-                                mainWindow.webContents.send('refresh-ui');
-                            }, 100);
-                        }
-                    } catch (uiError) {
-                        logger.error('Error updating UI (non-critical):', uiError.message);
-                    }
-                    
-                    resolve();
-                });
-            });
+            await database.saveScreenshot(
+                timestamp,
+                response.category,
+                response.activity,
+                imgBuffer,
+                thumbnailBuffer
+            );
+            
+            // Try to update UI, but don't let it break the process
+            try {
+                const updatedData = await database.getActivityStats(currentDate, store.get('interval'));
+                
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('activity-updated', updatedData);
+                    setTimeout(() => {
+                        mainWindow.webContents.send('refresh-ui');
+                    }, 100);
+                }
+            } catch (uiError) {
+                logger.error('Error updating UI (non-critical):', uiError.message);
+            }
         } catch (dbError) {
             logger.error('Database operation failed (non-critical):', dbError.message);
         }
@@ -378,77 +318,7 @@ async function captureAndAnalyze() {
     }
 }
 
-// Calculate activity statistics
-function getActivityStats() {
-    return new Promise((resolve, reject) => {
-        const startOfDay = new Date(currentDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const endOfDay = new Date(currentDate);
-        endOfDay.setHours(23, 59, 59, 999);
 
-        db.all(`
-            SELECT * FROM screenshots 
-            WHERE timestamp BETWEEN ? AND ?
-            ORDER BY timestamp DESC
-        `, [
-            startOfDay.toISOString(),
-            endOfDay.toISOString()
-        ], (err, screenshots) => {
-            if (err) {
-                console.error('Error getting screenshots:', err);
-                reject(err);
-                return;
-            }
-
-            screenshots = screenshots || [];
-
-            // Initialize stats object
-            const stats = {};
-            const timeInHours = {};
-            categories.forEach(category => {
-                stats[category] = 0;
-                timeInHours[category] = 0;
-            });
-
-            if (screenshots.length > 0) {
-                const categoryCounts = {};
-                categories.forEach(category => {
-                    categoryCounts[category] = screenshots.filter(
-                        shot => shot.category === category
-                    ).length;
-                });
-
-                const totalScreenshots = screenshots.length;
-                const interval = store.get('interval'); // Get interval in minutes
-                
-                categories.forEach(category => {
-                    stats[category] = totalScreenshots > 0 
-                        ? (categoryCounts[category] / totalScreenshots) * 100 
-                        : 0;
-                    // Calculate hours based on interval and count
-                    timeInHours[category] = (categoryCounts[category] * interval) / 60;
-                });
-            }
-
-            const processedScreenshots = screenshots.map(screenshot => ({
-                id: screenshot.id,
-                timestamp: screenshot.timestamp,
-                category: screenshot.category,
-                activity: screenshot.activity,
-                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data.toString('base64')}`
-            }));
-
-            const result = {
-                stats,
-                timeInHours, // Add the time data to the result
-                screenshots: processedScreenshots
-            };
-
-            resolve(result);
-        });
-    });
-}
 
 // Add this new function to get screenshot history
 function getScreenshotHistory() {
@@ -460,6 +330,10 @@ function getScreenshotHistory() {
     thumbnail: activity.screenshot.thumbnail
   })).reverse(); // Most recent first
 }
+
+
+
+
 
 // IPC handlers
 ipcMain.handle('initialize-api', async (event, apiKey) => {
@@ -477,7 +351,7 @@ ipcMain.handle('initialize-api', async (event, apiKey) => {
 
 ipcMain.handle('get-stats', async () => {
   try {
-    const data = await getActivityStats();
+    const data = await database.getActivityStats(currentDate, store.get('interval'));
     return {
       stats: {
         stats: data.stats,
@@ -594,7 +468,7 @@ ipcMain.handle('get-interval', () => {
 // Add this IPC handler with the other IPC handlers
 ipcMain.handle('update-current-date', async (event, newDateString) => {
     currentDate = new Date(newDateString);
-    const data = await getActivityStats();
+    const data = await database.getActivityStats(currentDate, store.get('interval'));
     return {
         stats: data.stats,
         timeInHours: data.timeInHours,
@@ -605,7 +479,7 @@ ipcMain.handle('update-current-date', async (event, newDateString) => {
 // Add this IPC handler to allow manual refresh requests
 ipcMain.handle('request-refresh', async () => {
     try {
-        const data = await getActivityStats();
+        const data = await database.getActivityStats(currentDate, store.get('interval'));
         return {
             stats: {
                 stats: data.stats,
@@ -782,7 +656,7 @@ app.whenReady().then(async () => {
     try {
         initializeLogger();
         await handleFirstRun();
-        await initializeDatabase();
+        await database.initializeDatabase();
         createWindow();
         createTray();
         initializeIdleMonitor();
@@ -823,14 +697,8 @@ ipcMain.on('window-close', () => {
 });
 
 // Add cleanup on app quit
-app.on('will-quit', () => {
-    if (db) {
-        db.close((err) => {
-            if (err) {
-                console.error('Error closing database:', err);
-            }
-        });
-    }
+app.on('will-quit', async () => {
+    await database.closeDatabase();
     if (tray) {
         tray.destroy();
     }
@@ -864,20 +732,28 @@ ipcMain.handle('toggle-auto-launch', async (event, enable) => {
 
 // Add this new IPC handler with your other handlers
 ipcMain.handle('delete-screenshot', async (event, id) => {
-    return new Promise((resolve, reject) => {
-        db.run('DELETE FROM screenshots WHERE id = ?', [id], function(err) {
-            if (err) {
-                console.error('Error deleting screenshot:', err);
-                resolve(false);
-                return;
-            }
-            resolve(true);
-        });
-    });
+    try {
+        const success = await database.deleteScreenshot(id);
+        return success;
+    } catch (error) {
+        console.error('Error deleting screenshot:', error);
+        return false;
+    }
 });
 
 // Add this IPC handler near your other IPC handlers
 ipcMain.handle('quit-app', () => {
     isQuitting = true;
     app.quit();
+});
+
+// Add this IPC handler near your other IPC handlers
+ipcMain.handle('load-more-screenshots', async (event, offset = 0, limit = 50) => {
+    try {
+        const screenshots = await database.getMoreScreenshots(currentDate, offset, limit);
+        return { success: true, screenshots };
+    } catch (error) {
+        console.error('Error loading more screenshots:', error);
+        return { success: false, screenshots: [] };
+    }
 });
