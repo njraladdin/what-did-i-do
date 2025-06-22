@@ -275,29 +275,6 @@ function deleteScreenshot(id) {
 }
 
 // Check if there was a recent failed analysis
-function hasRecentFailedAnalysis(minutesThreshold = 30) {
-    return new Promise((resolve, reject) => {
-        const thresholdTime = new Date();
-        thresholdTime.setMinutes(thresholdTime.getMinutes() - minutesThreshold);
-        
-        db.get(`
-            SELECT COUNT(*) as count
-            FROM screenshots 
-            WHERE timestamp >= ? 
-            AND activity = 'screenshot captured (analysis unavailable)'
-            ORDER BY timestamp DESC
-            LIMIT 1
-        `, [thresholdTime.toISOString()], (err, result) => {
-            if (err) {
-                console.error('Error checking for recent failed analysis:', err);
-                reject(err);
-                return;
-            }
-            
-            resolve(result && result.count > 0);
-        });
-    });
-}
 
 // Close database connection
 function closeDatabase() {
@@ -500,6 +477,5 @@ module.exports = {
     closeDatabase,
     categories,
     getMonthlyAverages,
-    exportData,
-    hasRecentFailedAnalysis
+    exportData
 }; 

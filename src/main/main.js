@@ -1,4 +1,3 @@
-
 const { app, BrowserWindow, ipcMain, screen, powerMonitor, Tray, Menu } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
@@ -315,35 +314,40 @@ async function captureAndAnalyze() {
             }
         }
 
-        // Store in database - wrap in try-catch to prevent database errors from breaking the schedule
-        try {
-            await database.saveScreenshot(
-                timestamp,
-                response.category,
-                response.activity,
-                imgBuffer,
-                thumbnailBuffer,
-                response.description
-            );
-            
-            // Try to update UI, but don't let it break the process
+        // Only save to database if analysis was successful
+        if (response.category !== 'UNKNOWN' || response.activity !== 'screenshot captured (analysis unavailable)') {
+            // Store in database - wrap in try-catch to prevent database errors from breaking the schedule
             try {
-                const updatedData = await database.getActivityStats(currentDate, store.get('interval'));
+                await database.saveScreenshot(
+                    timestamp,
+                    response.category,
+                    response.activity,
+                    imgBuffer,
+                    thumbnailBuffer,
+                    response.description
+                );
                 
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.send('activity-updated', updatedData);
-                    setTimeout(() => {
-                        mainWindow.webContents.send('refresh-ui');
-                    }, 100);
+                // Try to update UI, but don't let it break the process
+                try {
+                    const updatedData = await database.getActivityStats(currentDate, store.get('interval'));
+                    
+                    if (mainWindow && !mainWindow.isDestroyed()) {
+                        mainWindow.webContents.send('activity-updated', updatedData);
+                        setTimeout(() => {
+                            mainWindow.webContents.send('refresh-ui');
+                        }, 100);
+                    }
+                } catch (uiError) {
+                    appLogger.error('Error updating UI (non-critical):', uiError.message);
                 }
-            } catch (uiError) {
-                appLogger.error('Error updating UI (non-critical):', uiError.message);
+                
+                appLogger.info('Screenshot capture and analysis completed successfully');
+            } catch (dbError) {
+                appLogger.error('Database operation failed (non-critical):', dbError.message);
             }
-        } catch (dbError) {
-            appLogger.error('Database operation failed (non-critical):', dbError.message);
+        } else {
+            appLogger.info('Screenshot capture completed, but analysis FAILED - skipping database insertion');
         }
-
-        appLogger.info('Screenshot capture and analysis completed successfully');
 
     } catch (error) {
         appLogger.error('Error in capture and analyze:', error);
