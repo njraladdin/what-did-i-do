@@ -516,16 +516,25 @@
                     const screenshotDiv = document.createElement('div');
                     screenshotDiv.className = 'screenshot-item';
                     
-                    // Only add tooltip if description exists
-                    const tooltipHTML = screenshot.description && screenshot.description.trim() 
+                    // Only add tooltip and icon if description exists
+                    const hasDescription = screenshot.description && screenshot.description.trim();
+                    const tooltipHTML = hasDescription
                         ? `<div class="screenshot-description-tooltip">
                             <div class="description-title">Detailed Description</div>
                             <div class="description-content">${screenshot.description}</div>
                         </div>`
                         : '';
                     
+                    const iconHTML = hasDescription
+                        ? `<div class="screenshot-info-icon"><i class="fas fa-info-circle"></i></div>`
+                        : '';
+                    
                     screenshotDiv.innerHTML = `
-                        <img src="${screenshot.thumbnail}" class="screenshot-thumbnail" />
+                        <div class="screenshot-thumbnail-container">
+                            <img src="${screenshot.thumbnail}" class="screenshot-thumbnail" />
+                            ${iconHTML}
+                            ${tooltipHTML}
+                        </div>
                         <div class="screenshot-info">
                             <div class="screenshot-activity">Activity: ${screenshot.activity || 'Unknown'}</div>
                             <div class="screenshot-category category-label ${screenshot.category}">Category: ${formatCategoryName(screenshot.category || 'UNKNOWN')}</div>
@@ -534,7 +543,6 @@
                         <button class="delete-screenshot" onclick="deleteScreenshot(${screenshot.id})">
                             <i class="fas fa-trash"></i>
                         </button>
-                        ${tooltipHTML}
                     `;
                     historyContainer.appendChild(screenshotDiv);
                 } catch (error) {
