@@ -139,7 +139,7 @@ function createWindow() {
 async function initializeGeminiAPI(apiKey) {
   try {
     genAI = new GoogleGenerativeAI(apiKey);
-    model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-002" });
+    model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
     
     // Test the API key with a simple request
     const result = await model.generateContent('Hello, this is a test message.');
@@ -248,17 +248,26 @@ async function captureAndAnalyze() {
         
         logger.info('Processing screenshot with Gemini...');
         
-        // Create a temporary file with a safe filename
-        const safeTimestamp = timestamp.replace(/[:.]/g, '-');
-        const tempFilePath = path.join(
-            app.getPath('temp'), 
-            `temp-screenshot-${safeTimestamp}.png`
-        );
+        // Default response in case of any failure
+        let response = {
+            category: 'WORK',
+            activity: 'screenshot captured (analysis unavailable)'
+        };
 
+        // Try Gemini analysis with full error isolation
+        let tempFilePath = null;
         try {
+            // Create a temporary file with a safe filename
+            const safeTimestamp = timestamp.replace(/[:.]/g, '-');
+            tempFilePath = path.join(
+                app.getPath('temp'), 
+                `temp-screenshot-${safeTimestamp}.png`
+            );
+
             fs.mkdirSync(path.dirname(tempFilePath), { recursive: true });
             fs.writeFileSync(tempFilePath, imgBuffer);
 
+            // Try uploading to Gemini
             const uploadResult = await fileManager.uploadFile(tempFilePath, {
                 mimeType: 'image/png',
                 displayName: `screenshot-${safeTimestamp}.png`
@@ -273,45 +282,50 @@ async function captureAndAnalyze() {
             };
 
             logger.info('Starting Gemini analysis...');
-            let response;
-            try {
-                const chatSession = model.startChat({ generationConfig });
-                
-                const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
-                Return a JSON object with "category" and "activity" fields, where category must be one of: 
-                ${categories.join(', ')}. 
-                Focus on the purpose of the activity rather than the specific application.
-                For example:
-                - Games, videos, entertainment live streams, YouTube, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
-                - Coding, documents, or professional tasks would be "WORK"
-                - Online courses, tutorials, or research would be "LEARN"
-                - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
+            const chatSession = model.startChat({ generationConfig });
+            
+            const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
+            Return a JSON object with "category" and "activity" fields, where category must be one of: 
+            ${categories.join(', ')}. 
+            Focus on the purpose of the activity rather than the specific application.
+            For example:
+            - Games, videos, entertainment live streams, YouTube, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
+            - Coding, documents, or professional tasks would be "WORK"
+            - Online courses, tutorials, or research would be "LEARN"
+            - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
 
-                Example response: {"category": "WORK", "activity": "software development"}`;
+            Example response: {"category": "WORK", "activity": "software development"}`;
 
-                const result = await chatSession.sendMessage([
-                    {
-                        fileData: {
-                            mimeType: 'image/png',
-                            fileUri: uploadResult.file.uri
-                        }
-                    },
-                    { text: prompt }
-                ]);
+            const result = await chatSession.sendMessage([
+                {
+                    fileData: {
+                        mimeType: 'image/png',
+                        fileUri: uploadResult.file.uri
+                    }
+                },
+                { text: prompt }
+            ]);
 
-                logger.info('Received Gemini response:', result.response.text());
-                response = JSON.parse(result.response.text());
-                
-            } catch (geminiError) {
-                logger.error('Error in Gemini analysis:', geminiError);
-                response = {
-                    category: 'WORK',
-                    activity: 'unknown (analysis failed)'
-                };
+            logger.info('Received Gemini response:', result.response.text());
+            response = JSON.parse(result.response.text());
+            
+        } catch (geminiError) {
+            logger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
+            // Keep the default response - don't throw error
+        } finally {
+            // Clean up temp file
+            if (tempFilePath && fs.existsSync(tempFilePath)) {
+                try {
+                    fs.unlinkSync(tempFilePath);
+                } catch (cleanupError) {
+                    logger.error('Error cleaning up temp file:', cleanupError.message);
+                }
             }
+        }
 
-            // Store in database
-            return new Promise((resolve, reject) => {
+        // Store in database - wrap in try-catch to prevent database errors from breaking the schedule
+        try {
+            await new Promise((resolve) => {
                 db.run(`
                     INSERT INTO screenshots (
                         timestamp, 
@@ -329,10 +343,12 @@ async function captureAndAnalyze() {
                 ], async function(err) {
                     if (err) {
                         logger.error('Error saving to database:', err);
-                        reject(err);
+                        // Don't reject - just log and continue
+                        resolve();
                         return;
                     }
                     
+                    // Try to update UI, but don't let it break the process
                     try {
                         const updatedData = await getActivityStats();
                         
@@ -342,24 +358,23 @@ async function captureAndAnalyze() {
                                 mainWindow.webContents.send('refresh-ui');
                             }, 100);
                         }
-                        resolve();
-                    } catch (error) {
-                        logger.error('Error updating UI:', error);
-                        reject(error);
+                    } catch (uiError) {
+                        logger.error('Error updating UI (non-critical):', uiError.message);
                     }
+                    
+                    resolve();
                 });
             });
-
-        } finally {
-            if (fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
-            }
+        } catch (dbError) {
+            logger.error('Database operation failed (non-critical):', dbError.message);
         }
+
+        logger.info('Screenshot capture and analysis completed successfully');
 
     } catch (error) {
         logger.error('Error in capture and analyze:', error);
         logger.error('Stack trace:', error.stack);
-        // Don't reject here to ensure schedule continues running
+        // Don't throw - let the schedule continue regardless of any errors
     }
 }
 
