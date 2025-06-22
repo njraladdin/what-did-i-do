@@ -224,9 +224,9 @@ async function captureAndAnalyze() {
             ${categories.join(', ')}. 
             Focus on the purpose of the activity rather than the specific application.
             For example:
-            - Games, videos, entertainment live streams, YouTube, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
+            - Games, videos, entertainment live streams, clearly entertainment YouTube videos, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
             - Coding, documents, or professional tasks would be "WORK"
-            - Online courses, tutorials, or research or non-entertainment podcasts would be "LEARN"
+            - Online courses, tutorials, or research or podcasts and youtube videos (like tech / ai related  / psychology etc.) would be "LEARN"
             - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
 
             For the "description" field, provide a comprehensive description (150-200 words) of what the user is doing, what's visible on the screen, and any relevant context about the activity. This should be detailed enough to understand the user's behavior and the content they're interacting with.
