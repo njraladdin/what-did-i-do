@@ -2,7 +2,7 @@
   "name": "what-did-i-do",
   "version": "1.1.1",
   "description": "Time tracking app using screenshots and AI analysis",
-  "main": "main.js",
+  "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win",
@@ -15,11 +15,8 @@
       "output": "dist"
     },
     "files": [
-      "main.js",
-      "index.html",
-      "assets/**/*",
-      "logger.js",
-      "database.js"
+      "src/**/*",
+      "assets/**/*"
     ],
     "extraResources": [
       {

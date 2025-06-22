@@ -61,10 +61,10 @@ function createWindow() {
     focusable: true,
     show: false,
     titleBarStyle: 'hidden',
-    icon: path.join(__dirname, 'assets/icon.ico'),
+    icon: path.join(__dirname, '../../assets/icon.ico'),
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   
   mainWindow.webContents.on('did-finish-load', async () => {
     try {
@@ -519,7 +519,7 @@ async function handleFirstRun() {
 
 // Add this function to create the tray
 function createTray() {
-    tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
+    tray = new Tray(path.join(__dirname, '../../assets/icon.ico'));
     
     const contextMenu = Menu.buildFromTemplate([
         {
@@ -554,7 +554,7 @@ function showTrayNotification() {
         tray.displayBalloon({
             title: 'What Did I Do is still running',
             content: 'The app will continue running in the background. You can access it anytime from the system tray.',
-            icon: path.join(__dirname, 'assets/icon.ico'),
+            icon: path.join(__dirname, '../../assets/icon.ico'),
             iconType: 'custom'
         });
         hasShownMinimizeNotification = true;
