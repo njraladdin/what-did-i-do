@@ -15,6 +15,7 @@ const AutoLaunch = require('auto-launch');
 const database = require('./database');
 const logger = require('./logger');
 const ScreenshotCapture = require('./screenshot');
+const { initializeIpcHandlers } = require('./ipc-handlers');
 
 // Remove archiver - not needed anymore
 const { dialog } = require('electron');
@@ -165,7 +166,7 @@ async function captureAndAnalyze() {
         
         // Default response in case of any failure
         let response = {
-            category: 'WORK',
+            category: 'UNKNOWN',  // Changed from 'WORK' to 'UNKNOWN' to avoid misleading categorization
             activity: 'screenshot captured (analysis unavailable)',
             description: 'No description available due to analysis failure.'
         };
@@ -192,7 +193,7 @@ async function captureAndAnalyze() {
             appLogger.info('Gemini file upload successful');
 
             const generationConfig = {
-                temperature: 0.2, // Lower temperature for more consistent outputs
+                temperature: 0.6, // Lower temperature for more consistent outputs
                 maxOutputTokens: 8192,
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -250,38 +251,34 @@ async function captureAndAnalyze() {
 
                 appLogger.info('Received Gemini response');
                 
-                // Access the structured response directly
-                if (result.response.functionResponse) {
-                    response = result.response.functionResponse;
-                } else {
-                    try {
-                        const parsedResponse = JSON.parse(result.response.text());
+                // Parse the response text
+                try {
+                    const parsedResponse = JSON.parse(result.response.text());
+                    
+                    // Simple normalization to ensure consistent category casing
+                    if (parsedResponse.category && parsedResponse.activity) {
+                        const normalizedCategory = categories.find(cat => 
+                            cat.toUpperCase() === parsedResponse.category.toUpperCase());
                         
-                        // Simple normalization to ensure consistent category casing
-                        if (parsedResponse.category && parsedResponse.activity) {
-                            const normalizedCategory = categories.find(cat => 
-                                cat.toUpperCase() === parsedResponse.category.toUpperCase());
-                            
-                            if (normalizedCategory) {
-                                response = {
-                                    category: normalizedCategory,
-                                    activity: parsedResponse.activity,
-                                    description: parsedResponse.description || 'No description available.'
-                                };
-                            } else {
-                                // Keep default response if category not found
-                                appLogger.error('Invalid category in response:', parsedResponse.category);
-                            }
+                        if (normalizedCategory) {
+                            response = {
+                                category: normalizedCategory,
+                                activity: parsedResponse.activity,
+                                description: parsedResponse.description || 'No description available.'
+                            };
+                        } else {
+                            // Keep default response if category not found
+                            appLogger.error('Invalid category in response:', parsedResponse.category);
                         }
-                    } catch (parseError) {
-                        appLogger.error('Error parsing JSON response:', parseError.message);
                     }
+                } catch (parseError) {
+                    appLogger.error('Error parsing JSON response:', parseError.message);
                 }
             } catch (geminiError) {
-                appLogger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
+                appLogger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message || geminiError);
             }
         } catch (geminiError) {
-            appLogger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
+            appLogger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message || geminiError);
             // Keep the default response - don't throw error
         } finally {
             // Clean up temp file
@@ -332,169 +329,43 @@ async function captureAndAnalyze() {
 }
 
 
-// IPC handlers
-ipcMain.handle('initialize-api', async (event, apiKey) => {
-  try {
-    const result = await initializeGeminiAPI(apiKey);
-    return result;
-  } catch (error) {
-    console.error('Error initializing API:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to initialize API'
-    };
-  }
-});
-
-ipcMain.handle('get-stats', async () => {
-  try {
-    const data = await database.getActivityStats(currentDate, store.get('interval'));
-    return {
-      stats: {
-        stats: data.stats,
-        timeInHours: data.timeInHours  // Make sure this is included
-      },
-      screenshots: data.screenshots
-    };
-  } catch (error) {
-    console.error('Error getting stats:', error);
-    return {
-      stats: {
-        stats: {},
-        timeInHours: {}  // Include empty timeInHours object
-      },
-      screenshots: []
-    };
-  }
-});
-
-ipcMain.handle('toggle-tracking', async (event, shouldTrack) => {
-  const apiKey = store.get('apiKey');
-  if (!apiKey) {
-    pauseTracking();
-    return false;
-  }
-  
-  isTracking = shouldTrack;
-  if (isTracking) {
-    const interval = store.get('interval');
-    schedule.scheduleJob(`*/${interval} * * * *`, captureAndAnalyze);
-  } else {
-    schedule.gracefulShutdown();
-  }
-  return isTracking;
-});
-
 // Add this helper function for the countdown
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Modify the test-screenshot handler
-ipcMain.handle('test-screenshot', async () => {
-  try {
-    console.log('Starting test screenshot process...');
-    // Send countdown updates to renderer
-    for (let i = 3; i > 0; i--) {
-      console.log(`Countdown: ${i}`);
-      mainWindow.webContents.send('countdown-update', i);
-      await sleep(1000);
-    }
-    
-    console.log('Initiating capture and analyze...');
-    await captureAndAnalyze();
-    return true;
-  } catch (error) {
-    console.error('Error in test-screenshot handler:', error);
-    return false;
-  }
-});
-
-// Add this IPC handler near your other handlers
-ipcMain.handle('get-api-key', () => {
-    return store.get('apiKey');
-});
-
-// Add this IPC handler near your other handlers
-ipcMain.handle('check-api-key', () => {
-    const apiKey = store.get('apiKey');
-    if (apiKey) {
-        initializeGeminiAPI(apiKey);
-        return true;
-    }
-    pauseTracking();
-    return false;
-});
-
-ipcMain.handle('delete-api-key', () => {
-    try {
-        store.delete('apiKey');
-        genAI = null;
-        model = null;
-        fileManager = null;
-        pauseTracking();
-        return true;
-    } catch (error) {
-        console.error('Error deleting API key:', error);
-        return false;
-    }
-});
-
 // Add this helper function
 function pauseTracking() {
   isTracking = false;
   schedule.gracefulShutdown();
+  genAI = null;
+  model = null;
+  fileManager = null;
   if (mainWindow) {
     mainWindow.webContents.send('tracking-paused');
   }
 }
 
-ipcMain.handle('update-interval', async (event, interval) => {
-    store.set('interval', interval);
-    if (isTracking) {
-        schedule.gracefulShutdown();
-        schedule.scheduleJob(`*/${interval} * * * *`, captureAndAnalyze);
-    }
-    return true;
-});
+// Helper functions for state management
+function getCurrentDate() {
+  return currentDate;
+}
 
-ipcMain.handle('get-interval', () => {
-    return store.get('interval');
-});
+function setCurrentDate(newDate) {
+  currentDate = newDate;
+}
 
-// Add this IPC handler with the other IPC handlers
-ipcMain.handle('update-current-date', async (event, newDateString) => {
-    currentDate = new Date(newDateString);
-    const data = await database.getActivityStats(currentDate, store.get('interval'));
-    return {
-        stats: data.stats,
-        timeInHours: data.timeInHours,
-        screenshots: data.screenshots
-    };
-});
+function getIsTracking() {
+  return isTracking;
+}
 
-// Add this IPC handler to allow manual refresh requests
-ipcMain.handle('request-refresh', async () => {
-    try {
-        const data = await database.getActivityStats(currentDate, store.get('interval'));
-        return {
-            stats: {
-                stats: data.stats,
-                timeInHours: data.timeInHours
-            },
-            screenshots: data.screenshots
-        };
-    } catch (error) {
-        console.error('Error in manual refresh:', error);
-        return {
-            stats: {
-                stats: {},
-                timeInHours: {}
-            },
-            screenshots: []
-        };
-    }
-});
+function setIsTracking(tracking) {
+  isTracking = tracking;
+}
+
+function setIsQuitting(quitting) {
+  isQuitting = quitting;
+}
 
 // Add this near your other initialization code (in app.whenReady())
 function initializeIdleMonitor() {
@@ -576,24 +447,7 @@ function showTrayNotification() {
     }
 }
 
-// Add these IPC handlers
-ipcMain.handle('open-logs', () => {
-    const logPath = logger.getLogPath();
-    if (fs.existsSync(logPath)) {
-        require('electron').shell.openPath(logPath);
-        return true;
-    }
-    return false;
-});
 
-ipcMain.handle('get-recent-logs', async () => {
-    try {
-        return await logger.getRecentLogs();
-    } catch (error) {
-        appLogger.error('Error reading logs:', error);
-        return [];
-    }
-});
 
 app.whenReady().then(async () => {
     try {
@@ -604,6 +458,24 @@ app.whenReady().then(async () => {
         createWindow();
         createTray();
         initializeIdleMonitor();
+        
+        // Initialize IPC handlers
+        initializeIpcHandlers({
+            database,
+            store,
+            logger,
+            mainWindow,
+            autoLauncher,
+            initializeGeminiAPI,
+            pauseTracking,
+            captureAndAnalyze,
+            getCurrentDate,
+            setCurrentDate,
+            getIsTracking,
+            setIsTracking,
+            setIsQuitting,
+            sleep
+        });
         
         // Only start tracking if API key exists
         const apiKey = store.get('apiKey');
@@ -631,14 +503,7 @@ app.on('activate', () => {
   }
 });
 
-// Add these IPC handlers for window controls
-ipcMain.on('window-minimize', () => {
-  if (mainWindow) mainWindow.minimize();
-});
 
-ipcMain.on('window-close', () => {
-  if (mainWindow) mainWindow.hide();
-});
 
 // Add cleanup on app quit
 app.on('will-quit', async () => {
@@ -648,176 +513,4 @@ app.on('will-quit', async () => {
     }
 });
 
-// Add these IPC handlers
-ipcMain.handle('get-auto-launch', async () => {
-    try {
-        const isEnabled = await autoLauncher.isEnabled();
-        return isEnabled;
-    } catch (error) {
-        console.error('Error checking auto-launch status:', error);
-        // Return true as default if there's an error checking status
-        return true;
-    }
-});
 
-ipcMain.handle('toggle-auto-launch', async (event, enable) => {
-    try {
-        if (enable) {
-            await autoLauncher.enable();
-        } else {
-            await autoLauncher.disable();
-        }
-        return true;
-    } catch (error) {
-        console.error('Error toggling auto-launch:', error);
-        return false;
-    }
-});
-
-// Add this new IPC handler with your other handlers
-ipcMain.handle('delete-screenshot', async (event, id) => {
-    try {
-        const success = await database.deleteScreenshot(id);
-        return success;
-    } catch (error) {
-        console.error('Error deleting screenshot:', error);
-        return false;
-    }
-});
-
-// Add this IPC handler near your other IPC handlers
-ipcMain.handle('quit-app', () => {
-    isQuitting = true;
-    app.quit();
-});
-
-// Add this IPC handler near your other IPC handlers
-ipcMain.handle('load-more-screenshots', async (event, offset = 0, limit = 50) => {
-    try {
-        const screenshots = await database.getMoreScreenshots(currentDate, offset, limit);
-        return { success: true, screenshots };
-    } catch (error) {
-        console.error('Error loading more screenshots:', error);
-        return { success: false, screenshots: [] };
-    }
-});
-
-// Add this IPC handler near the other IPC handlers
-ipcMain.handle('get-monthly-averages', async () => {
-  try {
-    const data = await database.getMonthlyAverages(currentDate, store.get('interval'));
-    return {
-      monthlyAverages: data.monthlyAverages,
-      monthlyTimeInHours: data.monthlyTimeInHours,
-      daysWithData: data.daysWithData
-    };
-  } catch (error) {
-    console.error('Error getting monthly averages:', error);
-    return {
-      monthlyAverages: {},
-      monthlyTimeInHours: {},
-      daysWithData: 0
-    };
-  }
-});
-
-// Add this new IPC handler for changing the month
-ipcMain.handle('update-current-month', async (event, year, month) => {
-  try {
-    // Create a new date with the specified year and month (keeping the day the same)
-    const newDate = new Date(currentDate);
-    newDate.setFullYear(year);
-    newDate.setMonth(month);
-    
-    // Update the global currentDate
-    currentDate = newDate;
-    
-    // Get the monthly averages for the new month
-    const data = await database.getMonthlyAverages(currentDate, store.get('interval'));
-    return {
-      monthlyAverages: data.monthlyAverages,
-      monthlyTimeInHours: data.monthlyTimeInHours,
-      daysWithData: data.daysWithData
-    };
-  } catch (error) {
-    console.error('Error updating month:', error);
-    return {
-      monthlyAverages: {},
-      monthlyTimeInHours: {},
-      daysWithData: 0
-    };
-  }
-});
-
-// Add export data IPC handler
-ipcMain.handle('export-data', async (event, options) => {
-  try {
-    appLogger.info('Starting data export with options:', options);
-    
-    const { startDate, endDate, rangeType } = options;
-    
-    // Show save dialog
-    const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Export What Did I Do Data',
-      defaultPath: `what-did-i-do-export-${rangeType}-${new Date().toISOString().split('T')[0]}.json`,
-      filters: [
-        { name: 'JSON Files', extensions: ['json'] },
-        { name: 'All Files', extensions: ['*'] }
-      ]
-    });
-
-    if (result.canceled) {
-      return { success: false, error: 'Export canceled by user' };
-    }
-
-    const exportPath = result.filePath;
-    
-    // Get data from database (always include stats, never include media)
-    const exportData = await database.exportData(
-      startDate, 
-      endDate, 
-      false, // Never include media for JSON export
-      true   // Always include stats
-    );
-
-    appLogger.info(`Exporting ${exportData.screenshots.length} screenshots`);
-
-    // Create the export JSON structure
-    const exportJson = {
-      metadata: {
-        exportDate: new Date().toISOString(),
-        dateRange: {
-          startDate,
-          endDate
-        },
-        rangeType,
-        screenshotCount: exportData.screenshots.length,
-        categories: database.categories,
-        version: "1.0"
-      },
-      screenshots: exportData.screenshots.map(screenshot => ({
-        id: screenshot.id,
-        timestamp: screenshot.timestamp,
-        category: screenshot.category,
-        activity: screenshot.activity,
-        description: screenshot.description
-      })),
-      statistics: exportData.statistics || {}
-    };
-
-    // Write JSON file
-    fs.writeFileSync(exportPath, JSON.stringify(exportJson, null, 2), 'utf8');
-    
-    appLogger.info(`Export completed: ${exportPath}`);
-    
-    return { 
-      success: true, 
-      filePath: exportPath,
-      screenshotCount: exportData.screenshots.length
-    };
-
-  } catch (error) {
-    appLogger.error('Export error:', error);
-    return { success: false, error: error.message };
-  }
-});
