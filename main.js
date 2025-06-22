@@ -16,8 +16,7 @@ const store = new Store({
 const { windowManager } = require('node-window-manager');
 const AutoLaunch = require('auto-launch');
 const database = require('./database');
-const winston = require('winston');
-const { format } = winston;
+const logger = require('./logger');
 
 let mainWindow;
 let isTracking = false;
@@ -47,7 +46,8 @@ let isQuitting = false;
 // Add this near your other global variables
 let hasShownMinimizeNotification = false;
 
-
+// Initialize logger
+let appLogger;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -106,7 +106,7 @@ function createWindow() {
 // Initialize Gemini API with file manager
 async function initializeGeminiAPI(apiKey) {
   try {
-    logger.info('Initializing Gemini API...');
+    appLogger.info('Initializing Gemini API...');
     genAI = new GoogleGenerativeAI(apiKey);
     
     model = genAI.getGenerativeModel({ 
@@ -127,10 +127,10 @@ async function initializeGeminiAPI(apiKey) {
       return { success: true };
     }
     
-    logger.error('Invalid API response received during initialization');
+    appLogger.error('Invalid API response received during initialization');
     return { success: false, error: 'Invalid API response' };
   } catch (error) {
-    logger.error('API validation error:', error.message);
+    appLogger.error('API validation error:', error.message);
     return { 
       success: false, 
       error: error.message || 'Invalid API key'
@@ -147,15 +147,15 @@ async function captureAndAnalyze() {
         const interval = store.get('interval');
 
         if (idleMinutes >= interval) {
-            logger.info(`User idle for ${idleMinutes.toFixed(1)} minutes. Skipping screenshot.`);
+            appLogger.info(`User idle for ${idleMinutes.toFixed(1)} minutes. Skipping screenshot.`);
             return;
         }
 
-        logger.info('Starting capture and analyze process...');
+        appLogger.info('Starting capture and analyze process...');
         
         const now = new Date();
         const timestamp = now.toISOString();
-        logger.info('Created timestamp:', timestamp);
+        appLogger.info('Created timestamp:', timestamp);
 
         // Get active window and display information
         const activeWindow = windowManager.getActiveWindow();
@@ -208,7 +208,7 @@ async function captureAndAnalyze() {
             .resize(200, 150, { fit: 'inside' })
             .toBuffer();
         
-        logger.info('Processing screenshot with Gemini...');
+        appLogger.info('Processing screenshot with Gemini...');
         
         // Default response in case of any failure
         let response = {
@@ -235,7 +235,7 @@ async function captureAndAnalyze() {
                 displayName: `screenshot-${safeTimestamp}.png`
             });
 
-            logger.info('Gemini file upload successful');
+            appLogger.info('Gemini file upload successful');
 
             const generationConfig = {
                 temperature: 0.2, // Lower temperature for more consistent outputs
@@ -258,7 +258,7 @@ async function captureAndAnalyze() {
                 }
             };
 
-            logger.info('Starting Gemini analysis...');
+            appLogger.info('Starting Gemini analysis...');
             const chatSession = model.startChat({ generationConfig });
             
             const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
@@ -284,7 +284,7 @@ async function captureAndAnalyze() {
                     { text: prompt }
                 ]);
 
-                logger.info('Received Gemini response');
+                appLogger.info('Received Gemini response');
                 
                 // Access the structured response directly
                 if (result.response.functionResponse) {
@@ -305,18 +305,18 @@ async function captureAndAnalyze() {
                                 };
                             } else {
                                 // Keep default response if category not found
-                                logger.error('Invalid category in response:', parsedResponse.category);
+                                appLogger.error('Invalid category in response:', parsedResponse.category);
                             }
                         }
                     } catch (parseError) {
-                        logger.error('Error parsing JSON response:', parseError.message);
+                        appLogger.error('Error parsing JSON response:', parseError.message);
                     }
                 }
             } catch (geminiError) {
-                logger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
+                appLogger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
             }
         } catch (geminiError) {
-            logger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
+            appLogger.error('Error in Gemini analysis (will continue with fallback):', geminiError.message);
             // Keep the default response - don't throw error
         } finally {
             // Clean up temp file
@@ -324,7 +324,7 @@ async function captureAndAnalyze() {
                 try {
                     fs.unlinkSync(tempFilePath);
                 } catch (cleanupError) {
-                    logger.error('Error cleaning up temp file:', cleanupError.message);
+                    appLogger.error('Error cleaning up temp file:', cleanupError.message);
                 }
             }
         }
@@ -350,17 +350,17 @@ async function captureAndAnalyze() {
                     }, 100);
                 }
             } catch (uiError) {
-                logger.error('Error updating UI (non-critical):', uiError.message);
+                appLogger.error('Error updating UI (non-critical):', uiError.message);
             }
         } catch (dbError) {
-            logger.error('Database operation failed (non-critical):', dbError.message);
+            appLogger.error('Database operation failed (non-critical):', dbError.message);
         }
 
-        logger.info('Screenshot capture and analysis completed successfully');
+        appLogger.info('Screenshot capture and analysis completed successfully');
 
     } catch (error) {
-        logger.error('Error in capture and analyze:', error);
-        logger.error('Stack trace:', error.stack);
+        appLogger.error('Error in capture and analyze:', error);
+        appLogger.error('Stack trace:', error.stack);
         // Don't throw - let the schedule continue regardless of any errors
     }
 }
@@ -610,52 +610,9 @@ function showTrayNotification() {
     }
 }
 
-// Add after other global variables
-let logger;
-
-// Add this function near the top of the file
-function initializeLogger() {
-    const logPath = path.join(app.getPath('userData'), 'logs');
-    if (!fs.existsSync(logPath)) {
-        fs.mkdirSync(logPath);
-    }
-
-    logger = winston.createLogger({
-        format: format.combine(
-            format.timestamp(),
-            format.printf(({ level, message, timestamp }) => {
-                return `${timestamp} [${level.toUpperCase()}]: ${message}`;
-            })
-        ),
-        transports: [
-            new winston.transports.File({ 
-                filename: path.join(logPath, 'error.log'), 
-                level: 'error' 
-            }),
-            new winston.transports.File({ 
-                filename: path.join(logPath, 'combined.log'),
-                maxsize: 5242880, // 5MB
-                maxFiles: 5,
-                tailable: true
-            })
-        ]
-    });
-
-    // Also log to console in development
-    if (DEBUG) {
-        logger.add(new winston.transports.Console({
-            format: format.simple()
-        }));
-    }
-
-    // Replace console.log and console.error with logger
-    console.log = (...args) => logger.info(args.join(' '));
-    console.error = (...args) => logger.error(args.join(' '));
-}
-
 // Add these IPC handlers
 ipcMain.handle('open-logs', () => {
-    const logPath = path.join(app.getPath('userData'), 'logs', 'combined.log');
+    const logPath = logger.getLogPath();
     if (fs.existsSync(logPath)) {
         require('electron').shell.openPath(logPath);
         return true;
@@ -665,27 +622,16 @@ ipcMain.handle('open-logs', () => {
 
 ipcMain.handle('get-recent-logs', async () => {
     try {
-        const logPath = path.join(app.getPath('userData'), 'logs', 'combined.log');
-        if (!fs.existsSync(logPath)) {
-            return [];
-        }
-
-        // Read last 1000 lines of logs
-        const logs = fs.readFileSync(logPath, 'utf8')
-            .split('\n')
-            .filter(Boolean)
-            .slice(-1000);
-        
-        return logs;
+        return await logger.getRecentLogs();
     } catch (error) {
-        logger.error('Error reading logs:', error);
+        appLogger.error('Error reading logs:', error);
         return [];
     }
 });
 
 app.whenReady().then(async () => {
     try {
-        initializeLogger();
+        appLogger = logger.createLogger();
         await handleFirstRun();
         await database.initializeDatabase();
         createWindow();

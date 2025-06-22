@@ -17,7 +17,9 @@
     "files": [
       "main.js",
       "index.html",
-      "assets/**/*"
+      "assets/**/*",
+      "logger.js",
+      "database.js"
     ],
     "extraResources": [
       {
