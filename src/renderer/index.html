@@ -999,9 +999,21 @@
 
         async function initializeGeminiModel() {
             const currentModel = await ipcRenderer.invoke('get-gemini-model');
-            document.getElementById('geminiModel').value = currentModel;
             
-            // Fetch available models on initial load
+            // Set the current model first
+            const modelSelect = document.getElementById('geminiModel');
+            modelSelect.value = currentModel;
+            
+            // If the current model isn't in the default options, add it
+            if (!Array.from(modelSelect.options).some(opt => opt.value === currentModel)) {
+                const option = document.createElement('option');
+                option.value = currentModel;
+                option.text = currentModel;
+                option.selected = true;
+                modelSelect.add(option);
+            }
+            
+            // Fetch available models after setting the current one
             fetchAvailableModels();
         }
 
@@ -1079,12 +1091,23 @@
                 const result = await ipcRenderer.invoke('fetch-available-models');
                 
                 if (result.success && result.models.length > 0) {
-                    // Clear existing options except the first default one
-                    while (modelSelect.options.length > 1) {
-                        modelSelect.remove(1);
-                    }
+                    // Keep track of existing options to preserve custom ones
+                    const existingOptions = Array.from(modelSelect.options).map(opt => ({
+                        value: opt.value,
+                        text: opt.text,
+                        selected: opt.selected
+                    }));
                     
-                    // Add new options
+                    // Clear all options
+                    modelSelect.innerHTML = '';
+                    
+                    // Add default option
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = 'gemini-2.0-flash';
+                    defaultOption.text = 'gemini-2.0-flash (Default)';
+                    modelSelect.add(defaultOption);
+                    
+                    // Add fetched models
                     result.models.forEach(model => {
                         const option = document.createElement('option');
                         option.value = model.id;
@@ -1095,10 +1118,16 @@
                         modelSelect.add(option);
                     });
                     
-                    // Restore selection if possible
-                    if (Array.from(modelSelect.options).some(opt => opt.value === currentSelection)) {
-                        modelSelect.value = currentSelection;
+                    // Restore selection - if the saved model isn't in the list, add it
+                    if (currentSelection && !Array.from(modelSelect.options).some(opt => opt.value === currentSelection)) {
+                        const customOption = document.createElement('option');
+                        customOption.value = currentSelection;
+                        customOption.text = currentSelection + ' (Custom)';
+                        modelSelect.add(customOption);
                     }
+                    
+                    // Set the selection
+                    modelSelect.value = currentSelection;
                     
                     statusEl.textContent = `Loaded ${result.models.length} available models`;
                     statusEl.className = 'model-status success';
