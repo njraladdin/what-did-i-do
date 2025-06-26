@@ -374,6 +374,25 @@ function initializeIpcHandlers(dependencies) {
         clearAnalysisError();
         return true;
     });
+
+    // Gemini model handlers
+    ipcMain.handle('get-gemini-model', () => {
+        return store.get('geminiModel') || 'gemini-2.0-flash';
+    });
+
+    ipcMain.handle('set-gemini-model', (event, model) => {
+        try {
+            const trimmedModel = model.trim();
+            if (!trimmedModel) {
+                return { success: false, error: 'Model name cannot be empty' };
+            }
+            store.set('geminiModel', trimmedModel);
+            return { success: true };
+        } catch (error) {
+            console.error('Error setting Gemini model:', error);
+            return { success: false, error: error.message };
+        }
+    });
 }
 
 module.exports = {

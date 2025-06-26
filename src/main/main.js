@@ -5,7 +5,8 @@ const { GoogleGenAI, Type } = require('@google/genai');
 const fs = require('fs');
 const store = new Store({
     defaults: {
-        interval: 1 // Default to 1 minute
+        interval: 1, // Default to 1 minute
+        geminiModel: 'gemini-2.0-flash' // Default Gemini model
     }
 });
 const AutoLaunch = require('auto-launch');
@@ -110,7 +111,7 @@ async function initializeGeminiAPI(apiKey) {
     
     // Test the API key with a simple request
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: store.get('geminiModel') || 'gemini-2.0-flash',
       contents: 'Hello, this is a test message.'
     });
     
@@ -207,7 +208,7 @@ async function captureAndAnalyze() {
                 appLogger.info('Starting Gemini analysis...');
                 
                 const result = await ai.models.generateContent({
-                    model: 'gemini-2.0-flash',
+                    model: store.get('geminiModel') || 'gemini-2.0-flash',
                     contents: [
                         {
                             parts: [

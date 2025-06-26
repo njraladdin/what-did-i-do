@@ -589,6 +589,17 @@
     .switch-label { display: flex; align-items: center; gap: 12px; cursor: pointer; }
     
     .setting-text { font-size: 14px; color: var(--color-text-primary); }
+
+    .setting-label { font-size: 14px; color: var(--color-text-primary); font-weight: 500; margin-right: 12px; min-width: 100px; }
+
+    .model-input { flex: 1; margin-right: 12px; font-size: 14px; }
+
+    .save-model-btn { background: var(--color-primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+
+    .save-model-btn:hover { background: var(--color-primary-hover); }
+
+    .save-model-btn:disabled { opacity: 0.6; cursor: not-allowed; background: var(--color-primary); }
+
     
     .checkbox-wrapper { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); }
     

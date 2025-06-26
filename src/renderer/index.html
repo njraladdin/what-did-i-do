@@ -65,6 +65,16 @@
             </div>
 
             <div class="settings-section">
+                <h3>AI Model Settings</h3>
+                <div class="setting-item">
+                    <label for="geminiModel" class="setting-label">Gemini Model:</label>
+                    <input type="text" id="geminiModel" placeholder="gemini-2.0-flash" class="model-input">
+                    <button onclick="saveGeminiModel()" id="saveModelBtn" class="save-model-btn">Save</button>
+                </div>
+             
+            </div>
+
+            <div class="settings-section">
                 <h3>Startup Options</h3>
                 <div class="setting-item">
                     <label class="switch-label">
@@ -731,6 +741,9 @@
             // Add event listener for auto-launch toggle
             document.getElementById('autoLaunchToggle').addEventListener('change', toggleAutoLaunch);
 
+            // Initialize Gemini model input
+            await initializeGeminiModel();
+
             // Initialize date navigation on page load
             document.getElementById('currentDate').textContent = formatDate(currentDate);
             document.getElementById('nextDateBtn').disabled = isToday(currentDate);
@@ -973,6 +986,44 @@
             if (!success) {
                 event.target.checked = !enable;
                 // Optionally show an error message
+            }
+        }
+
+        async function initializeGeminiModel() {
+            const currentModel = await ipcRenderer.invoke('get-gemini-model');
+            document.getElementById('geminiModel').value = currentModel;
+        }
+
+        async function saveGeminiModel() {
+            const modelInput = document.getElementById('geminiModel');
+            const saveButton = document.getElementById('saveModelBtn');
+            const model = modelInput.value.trim();
+
+            if (!model) {
+                alert('Please enter a model name');
+                return;
+            }
+
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+
+            try {
+                const result = await ipcRenderer.invoke('set-gemini-model', model);
+                if (result.success) {
+                    saveButton.textContent = 'Saved!';
+                    setTimeout(() => {
+                        saveButton.textContent = 'Save';
+                        saveButton.disabled = false;
+                    }, 1500);
+                } else {
+                    alert('Error saving model: ' + result.error);
+                    saveButton.textContent = 'Save';
+                    saveButton.disabled = false;
+                }
+            } catch (error) {
+                alert('Error saving model: ' + error.message);
+                saveButton.textContent = 'Save';
+                saveButton.disabled = false;
             }
         }
 
