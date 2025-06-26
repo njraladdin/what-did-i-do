@@ -1,5 +1,6 @@
 const { ipcMain, dialog } = require('electron');
 const fs = require('fs');
+const axios = require('axios');
 
 /**
  * Initialize all IPC handlers for the application
@@ -391,6 +392,69 @@ function initializeIpcHandlers(dependencies) {
         } catch (error) {
             console.error('Error setting Gemini model:', error);
             return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('test-gemini-model', async (event, model) => {
+        try {
+            const apiKey = store.get('apiKey');
+            if (!apiKey) {
+                return { success: false, error: 'API key not found' };
+            }
+
+            // Use the existing ai instance but with the test model
+            const { GoogleGenAI } = require('@google/genai');
+            const testAi = new GoogleGenAI({ apiKey: apiKey });
+            
+            const result = await testAi.models.generateContent({
+                model: model,
+                contents: 'Hello, this is a test message.'
+            });
+
+            if (result && result.text) {
+                return { success: true };
+            }
+
+            return { success: false, error: 'Invalid response from model' };
+        } catch (error) {
+            console.error('Model test error:', error);
+            return { 
+                success: false, 
+                error: error.message || 'Failed to test model'
+            };
+        }
+    });
+
+    ipcMain.handle('fetch-available-models', async () => {
+        try {
+            const apiKey = store.get('apiKey');
+            if (!apiKey) {
+                return { success: false, error: 'API key not found', models: [] };
+            }
+            
+            const response = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            
+            // Filter and format models
+            const models = response.data.models
+                .filter(model => model.name.includes('gemini'))
+                .map(model => ({
+                    id: model.name.split('/').pop(),
+                    name: model.displayName || model.name.split('/').pop(),
+                    description: model.description || ''
+                }));
+                
+            return { success: true, models };
+        } catch (error) {
+            console.error('Error fetching available models:', error.message);
+            const errorMessage = error.response ? 
+                `API error: ${error.response.status} ${error.response.statusText}` : 
+                error.message || 'Failed to fetch models';
+                
+            return { 
+                success: false, 
+                error: errorMessage,
+                models: [] 
+            };
         }
     });
 }

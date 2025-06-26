@@ -594,38 +594,89 @@
 
     .model-input { flex: 1; margin-right: 12px; font-size: 14px; }
 
-    .save-model-btn { background: var(--color-primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+    .save-model-btn { 
+        background: var(--color-primary); 
+        color: white; 
+        border: none; 
+        padding: 8px 16px; 
+        border-radius: 6px; 
+        font-size: 13px; 
+        font-weight: 500; 
+        cursor: pointer; 
+        transition: all 0.2s ease;
+        width: 100%;
+        margin-top: 12px;
+    }
 
     .save-model-btn:hover { background: var(--color-primary-hover); }
 
     .save-model-btn:disabled { opacity: 0.6; cursor: not-allowed; background: var(--color-primary); }
-
     
-    .checkbox-wrapper { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+    .model-select-wrapper { 
+        display: flex; 
+        flex: 1;
+        align-items: center;
+        gap: 8px;
+    }
     
-    .checkbox-wrapper label { cursor: pointer; }
+    .model-select { 
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        background-color: var(--color-bg-surface);
+        color: var(--color-text-primary);
+        font-size: 14px;
+        height: 40px;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
     
-    .checkbox-wrapper input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }
+    .refresh-btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
     
-    /* Add these new styles */ .delete-screenshot { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--color-text-muted); padding: 8px; cursor: pointer; opacity: 0; transition: all 0.2s ease; }
+    .refresh-btn:hover {
+        background: var(--color-bg-elevated);
+        color: var(--color-primary);
+    }
     
-    .screenshot-item:hover .delete-screenshot { opacity: 1; }
+    .refresh-btn i {
+        font-size: 14px;
+    }
     
-    .delete-screenshot:hover { color: #DC2626; background: none; transform: translateY(-50%) scale(1.1); }
+    .refresh-btn.loading i {
+        animation: spin 1s linear infinite;
+    }
     
-    /* Add these new styles */ .logs-container { margin-top: 16px; }
+    .model-status {
+        font-size: 13px;
+        margin: 8px 0 12px 0;
+        padding: 0;
+        min-height: 20px;
+    }
     
-    .logs-actions { display: flex; gap: 12px; }
+    .model-status.error {
+        color: #DC2626;
+    }
     
-    .logs-actions button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 36px; }
-    
-    .recent-logs { margin-top: 16px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto; }
-    
-    .logs-content { font-family: monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; color: var(--color-text-secondary); }
-    
-    .logs-content div { padding: 2px 0; }
-    
-    .logs-content div:hover { background: var(--color-bg-surface); }
+    .model-status.success {
+        color: #059669;
+    }
 
     /* Analytics section styles */
     .analytics-section {
