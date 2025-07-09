@@ -378,6 +378,65 @@ async function captureAndAnalyze() {
     }
 }
 
+// Add this after captureAndAnalyze function
+async function generateDayAnalysis(date) {
+    try {
+        appLogger.info('Starting day analysis generation for date:', date);
+        
+        const data = await database.getDayDataForAnalysis(date);
+        appLogger.info('Retrieved data for analysis:', {
+            screenshotsCount: data.screenshots.length,
+            diaryLogsCount: data.diaryLogs.length
+        });
+
+        if (!ai) {
+            throw new Error('AI is not initialized. Please check your API key.');
+        }
+
+        const prompt = `You are a behavioral analyst. Your task is to analyze my activity logs and diary entries to create a report about my day.
+
+The report must have two distinct sections:
+
+1.  **My Day:** Write an objective, chronological summary of my day from a first-person perspective (using "I"). State events simply and factually. Instead of vague descriptions like "for a while," use general but concrete estimates like "for about an hour" or "for a few minutes." Avoid complex language. Just describe what I did in the order it happened.
+
+2.  **Behavioral Analysis:** Write a concise and focused analysis of the user's behavior from a third-person, objective perspective. Identify 3-4 key, actionable patterns related to focus, context-switching, activity triggers, or the alignment between the user's actions and stated intentions.
+
+Here is my data for analysis:
+
+**Activities Data (timestamps, categories, and descriptions):**
+${JSON.stringify(data.screenshots, null, 2)}
+
+**Diary Logs from the day:**
+${JSON.stringify(data.diaryLogs, null, 2)}
+
+Generate the report following the specified structure and tone. IMPORTANT: Do not include any introductory text like "Of course, here is the report." Just return the raw markdown content of the report.
+`;
+
+        appLogger.info('Sending request to Gemini API');
+        const result = await ai.models.generateContent({
+             model: "gemini-2.5-pro",
+             contents: prompt,
+             config: {
+                temperature: 0.7,
+                maxOutputTokens: 8192,
+            }
+        });
+        appLogger.info('Received response from Gemini API');
+
+        if (!result || !result.text) {
+            throw new Error('Invalid response from Gemini API');
+        }
+
+        // Save to the day_analyses table
+        await database.saveDayAnalysis(date, result.text);
+        appLogger.info('Analysis saved to database');
+
+        return result.text;
+    } catch (error) {
+        appLogger.error('Error in generateDayAnalysis:', error);
+        throw error;
+    }
+}
 
 // Add this helper function
 function pauseTracking() {
@@ -571,7 +630,7 @@ app.whenReady().then(async () => {
         initializeIpcHandlers({
             database,
             store,
-            logger,
+            logger: appLogger,
             mainWindow,
             autoLauncher,
             initializeGeminiAPI,
@@ -588,7 +647,8 @@ app.whenReady().then(async () => {
             updateSchedulerInterval,
             getSchedulerStatus,
             getLastAnalysisError,
-            clearAnalysisError
+            clearAnalysisError,
+            generateDayAnalysis // Pass the function instead of ai instance
         });
         
         // Only start tracking if API key exists

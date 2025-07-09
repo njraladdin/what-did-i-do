@@ -27,7 +27,8 @@ function initializeIpcHandlers(dependencies) {
         updateSchedulerInterval,
         getSchedulerStatus,
         getLastAnalysisError,
-        clearAnalysisError
+        clearAnalysisError,
+        generateDayAnalysis // Get the function from dependencies
     } = dependencies;
 
     // API-related handlers
@@ -78,7 +79,9 @@ function initializeIpcHandlers(dependencies) {
                     stats: data.stats,
                     timeInHours: data.timeInHours
                 },
-                screenshots: data.screenshots
+                screenshots: data.screenshots,
+                diaryLogs: data.diaryLogs,
+                dayAnalysis: data.dayAnalysis
             };
         } catch (error) {
             console.error('Error getting stats:', error);
@@ -87,7 +90,9 @@ function initializeIpcHandlers(dependencies) {
                     stats: {},
                     timeInHours: {}
                 },
-                screenshots: []
+                screenshots: [],
+                diaryLogs: [],
+                dayAnalysis: null
             };
         }
     });
@@ -100,7 +105,9 @@ function initializeIpcHandlers(dependencies) {
                     stats: data.stats,
                     timeInHours: data.timeInHours
                 },
-                screenshots: data.screenshots
+                screenshots: data.screenshots,
+                diaryLogs: data.diaryLogs,
+                dayAnalysis: data.dayAnalysis
             };
         } catch (error) {
             console.error('Error in manual refresh:', error);
@@ -109,7 +116,9 @@ function initializeIpcHandlers(dependencies) {
                     stats: {},
                     timeInHours: {}
                 },
-                screenshots: []
+                screenshots: [],
+                diaryLogs: [],
+                dayAnalysis: null
             };
         }
     });
@@ -120,7 +129,9 @@ function initializeIpcHandlers(dependencies) {
         return {
             stats: data.stats,
             timeInHours: data.timeInHours,
-            screenshots: data.screenshots
+            screenshots: data.screenshots,
+            diaryLogs: data.diaryLogs,
+            dayAnalysis: data.dayAnalysis
         };
     });
 
@@ -509,6 +520,31 @@ function initializeIpcHandlers(dependencies) {
         } catch (error) {
             console.error('Error getting diary logs in range:', error);
             return { success: false, logs: [] };
+        }
+    });
+
+    // Update day analysis handlers
+    ipcMain.handle('generate-day-analysis', async (event, date) => {
+        logger.info('Received generate-day-analysis request for date:', date);
+        try {
+            const analysis = await generateDayAnalysis(date);
+            logger.info('Day analysis generated successfully');
+            return analysis;
+        } catch (error) {
+            logger.error('Error generating day analysis:', error);
+            throw error;
+        }
+    });
+
+    ipcMain.handle('get-day-analysis', async (event, date) => {
+        logger.info('Received get-day-analysis request for date:', date);
+        try {
+            const analysis = await database.getDayAnalysis(date);
+            logger.info('Retrieved day analysis:', analysis ? 'found' : 'not found');
+            return analysis;
+        } catch (error) {
+            logger.error('Error getting day analysis:', error);
+            throw error;
         }
     });
 }

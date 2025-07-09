@@ -277,6 +277,61 @@
                     <div id="diaryLogs" class="diary-logs-container"></div>
                 </div>
 
+                <!-- Day Analysis Section -->
+                <div class="stats-section">
+                    <div class="section-header">
+                        <h2>Day Analysis</h2>
+                        <button id="generateAnalysis" class="btn">
+                            <i class="fas fa-brain"></i>
+                            Generate Analysis
+                        </button>
+                    </div>
+                    <div id="dayAnalysisContent" class="analysis-content">
+                        No analysis generated yet for this day.
+                    </div>
+                </div>
+
+                <style>
+                    .analysis-content {
+                        margin-top: 15px;
+                        white-space: pre-wrap;
+                        max-height: 500px;
+                        overflow-y: auto;
+                        padding: 15px;
+                        background: var(--color-background-secondary);
+                        border-radius: 8px;
+                        font-size: 14px;
+                        line-height: 1.6;
+                    }
+
+                    #generateAnalysis {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 8px 16px;
+                        background: var(--color-primary);
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                    }
+
+                    #generateAnalysis:hover {
+                        background: var(--color-primary-dark);
+                    }
+
+                    #generateAnalysis:disabled {
+                        opacity: 0.7;
+                        cursor: not-allowed;
+                    }
+
+                    #generateAnalysis i {
+                        font-size: 16px;
+                    }
+                </style>
+
                 <!-- History Section -->
                 <div class="stats-section">
                     <h2>Screenshot History</h2>
@@ -457,6 +512,14 @@
                 allScreenshots = data.screenshots || [];
                 currentPage = 1;
                 displayScreenshots();
+
+                // Update day analysis if available
+                const contentDiv = document.getElementById('dayAnalysisContent');
+                if (data.dayAnalysis && data.dayAnalysis.content) {
+                    contentDiv.textContent = data.dayAnalysis.content;
+                } else {
+                    contentDiv.textContent = 'No analysis generated yet for this day.';
+                }
             } catch (error) {
                 console.error('Error updating stats:', error);
             }
@@ -936,6 +999,14 @@
                 } else {
                     await refreshDiaryLogs();
                 }
+
+                // Update day analysis
+                const contentDiv = document.getElementById('dayAnalysisContent');
+                if (data.dayAnalysis && data.dayAnalysis.content) {
+                    contentDiv.textContent = data.dayAnalysis.content;
+                } else {
+                    contentDiv.textContent = 'No analysis generated yet for this day.';
+                }
             } catch (error) {
                 console.error('Error changing date:', error);
                 allScreenshots = [];
@@ -959,6 +1030,14 @@
                     allScreenshots = data.screenshots || [];
                     currentPage = 1;
                     displayScreenshots();
+                    
+                    // Update day analysis
+                    const contentDiv = document.getElementById('dayAnalysisContent');
+                    if (data.dayAnalysis && data.dayAnalysis.content) {
+                        contentDiv.textContent = data.dayAnalysis.content;
+                    } else {
+                        contentDiv.textContent = 'No analysis generated yet for this day.';
+                    }
                 }
             } catch (error) {
                 console.error('Error refreshing UI:', error);
@@ -979,6 +1058,21 @@
                 allScreenshots = data.screenshots || [];
                 currentPage = 1;
                 displayScreenshots();
+                
+                // Display diary logs
+                if (data.diaryLogs) {
+                    displayDiaryLogs(data.diaryLogs);
+                } else {
+                    await refreshDiaryLogs();
+                }
+
+                // Update day analysis
+                const contentDiv = document.getElementById('dayAnalysisContent');
+                if (data.dayAnalysis && data.dayAnalysis.content) {
+                    contentDiv.textContent = data.dayAnalysis.content;
+                } else {
+                    contentDiv.textContent = 'No analysis generated yet for this day.';
+                }
             }
         });
        
@@ -1675,6 +1769,67 @@
                 } else {
                     await refreshDiaryLogs();
                 }
+            }
+        });
+
+        // Add day analysis handler
+        async function loadDayAnalysis() {
+            console.log('Loading day analysis for date:', currentDate);
+            try {
+                const analysis = await ipcRenderer.invoke('get-day-analysis', currentDate);
+                const contentDiv = document.getElementById('dayAnalysisContent');
+                
+                if (analysis && analysis.content) {
+                    console.log('Displaying existing analysis');
+                    contentDiv.textContent = analysis.content;
+                } else {
+                    console.log('No existing analysis found');
+                    contentDiv.textContent = 'No analysis generated yet for this day.';
+                }
+            } catch (error) {
+                console.error('Error loading day analysis:', error);
+                document.getElementById('dayAnalysisContent').textContent = 'Error loading analysis.';
+            }
+        }
+
+        // Day analysis handlers
+        document.getElementById('generateAnalysis').addEventListener('click', async () => {
+            console.log('Generate analysis button clicked');
+            const button = document.getElementById('generateAnalysis');
+            const contentDiv = document.getElementById('dayAnalysisContent');
+            
+            try {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                contentDiv.textContent = 'Generating analysis...';
+                
+                console.log('Requesting analysis for date:', currentDate);
+                const analysis = await ipcRenderer.invoke('generate-day-analysis', currentDate);
+                console.log('Analysis received:', analysis ? 'success' : 'empty');
+                
+                if (!analysis) {
+                    throw new Error('No analysis was generated');
+                }
+                
+                contentDiv.textContent = analysis;
+            } catch (error) {
+                console.error('Error generating analysis:', error);
+                contentDiv.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-circle"></i>
+                        Error generating analysis: ${error.message || 'Unknown error'}
+                        <br><br>
+                        Please check:
+                        <ul>
+                            <li>Your API key is valid</li>
+                            <li>There is data available for analysis</li>
+                            <li>You have an active internet connection</li>
+                        </ul>
+                    </div>
+                `;
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-brain"></i> Generate Analysis';
             }
         });
     </script>

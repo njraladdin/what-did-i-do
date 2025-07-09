@@ -63,47 +63,68 @@ function initializeDatabase() {
                         reject(err);
                         return;
                     }
-                    
-                    // Add description column if it doesn't exist (for existing databases)
-                    db.run(`ALTER TABLE screenshots ADD COLUMN description TEXT`, (err) => {
-                        // Ignore error if column already exists
-                        if (err && !err.message.includes('duplicate column name')) {
-                            console.error('Column addition error:', err);
+
+                    // Create day_analyses table
+                    db.run(`
+                        CREATE TABLE IF NOT EXISTS day_analyses (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            date TEXT NOT NULL,
+                            timestamp TEXT NOT NULL,
+                            content TEXT NOT NULL,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    `, (err) => {
+                        if (err) {
+                            console.error('Day analyses table creation error:', err);
+                            reject(err);
+                            return;
                         }
-                        
-                        // Create index on timestamp for faster date filtering
+
+                        // Create index on day_analyses date for faster filtering
                         db.run(`
-                            CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp 
-                            ON screenshots(timestamp)
+                            CREATE INDEX IF NOT EXISTS idx_day_analyses_date 
+                            ON day_analyses(date)
                         `, (err) => {
                             if (err) {
-                                console.error('Index creation error:', err);
+                                console.error('Day analyses index creation error:', err);
                                 reject(err);
                                 return;
                             }
-                            
-                            // Create composite index for timestamp and category aggregations
+
+                            // Continue with existing indices creation
                             db.run(`
-                                CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp_category 
-                                ON screenshots(timestamp, category)
+                                CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp 
+                                ON screenshots(timestamp)
                             `, (err) => {
                                 if (err) {
-                                    console.error('Composite index creation error:', err);
+                                    console.error('Index creation error:', err);
                                     reject(err);
                                     return;
                                 }
                                 
-                                // Create index on diary_logs date for faster filtering
+                                // Create composite index for timestamp and category aggregations
                                 db.run(`
-                                    CREATE INDEX IF NOT EXISTS idx_diary_logs_date 
-                                    ON diary_logs(date)
+                                    CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp_category 
+                                    ON screenshots(timestamp, category)
                                 `, (err) => {
                                     if (err) {
-                                        console.error('Diary logs index creation error:', err);
+                                        console.error('Composite index creation error:', err);
                                         reject(err);
                                         return;
                                     }
-                                    resolve();
+                                    
+                                    // Create index on diary_logs date for faster filtering
+                                    db.run(`
+                                        CREATE INDEX IF NOT EXISTS idx_diary_logs_date 
+                                        ON diary_logs(date)
+                                    `, (err) => {
+                                        if (err) {
+                                            console.error('Diary logs index creation error:', err);
+                                            reject(err);
+                                            return;
+                                        }
+                                        resolve();
+                                    });
                                 });
                             });
                         });
@@ -117,11 +138,13 @@ function initializeDatabase() {
 // Calculate activity statistics for a given date
 function getActivityStats(currentDate, intervalMinutes) {
     return new Promise((resolve, reject) => {
-        const startOfDay = new Date(currentDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const endOfDay = new Date(currentDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        const localDate = new Date(currentDate);
+        const year = localDate.getFullYear();
+        const month = localDate.getMonth();
+        const day = localDate.getDate();
+
+        const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
+        const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
 
         console.log('Calculating stats for date:', currentDate);
         console.log('Interval minutes:', intervalMinutes);
@@ -164,7 +187,6 @@ function getActivityStats(currentDate, intervalMinutes) {
 
             // Calculate time differences and sum up by category
             if (timeResults && timeResults.length > 0) {
-                
                 timeResults.forEach((row, index) => {
                     categoryCounts[row.category] = (categoryCounts[row.category] || 0) + 1;
                     totalScreenshots++;
@@ -175,17 +197,15 @@ function getActivityStats(currentDate, intervalMinutes) {
                         const nextTime = new Date(row.next_timestamp);
                         const diffMinutes = Math.abs((nextTime - currentTime) / (1000 * 60));
 
-
                         // Only count if difference is 5 minutes or less
                         if (diffMinutes <= 5) {
                             categoryMinutes[row.category] = (categoryMinutes[row.category] || 0) + diffMinutes;
-                        } 
+                        }
                     } else {
                         // For the last screenshot of a sequence, count a default duration
                         const defaultDuration = Math.min(intervalMinutes, 5);
                         categoryMinutes[row.category] = (categoryMinutes[row.category] || 0) + defaultDuration;
                     }
-
                 });
 
                 // Calculate percentages and convert minutes to hours
@@ -194,7 +214,6 @@ function getActivityStats(currentDate, intervalMinutes) {
                         ? (categoryCounts[category] / totalScreenshots) * 100 
                         : 0;
                     timeInHours[category] = categoryMinutes[category] / 60;
-                    
                 });
             }
 
@@ -232,24 +251,29 @@ function getActivityStats(currentDate, intervalMinutes) {
                     thumbnail: `data:image/png;base64,${screenshot.thumbnail_data.toString('base64')}`
                 }));
 
-                // Get diary logs for the current date
-                getDiaryLogsForDate(currentDate).then(diaryLogs => {
+                // Get diary logs and day analysis for the current date
+                Promise.all([
+                    getDiaryLogsForDate(currentDate),
+                    getDayAnalysis(currentDate)
+                ]).then(([diaryLogs, dayAnalysis]) => {
                     const result = {
                         stats,
                         timeInHours,
                         screenshots: processedScreenshots,
-                        diaryLogs: diaryLogs
+                        diaryLogs: diaryLogs,
+                        dayAnalysis: dayAnalysis
                     };
 
                     resolve(result);
                 }).catch(err => {
-                    console.error('Error getting diary logs:', err);
-                    // Still resolve with empty diary logs if there's an error
+                    console.error('Error getting diary logs or day analysis:', err);
+                    // Still resolve with empty diary logs and analysis if there's an error
                     const result = {
                         stats,
                         timeInHours,
                         screenshots: processedScreenshots,
-                        diaryLogs: []
+                        diaryLogs: [],
+                        dayAnalysis: null
                     };
 
                     resolve(result);
@@ -700,6 +724,89 @@ function getDiaryLogsInRange(startDate, endDate) {
     });
 }
 
+async function getDayDataForAnalysis(date) {
+    return new Promise((resolve, reject) => {
+        const localDate = new Date(date);
+        const year = localDate.getFullYear();
+        const month = localDate.getMonth();
+        const day = localDate.getDate();
+
+        const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
+        const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
+
+        Promise.all([
+            // Get all screenshots with their metadata
+            new Promise((resolve, reject) => {
+                db.all(`
+                    SELECT timestamp, category, activity, description
+                    FROM screenshots 
+                    WHERE timestamp BETWEEN ? AND ?
+                    ORDER BY timestamp ASC
+                `, [startOfDay.toISOString(), endOfDay.toISOString()], 
+                (err, screenshots) => err ? reject(err) : resolve(screenshots))
+            }),
+            // Get all diary logs except previous analyses
+            new Promise((resolve, reject) => {
+                db.all(`
+                    SELECT timestamp, content, tags
+                    FROM diary_logs 
+                    WHERE date = ? AND tags NOT LIKE '%day_analysis%'
+                    ORDER BY timestamp ASC
+                `, [startOfDay.toISOString().split('T')[0]], 
+                (err, logs) => err ? reject(err) : resolve(logs))
+            })
+        ]).then(([screenshots, diaryLogs]) => {
+            resolve({ screenshots, diaryLogs });
+        }).catch(reject);
+    });
+}
+
+async function saveDayAnalysis(date, content) {
+    console.log('Saving day analysis for date:', date);
+    return new Promise((resolve, reject) => {
+        const timestamp = new Date().toISOString();
+        const dateStr = new Date(date).toISOString().split('T')[0];
+        
+        db.run(`
+            INSERT INTO day_analyses (
+                date,
+                timestamp,
+                content
+            ) VALUES (?, ?, ?)
+        `, [dateStr, timestamp, content], function(err) {
+            if (err) {
+                console.error('Error saving day analysis:', err);
+                reject(err);
+                return;
+            }
+            console.log('Day analysis saved successfully, ID:', this.lastID);
+            resolve(this.lastID);
+        });
+    });
+}
+
+async function getDayAnalysis(date) {
+    console.log('Getting day analysis for date:', date);
+    return new Promise((resolve, reject) => {
+        const dateStr = new Date(date).toISOString().split('T')[0];
+        
+        db.get(`
+            SELECT * FROM day_analyses 
+            WHERE date = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+        `, [dateStr], (err, analysis) => {
+            if (err) {
+                console.error('Error getting day analysis:', err);
+                reject(err);
+                return;
+            }
+            console.log('Retrieved day analysis:', analysis);
+            resolve(analysis);
+        });
+    });
+}
+
 module.exports = {
     initializeDatabase,
     getActivityStats,
@@ -714,5 +821,8 @@ module.exports = {
     getDiaryLogsForDate,
     updateDiaryLog,
     deleteDiaryLog,
-    getDiaryLogsInRange
+    getDiaryLogsInRange,
+    getDayDataForAnalysis,
+    saveDayAnalysis,
+    getDayAnalysis
 }; 
