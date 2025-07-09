@@ -43,35 +43,68 @@ function initializeDatabase() {
                     return;
                 }
                 
-                // Add description column if it doesn't exist (for existing databases)
-                db.run(`ALTER TABLE screenshots ADD COLUMN description TEXT`, (err) => {
-                    // Ignore error if column already exists
-                    if (err && !err.message.includes('duplicate column name')) {
-                        console.error('Column addition error:', err);
+                // Create diary_logs table
+                db.run(`
+                    CREATE TABLE IF NOT EXISTS diary_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        date TEXT NOT NULL,
+                        timestamp TEXT NOT NULL,
+                        title TEXT,
+                        content TEXT NOT NULL,
+                        mood TEXT,
+                        tags TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    )
+                `, (err) => {
+                    if (err) {
+                        console.error('Diary logs table creation error:', err);
+                        reject(err);
+                        return;
                     }
                     
-                    // Create index on timestamp for faster date filtering
-                    db.run(`
-                        CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp 
-                        ON screenshots(timestamp)
-                    `, (err) => {
-                        if (err) {
-                            console.error('Index creation error:', err);
-                            reject(err);
-                            return;
+                    // Add description column if it doesn't exist (for existing databases)
+                    db.run(`ALTER TABLE screenshots ADD COLUMN description TEXT`, (err) => {
+                        // Ignore error if column already exists
+                        if (err && !err.message.includes('duplicate column name')) {
+                            console.error('Column addition error:', err);
                         }
                         
-                        // Create composite index for timestamp and category aggregations
+                        // Create index on timestamp for faster date filtering
                         db.run(`
-                            CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp_category 
-                            ON screenshots(timestamp, category)
+                            CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp 
+                            ON screenshots(timestamp)
                         `, (err) => {
                             if (err) {
-                                console.error('Composite index creation error:', err);
+                                console.error('Index creation error:', err);
                                 reject(err);
                                 return;
                             }
-                            resolve();
+                            
+                            // Create composite index for timestamp and category aggregations
+                            db.run(`
+                                CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp_category 
+                                ON screenshots(timestamp, category)
+                            `, (err) => {
+                                if (err) {
+                                    console.error('Composite index creation error:', err);
+                                    reject(err);
+                                    return;
+                                }
+                                
+                                // Create index on diary_logs date for faster filtering
+                                db.run(`
+                                    CREATE INDEX IF NOT EXISTS idx_diary_logs_date 
+                                    ON diary_logs(date)
+                                `, (err) => {
+                                    if (err) {
+                                        console.error('Diary logs index creation error:', err);
+                                        reject(err);
+                                        return;
+                                    }
+                                    resolve();
+                                });
+                            });
                         });
                     });
                 });
@@ -169,13 +202,28 @@ function getActivityStats(currentDate, intervalMinutes) {
                     thumbnail: `data:image/png;base64,${screenshot.thumbnail_data.toString('base64')}`
                 }));
 
-                const result = {
-                    stats,
-                    timeInHours,
-                    screenshots: processedScreenshots
-                };
+                // Get diary logs for the current date
+                getDiaryLogsForDate(currentDate).then(diaryLogs => {
+                    const result = {
+                        stats,
+                        timeInHours,
+                        screenshots: processedScreenshots,
+                        diaryLogs: diaryLogs
+                    };
 
-                resolve(result);
+                    resolve(result);
+                }).catch(err => {
+                    console.error('Error getting diary logs:', err);
+                    // Still resolve with empty diary logs if there's an error
+                    const result = {
+                        stats,
+                        timeInHours,
+                        screenshots: processedScreenshots,
+                        diaryLogs: []
+                    };
+
+                    resolve(result);
+                });
             });
         });
     });
@@ -468,6 +516,165 @@ function exportData(startDate, endDate, includeMedia, includeStats) {
     });
 }
 
+// Diary logs functions
+function saveDiaryLog(date, title, content, mood, tags) {
+    return new Promise((resolve, reject) => {
+        const timestamp = new Date().toISOString();
+        const dateStr = new Date(date).toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        
+        db.run(`
+            INSERT INTO diary_logs (
+                date, 
+                timestamp, 
+                title, 
+                content, 
+                mood, 
+                tags,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [
+            dateStr,
+            timestamp,
+            title,
+            content,
+            mood,
+            tags,
+            timestamp
+        ], function(err) {
+            if (err) {
+                console.error('Error saving diary log:', err);
+                reject(err);
+                return;
+            }
+            resolve(this.lastID);
+        });
+    });
+}
+
+function getDiaryLogsForDate(date) {
+    return new Promise((resolve, reject) => {
+        const dateStr = new Date(date).toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        
+        db.all(`
+            SELECT 
+                id,
+                date,
+                timestamp,
+                title,
+                content,
+                mood,
+                tags,
+                created_at,
+                updated_at
+            FROM diary_logs 
+            WHERE date = ?
+            ORDER BY timestamp DESC
+        `, [dateStr], (err, logs) => {
+            if (err) {
+                console.error('Error getting diary logs:', err);
+                reject(err);
+                return;
+            }
+            
+            const processedLogs = (logs || []).map(log => ({
+                id: log.id,
+                date: log.date,
+                timestamp: log.timestamp,
+                title: log.title,
+                content: log.content,
+                mood: log.mood,
+                tags: log.tags ? log.tags.split(',') : [],
+                created_at: log.created_at,
+                updated_at: log.updated_at
+            }));
+            
+            resolve(processedLogs);
+        });
+    });
+}
+
+function updateDiaryLog(id, title, content, mood, tags) {
+    return new Promise((resolve, reject) => {
+        const timestamp = new Date().toISOString();
+        
+        db.run(`
+            UPDATE diary_logs 
+            SET title = ?, content = ?, mood = ?, tags = ?, updated_at = ?
+            WHERE id = ?
+        `, [
+            title,
+            content,
+            mood,
+            tags,
+            timestamp,
+            id
+        ], function(err) {
+            if (err) {
+                console.error('Error updating diary log:', err);
+                reject(err);
+                return;
+            }
+            resolve(this.changes > 0);
+        });
+    });
+}
+
+function deleteDiaryLog(id) {
+    return new Promise((resolve, reject) => {
+        db.run('DELETE FROM diary_logs WHERE id = ?', [id], function(err) {
+            if (err) {
+                console.error('Error deleting diary log:', err);
+                reject(err);
+                return;
+            }
+            resolve(this.changes > 0);
+        });
+    });
+}
+
+function getDiaryLogsInRange(startDate, endDate) {
+    return new Promise((resolve, reject) => {
+        const startDateStr = new Date(startDate).toISOString().split('T')[0];
+        const endDateStr = new Date(endDate).toISOString().split('T')[0];
+        
+        db.all(`
+            SELECT 
+                id,
+                date,
+                timestamp,
+                title,
+                content,
+                mood,
+                tags,
+                created_at,
+                updated_at
+            FROM diary_logs 
+            WHERE date BETWEEN ? AND ?
+            ORDER BY date DESC, timestamp DESC
+        `, [startDateStr, endDateStr], (err, logs) => {
+            if (err) {
+                console.error('Error getting diary logs in range:', err);
+                reject(err);
+                return;
+            }
+            
+            const processedLogs = (logs || []).map(log => ({
+                id: log.id,
+                date: log.date,
+                timestamp: log.timestamp,
+                title: log.title,
+                content: log.content,
+                mood: log.mood,
+                tags: log.tags ? log.tags.split(',') : [],
+                created_at: log.created_at,
+                updated_at: log.updated_at
+            }));
+            
+            resolve(processedLogs);
+        });
+    });
+}
+
 module.exports = {
     initializeDatabase,
     getActivityStats,
@@ -477,5 +684,10 @@ module.exports = {
     closeDatabase,
     categories,
     getMonthlyAverages,
-    exportData
+    exportData,
+    saveDiaryLog,
+    getDiaryLogsForDate,
+    updateDiaryLog,
+    deleteDiaryLog,
+    getDiaryLogsInRange
 }; 

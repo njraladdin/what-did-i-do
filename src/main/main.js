@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, powerMonitor, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, powerMonitor, Tray, Menu, globalShortcut } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const { GoogleGenAI, Type } = require('@google/genai');
@@ -530,6 +530,17 @@ function showTrayNotification() {
     }
 }
 
+// Function to show window and open diary modal
+function showWindowAndOpenDiaryModal() {
+    if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+        
+        // Send message to renderer to open diary modal
+        mainWindow.webContents.send('open-diary-modal');
+    }
+}
+
 
 
 app.whenReady().then(async () => {
@@ -549,6 +560,11 @@ app.whenReady().then(async () => {
         createWindow();
         createTray();
         initializeIdleMonitor();
+        
+        // Register global shortcut for diary modal
+        globalShortcut.register('CommandOrControl+Shift+D', () => {
+            showWindowAndOpenDiaryModal();
+        });
         
         // Initialize IPC handlers
         initializeIpcHandlers({
@@ -610,6 +626,8 @@ app.on('will-quit', async () => {
     if (tray) {
         tray.destroy();
     }
+    // Unregister all global shortcuts
+    globalShortcut.unregisterAll();
 });
 
 

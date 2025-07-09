@@ -399,25 +399,24 @@ function initializeIpcHandlers(dependencies) {
         try {
             const apiKey = store.get('apiKey');
             if (!apiKey) {
-                return { success: false, error: 'API key not found' };
+                return { success: false, error: 'No API key configured' };
             }
 
-            // Use the existing ai instance but with the test model
-            const { GoogleGenAI } = require('@google/genai');
-            const testAi = new GoogleGenAI({ apiKey: apiKey });
+            // Test the model with a simple request
+            const ai = new (require('@google/genai').GoogleGenAI)({apiKey: apiKey});
             
-            const result = await testAi.models.generateContent({
-                model: model,
-                contents: 'Hello, this is a test message.'
+            const result = await ai.models.generateContent({
+                model: model.trim(),
+                contents: 'Hello, this is a test message to validate the model.'
             });
 
             if (result && result.text) {
-                return { success: true };
+                return { success: true, response: result.text };
+            } else {
+                return { success: false, error: 'Invalid response from model' };
             }
-
-            return { success: false, error: 'Invalid response from model' };
         } catch (error) {
-            console.error('Model test error:', error);
+            console.error('Error testing Gemini model:', error);
             return { 
                 success: false, 
                 error: error.message || 'Failed to test model'
@@ -429,32 +428,87 @@ function initializeIpcHandlers(dependencies) {
         try {
             const apiKey = store.get('apiKey');
             if (!apiKey) {
-                return { success: false, error: 'API key not found', models: [] };
+                return { success: false, error: 'No API key configured' };
             }
-            
-            const response = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-            
-            // Filter and format models
-            const models = response.data.models
-                .filter(model => model.name.includes('gemini'))
-                .map(model => ({
-                    id: model.name.split('/').pop(),
-                    name: model.displayName || model.name.split('/').pop(),
-                    description: model.description || ''
-                }));
-                
-            return { success: true, models };
+
+            const response = await axios.get('https://generativelanguage.googleapis.com/v1beta/models', {
+                params: {
+                    key: apiKey
+                }
+            });
+
+            if (response.data && response.data.models) {
+                const models = response.data.models
+                    .filter(model => model.name.includes('gemini'))
+                    .map(model => ({
+                        name: model.name.replace('models/', ''),
+                        displayName: model.displayName || model.name.replace('models/', ''),
+                        description: model.description || ''
+                    }));
+
+                return { success: true, models };
+            } else {
+                return { success: false, error: 'No models found' };
+            }
         } catch (error) {
-            console.error('Error fetching available models:', error.message);
-            const errorMessage = error.response ? 
-                `API error: ${error.response.status} ${error.response.statusText}` : 
-                error.message || 'Failed to fetch models';
-                
+            console.error('Error fetching models:', error);
             return { 
                 success: false, 
-                error: errorMessage,
-                models: [] 
+                error: error.message || 'Failed to fetch models'
             };
+        }
+    });
+
+    // Diary log handlers
+    ipcMain.handle('save-diary-log', async (event, date, title, content, mood, tags) => {
+        try {
+            const tagsString = Array.isArray(tags) ? tags.join(',') : tags || '';
+            const logId = await database.saveDiaryLog(date, title, content, mood, tagsString);
+            return { success: true, id: logId };
+        } catch (error) {
+            console.error('Error saving diary log:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('get-diary-logs-for-date', async (event, date) => {
+        try {
+            const logs = await database.getDiaryLogsForDate(date);
+            return { success: true, logs };
+        } catch (error) {
+            console.error('Error getting diary logs for date:', error);
+            return { success: false, logs: [] };
+        }
+    });
+
+    ipcMain.handle('update-diary-log', async (event, id, title, content, mood, tags) => {
+        try {
+            const tagsString = Array.isArray(tags) ? tags.join(',') : tags || '';
+            const success = await database.updateDiaryLog(id, title, content, mood, tagsString);
+            return { success };
+        } catch (error) {
+            console.error('Error updating diary log:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('delete-diary-log', async (event, id) => {
+        try {
+            const success = await database.deleteDiaryLog(id);
+            return { success };
+        } catch (error) {
+            console.error('Error deleting diary log:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('get-diary-logs-in-range', async (event, startDate, endDate) => {
+        try {
+            const logs = await database.getDiaryLogsInRange(startDate, endDate);
+            return { success: true, logs };
+        } catch (error) {
+            console.error('Error getting diary logs in range:', error);
+            return { success: false, logs: [] };
         }
     });
 }
