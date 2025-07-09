@@ -6,7 +6,7 @@
     
     /* Text colors - higher contrast */ --color-text-primary: #111827; /* Near black */ --color-text-secondary: #4B5563; /* Medium gray */ --color-text-muted: #6B7280; /* Light gray */
     
-    /* Updated category colors */ --color-work: #6366F1; /* Indigo */ --color-learn: #8B5CF6; /* Purple */ --color-social: #10B981; /* Emerald */ --color-entertainment: #EC4899; /* Pink */ }
+    /* Updated category colors */ --color-work: #6366F1; /* Indigo */ --color-learn: #8B5CF6; /* Purple */ --color-social: #10B981; /* Emerald */ --color-entertainment: #EC4899; /* Pink */ --color-other: #F59E0B; /* Amber */ }
     
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--color-bg-main); color: var(--color-text-secondary); line-height: 1.6; margin: 0; padding: 0; }
     
@@ -94,6 +94,8 @@
     .progress-bar.SOCIAL { background: var(--color-social); }
     
     .progress-bar.ENTERTAINMENT { background: var(--color-entertainment); }
+
+    .progress-bar.OTHER { background: var(--color-other); }
     
     button { background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border); border-radius: 6px; padding: 8px 16px; font-size: 14px; font-weight: 500; transition: all 0.15s ease; height: 40px; cursor: pointer; }
     
@@ -316,6 +318,8 @@
     .category-label.SOCIAL { color: var(--color-social); }
     
     .category-label.ENTERTAINMENT { color: var(--color-entertainment); }
+
+    .category-label.OTHER { color: var(--color-other); }
     
      .date-navigation { display: flex; align-items: center; gap: 8px; font-size: 14px; }
     

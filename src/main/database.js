@@ -10,7 +10,8 @@ const categories = [
     'LEARN',          // Education, tutorials, research
     'SOCIAL',         // Meetings, chat, emails, social media
     'ENTERTAINMENT',  // Games, videos, browsing for fun
-    'UNKNOWN'         // For failed analyses
+    'OTHER',          // Tasks that don't fit other categories
+    'UNKNOWN'         // Internal use only - for failed analyses, not shown in UI
 ];
 
 // Initialize database
@@ -132,7 +133,7 @@ function getActivityStats(currentDate, intervalMinutes) {
                 category,
                 LEAD(timestamp) OVER (ORDER BY timestamp ASC) as next_timestamp
             FROM screenshots 
-            WHERE timestamp BETWEEN ? AND ?
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
             ORDER BY timestamp ASC
         `, [
             startOfDay.toISOString(),
@@ -153,7 +154,8 @@ function getActivityStats(currentDate, intervalMinutes) {
             const categoryCounts = {};
             let totalScreenshots = 0;
 
-            categories.forEach(category => {
+            // Initialize stats for all categories except UNKNOWN
+            categories.filter(category => category !== 'UNKNOWN').forEach(category => {
                 stats[category] = 0;
                 timeInHours[category] = 0;
                 categoryMinutes[category] = 0;
@@ -187,7 +189,7 @@ function getActivityStats(currentDate, intervalMinutes) {
                 });
 
                 // Calculate percentages and convert minutes to hours
-                categories.forEach(category => {
+                categories.filter(category => category !== 'UNKNOWN').forEach(category => {
                     stats[category] = totalScreenshots > 0 
                         ? (categoryCounts[category] / totalScreenshots) * 100 
                         : 0;
@@ -206,7 +208,7 @@ function getActivityStats(currentDate, intervalMinutes) {
                     thumbnail_data,
                     description
                 FROM screenshots 
-                WHERE timestamp BETWEEN ? AND ?
+                WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
                 ORDER BY timestamp DESC
                 LIMIT 100
             `, [
@@ -372,54 +374,52 @@ function closeDatabase() {
 function getMonthlyAverages(currentDate, intervalMinutes) {
     return new Promise((resolve, reject) => {
         const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        
-        const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-        endOfMonth.setHours(23, 59, 59, 999);
+        const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
-        // Get all screenshots for the month ordered by timestamp to calculate actual durations
+        // Get all screenshots for the month
         db.all(`
             SELECT 
                 timestamp,
                 category,
-                LEAD(timestamp) OVER (ORDER BY timestamp ASC) as next_timestamp,
-                strftime('%Y-%m-%d', timestamp) as day
+                LEAD(timestamp) OVER (ORDER BY timestamp ASC) as next_timestamp
             FROM screenshots 
-            WHERE timestamp BETWEEN ? AND ?
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
             ORDER BY timestamp ASC
         `, [
             startOfMonth.toISOString(),
             endOfMonth.toISOString()
-        ], (err, results) => {
+        ], (err, timeResults) => {
             if (err) {
-                console.error('Error getting monthly averages:', err);
+                console.error('Error getting monthly stats:', err);
                 reject(err);
                 return;
             }
 
-            // Initialize stats objects
             const monthlyAverages = {};
             const monthlyTimeInHours = {};
-            categories.forEach(category => {
+            const categoryMinutes = {};
+            const categoryCounts = {};
+            const uniqueDays = new Set();
+            let totalScreenshots = 0;
+
+            // Initialize stats for all categories except UNKNOWN
+            categories.filter(category => category !== 'UNKNOWN').forEach(category => {
                 monthlyAverages[category] = 0;
                 monthlyTimeInHours[category] = 0;
-            });
-
-            // Process results to get daily counts and time
-            const categoryCounts = {};
-            const categoryMinutes = {};
-            categories.forEach(category => {
-                categoryCounts[category] = 0;
                 categoryMinutes[category] = 0;
+                categoryCounts[category] = 0;
             });
 
-            // Count unique days with data
-            const uniqueDays = new Set();
-            
-            if (results && results.length > 0) {
-                results.forEach(row => {
-                    uniqueDays.add(row.day);
+            // Process results
+            if (timeResults && timeResults.length > 0) {
+                timeResults.forEach(row => {
+                    // Track unique days
+                    const day = new Date(row.timestamp).toISOString().split('T')[0];
+                    uniqueDays.add(day);
+
+                    // Count screenshots per category
                     categoryCounts[row.category] = (categoryCounts[row.category] || 0) + 1;
+                    totalScreenshots++;
 
                     // Calculate time difference if there's a next screenshot
                     if (row.next_timestamp) {
@@ -438,11 +438,8 @@ function getMonthlyAverages(currentDate, intervalMinutes) {
                     }
                 });
                 
-                // Calculate total screenshots across all categories
-                const totalScreenshots = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0);
-                
                 if (totalScreenshots > 0) {
-                    categories.forEach(category => {
+                    categories.filter(category => category !== 'UNKNOWN').forEach(category => {
                         // Calculate average percentage
                         monthlyAverages[category] = (categoryCounts[category] / totalScreenshots) * 100;
                         
@@ -464,28 +461,22 @@ function getMonthlyAverages(currentDate, intervalMinutes) {
 // Export data for a specific date range with options
 function exportData(startDate, endDate, includeMedia, includeStats) {
     return new Promise((resolve, reject) => {
-        let query = `
+        // Get all screenshots for the date range
+        const query = `
             SELECT 
                 id,
                 timestamp,
                 category,
                 activity,
+                ${includeMedia ? 'image_data, thumbnail_data,' : ''}
                 description
-        `;
-        
-        if (includeMedia) {
-            query += `, image_data, thumbnail_data`;
-        }
-        
-        query += `
             FROM screenshots 
-            WHERE timestamp BETWEEN ? AND ?
-            ORDER BY timestamp DESC
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
+            ORDER BY timestamp ASC
         `;
 
-        db.all(query, [startDate, endDate], (err, screenshots) => {
+        db.all(query, [startDate.toISOString(), endDate.toISOString()], async (err, screenshots) => {
             if (err) {
-                console.error('Error exporting screenshots:', err);
                 reject(err);
                 return;
             }

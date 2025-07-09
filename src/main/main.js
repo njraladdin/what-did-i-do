@@ -195,6 +195,7 @@ async function captureAndAnalyze() {
             - Coding, documents, or professional tasks would be "WORK"
             - Online courses, tutorials, or research or podcasts and youtube videos (like tech / ai related  / psychology etc.) would be "LEARN"
             - Meetings, direct messaging, emails, or professional/personal communication would be "SOCIAL" (IMPORTANT: interactions on entertainment platforms like YouTube comments, Twitch chat, or social media entertainment content are NOT social - they count as ENTERTAINMENT)
+            - Tasks that don't clearly fit into WORK, LEARN, SOCIAL, or ENTERTAINMENT would be "OTHER" (e.g., personal finance, shopping, health tracking, system settings, etc.)
 
             For the "description" field, provide a comprehensive description (max 150-300 words) of what the user is doing, what's visible on the screen, and any relevant context about the activity. This should be detailed enough to understand the user's behavior and the content they're interacting with.
 
