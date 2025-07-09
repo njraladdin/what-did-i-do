@@ -122,49 +122,77 @@ function getActivityStats(currentDate, intervalMinutes) {
         const endOfDay = new Date(currentDate);
         endOfDay.setHours(23, 59, 59, 999);
 
-        // First, get statistics using aggregation (much faster)
+        console.log('Calculating stats for date:', currentDate);
+        console.log('Interval minutes:', intervalMinutes);
+
+        // First, get all screenshots for the day ordered by timestamp to calculate actual durations
         db.all(`
             SELECT 
+                timestamp,
                 category,
-                COUNT(*) as count
+                LEAD(timestamp) OVER (ORDER BY timestamp ASC) as next_timestamp
             FROM screenshots 
             WHERE timestamp BETWEEN ? AND ?
-            GROUP BY category
+            ORDER BY timestamp ASC
         `, [
             startOfDay.toISOString(),
             endOfDay.toISOString()
-        ], (err, statResults) => {
+        ], (err, timeResults) => {
             if (err) {
-                console.error('Error getting stats:', err);
+                console.error('Error getting time stats:', err);
                 reject(err);
                 return;
             }
 
+            console.log('Total screenshots found:', timeResults.length);
+
             // Initialize stats object
             const stats = {};
             const timeInHours = {};
+            const categoryMinutes = {};
+            const categoryCounts = {};
+            let totalScreenshots = 0;
+
             categories.forEach(category => {
                 stats[category] = 0;
                 timeInHours[category] = 0;
+                categoryMinutes[category] = 0;
+                categoryCounts[category] = 0;
             });
 
-            let totalScreenshots = 0;
-            const categoryCounts = {};
-            
-            // Process aggregated results
-            if (statResults && statResults.length > 0) {
-                statResults.forEach(row => {
-                    categoryCounts[row.category] = row.count;
-                    totalScreenshots += row.count;
-                });
+            // Calculate time differences and sum up by category
+            if (timeResults && timeResults.length > 0) {
                 
+                timeResults.forEach((row, index) => {
+                    categoryCounts[row.category] = (categoryCounts[row.category] || 0) + 1;
+                    totalScreenshots++;
+
+                    // Calculate time difference if there's a next screenshot
+                    if (row.next_timestamp) {
+                        const currentTime = new Date(row.timestamp);
+                        const nextTime = new Date(row.next_timestamp);
+                        const diffMinutes = Math.abs((nextTime - currentTime) / (1000 * 60));
+
+
+                        // Only count if difference is 5 minutes or less
+                        if (diffMinutes <= 5) {
+                            categoryMinutes[row.category] = (categoryMinutes[row.category] || 0) + diffMinutes;
+                        } 
+                    } else {
+                        // For the last screenshot of a sequence, count a default duration
+                        const defaultDuration = Math.min(intervalMinutes, 5);
+                        categoryMinutes[row.category] = (categoryMinutes[row.category] || 0) + defaultDuration;
+                    }
+
+                });
+
+                // Calculate percentages and convert minutes to hours
                 categories.forEach(category => {
-                    const count = categoryCounts[category] || 0;
                     stats[category] = totalScreenshots > 0 
-                        ? (count / totalScreenshots) * 100 
+                        ? (categoryCounts[category] / totalScreenshots) * 100 
                         : 0;
-                    // Calculate hours based on interval and count
-                    timeInHours[category] = (count * intervalMinutes) / 60;
+                    timeInHours[category] = categoryMinutes[category] / 60;
+                    
                 });
             }
 
@@ -349,15 +377,16 @@ function getMonthlyAverages(currentDate, intervalMinutes) {
         const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
         endOfMonth.setHours(23, 59, 59, 999);
 
-        // Get statistics using aggregation for the entire month
+        // Get all screenshots for the month ordered by timestamp to calculate actual durations
         db.all(`
             SELECT 
+                timestamp,
                 category,
-                COUNT(*) as count,
+                LEAD(timestamp) OVER (ORDER BY timestamp ASC) as next_timestamp,
                 strftime('%Y-%m-%d', timestamp) as day
             FROM screenshots 
             WHERE timestamp BETWEEN ? AND ?
-            GROUP BY category, day
+            ORDER BY timestamp ASC
         `, [
             startOfMonth.toISOString(),
             endOfMonth.toISOString()
@@ -376,11 +405,12 @@ function getMonthlyAverages(currentDate, intervalMinutes) {
                 monthlyTimeInHours[category] = 0;
             });
 
-            // Process results to get daily counts
-            const dailyTotals = {};
+            // Process results to get daily counts and time
             const categoryCounts = {};
+            const categoryMinutes = {};
             categories.forEach(category => {
                 categoryCounts[category] = 0;
+                categoryMinutes[category] = 0;
             });
 
             // Count unique days with data
@@ -389,31 +419,35 @@ function getMonthlyAverages(currentDate, intervalMinutes) {
             if (results && results.length > 0) {
                 results.forEach(row => {
                     uniqueDays.add(row.day);
-                    categoryCounts[row.category] = (categoryCounts[row.category] || 0) + row.count;
-                    
-                    // Track daily totals for percentage calculation
-                    if (!dailyTotals[row.day]) {
-                        dailyTotals[row.day] = 0;
+                    categoryCounts[row.category] = (categoryCounts[row.category] || 0) + 1;
+
+                    // Calculate time difference if there's a next screenshot
+                    if (row.next_timestamp) {
+                        const currentTime = new Date(row.timestamp);
+                        const nextTime = new Date(row.next_timestamp);
+                        const diffMinutes = Math.abs((nextTime - currentTime) / (1000 * 60));
+
+                        // Only count if difference is 5 minutes or less
+                        if (diffMinutes <= 5) {
+                            categoryMinutes[row.category] = (categoryMinutes[row.category] || 0) + diffMinutes;
+                        }
+                    } else {
+                        // For the last screenshot of a sequence, count a default duration
+                        const defaultDuration = Math.min(intervalMinutes, 5);
+                        categoryMinutes[row.category] = (categoryMinutes[row.category] || 0) + defaultDuration;
                     }
-                    dailyTotals[row.day] += row.count;
                 });
                 
-                // Calculate the average percentage and time for each category
-                const daysWithData = uniqueDays.size;
+                // Calculate total screenshots across all categories
+                const totalScreenshots = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0);
                 
-                if (daysWithData > 0) {
-                    // Calculate total screenshots across all categories
-                    const totalScreenshots = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0);
-                    
+                if (totalScreenshots > 0) {
                     categories.forEach(category => {
-                        const count = categoryCounts[category] || 0;
                         // Calculate average percentage
-                        monthlyAverages[category] = totalScreenshots > 0 
-                            ? (count / totalScreenshots) * 100 
-                            : 0;
+                        monthlyAverages[category] = (categoryCounts[category] / totalScreenshots) * 100;
                         
                         // Calculate total hours for the month
-                        monthlyTimeInHours[category] = (count * intervalMinutes) / 60;
+                        monthlyTimeInHours[category] = categoryMinutes[category] / 60;
                     });
                 }
             }
