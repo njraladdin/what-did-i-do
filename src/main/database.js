@@ -777,8 +777,12 @@ async function getDayDataForAnalysis(date) {
         const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
         const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
 
+        // Get start of month for historical data
+        const startOfMonth = new Date(year, month, 1);
+        const dateStr = startOfDay.toISOString().split('T')[0];
+
         Promise.all([
-            // Get all screenshots with their metadata
+            // Get all screenshots with their metadata for today
             new Promise((resolve, reject) => {
                 db.all(`
                     SELECT timestamp, category, activity, description
@@ -788,18 +792,54 @@ async function getDayDataForAnalysis(date) {
                 `, [startOfDay.toISOString(), endOfDay.toISOString()], 
                 (err, screenshots) => err ? reject(err) : resolve(screenshots))
             }),
-            // Get all notes
+            // Get all notes for today
             new Promise((resolve, reject) => {
                 db.all(`
                     SELECT timestamp, content
                     FROM notes 
                     WHERE date = ?
                     ORDER BY timestamp ASC
-                `, [startOfDay.toISOString().split('T')[0]], 
+                `, [dateStr], 
                 (err, notes) => err ? reject(err) : resolve(notes))
+            }),
+            // Get historical notes from start of month until yesterday
+            new Promise((resolve, reject) => {
+                db.all(`
+                    SELECT date, timestamp, content
+                    FROM notes 
+                    WHERE date >= ? AND date < ?
+                    ORDER BY date DESC, timestamp DESC
+                `, [
+                    startOfMonth.toISOString().split('T')[0],
+                    dateStr
+                ], 
+                (err, historicalNotes) => err ? reject(err) : resolve(historicalNotes))
+            }),
+            // Get historical day analyses from start of month until yesterday
+            // Explicitly exclude today's date to avoid including any existing analysis for today
+            new Promise((resolve, reject) => {
+                db.all(`
+                    SELECT date, content
+                    FROM day_analyses 
+                    WHERE date >= ? AND date < ?
+                    AND date != ?
+                    ORDER BY date DESC
+                `, [
+                    startOfMonth.toISOString().split('T')[0],
+                    endOfDay.toISOString().split('T')[0],
+                    dateStr
+                ], 
+                (err, historicalAnalyses) => err ? reject(err) : resolve(historicalAnalyses))
             })
-        ]).then(([screenshots, notes]) => {
-            resolve({ screenshots, notes });
+        ]).then(([screenshots, notes, historicalNotes, historicalAnalyses]) => {
+            resolve({ 
+                screenshots, 
+                notes,
+                historicalData: {
+                    notes: historicalNotes,
+                    analyses: historicalAnalyses
+                }
+            });
         }).catch(reject);
     });
 }

@@ -387,33 +387,53 @@ async function generateDayAnalysis(date) {
         const data = await database.getDayDataForAnalysis(date);
         appLogger.info('Retrieved data for analysis:', {
             screenshotsCount: data.screenshots.length,
-            notesCount: data.notes.length
+            notesCount: data.notes.length,
+            historicalNotesCount: data.historicalData.notes.length,
+            historicalAnalysesCount: data.historicalData.analyses.length
         });
 
         if (!ai) {
             throw new Error('AI is not initialized. Please check your API key.');
         }
 
-        const prompt = `You are a behavioral analyst. Your task is to analyze my activity logs and diary entries to create a report about my day.
+        const prompt = `You are a behavioral analyst. Your task is to analyze my activity logs and diary entries to create a report about my day, while considering my recent history and patterns from this month.
 
-The report must have two distinct sections:
+Here is today's data for analysis:
 
-1.  **My Day:** Write an objective, chronological summary of my day from a first-person perspective (using "I"). State events simply and factually. Instead of vague descriptions like "for a while," use general but concrete estimates like "for about an hour" or "for a few minutes." Avoid complex language. Just describe what I did in the order it happened.
-
-2.  **Behavioral Analysis:** Write a concise and focused analysis of the user's behavior from a third-person, objective perspective. Identify 3-4 key, actionable patterns related to focus, context-switching, activity triggers, or the alignment between the user's actions and stated intentions.
-
-Here is my data for analysis:
-
-**Activities Data (timestamps, categories, and descriptions):**
+**Today's Activities Data (timestamps, categories, and descriptions):**
 ${JSON.stringify(data.screenshots, null, 2)}
 
-**Diary Logs from the day:**
+**Today's Notes (${new Date(date).toISOString().split('T')[0]}):**
 ${JSON.stringify(data.notes, null, 2)}
 
-Generate the report following the specified structure and tone. IMPORTANT: Do not include any introductory text like "Of course, here is the report." Just return the raw markdown content of the report.
-`;
+The report must have three distinct sections:
 
-        appLogger.info('Sending request to Gemini API');
+1. Based on Todays data: **My Day:** Write an objective, chronological summary of my day from a first-person perspective (using "I"). State events simply and factually. Instead of vague descriptions like "for a while," use general but concrete estimates like "for about an hour" or "for a few minutes." Avoid complex language. Just describe what I did in the order it happened.
+
+2. Based on Todays data: **Behavioral Analysis:** Write a very concise and focused analysis of the user's behavior from a third-person, objective perspective. Use a numbered list. Identify 3-4 key, actionable patterns related to focus, context-switching, activity triggers, or the alignment between the user's actions and stated intentions. Get straight to the point. give direct observation (1-2 sentences max).
+
+3. Based on Todays data and Historical data: **Monthly Progress & Trends:** Based on the historical data provided, analyze how today's behavior compares to recent days. Be very direct and use a numbered list. Identify any improvements or regressions in productivity patterns, highlight emerging habits (both positive and concerning), and note any progress toward previously identified goals or recommendations. where is the user going?
+
+
+
+**Historical Data from This Month for more context for the progress and trends analysis:**
+
+Previous Days' Notes (before ${new Date(date).toISOString().split('T')[0]}):
+${JSON.stringify(data.historicalData.notes, null, 2)}
+
+Previous Days' Analyses:
+${JSON.stringify(data.historicalData.analyses, null, 2)}
+
+Generate the report following the specified structure and tone. IMPORTANT: Do not include any introductory text like "Of course, here is the report." Just return the raw markdown content of the report.
+
+When analyzing trends and progress:
+1. Compare today's activities with patterns from previous days
+2. Note any improvements in areas previously identified as needing work
+3. Identify if previously suggested strategies have been implemented
+4. Look for consistency or changes in daily routines
+5. Consider how today's behavior aligns with patterns from earlier in the month`;
+
+        appLogger.info('Sending request to Gemini API', { prompt: (prompt) });
         const result = await ai.models.generateContent({
              model: "gemini-2.5-pro",
              contents: prompt,
