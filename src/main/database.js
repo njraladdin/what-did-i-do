@@ -14,20 +14,20 @@ const categories = [
     'UNKNOWN'         // Internal use only - for failed analyses, not shown in UI
 ];
 
-// Migration function to transition from diary_logs to notes
-function migrateDiaryLogsToNotes() {
+// Initialize database
+function initializeDatabase() {
     return new Promise((resolve, reject) => {
-        // First check if the notes table exists
-        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='notes'", (err, result) => {
+        const dbPath = path.join(app.getPath('userData'), 'screenshots.db');
+        db = new sqlite3.Database(dbPath, async (err) => {
             if (err) {
-                console.error('Error checking for notes table:', err);
+                console.error('Database initialization error:', err);
                 reject(err);
                 return;
             }
 
-            // If notes table doesn't exist, create it
-            const createNotesTable = () => {
-                return new Promise((resolve, reject) => {
+            try {
+                // Create notes table
+                await new Promise((resolve, reject) => {
                     db.run(`
                         CREATE TABLE IF NOT EXISTS notes (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,89 +41,26 @@ function migrateDiaryLogsToNotes() {
                         if (err) {
                             console.error('Error creating notes table:', err);
                             reject(err);
-                            return;
-                        }
-                        
-                        // Create index on notes date
-                        db.run(`
-                            CREATE INDEX IF NOT EXISTS idx_notes_date 
-                            ON notes(date)
-                        `, (err) => {
-                            if (err) {
-                                console.error('Error creating notes index:', err);
-                                reject(err);
-                            } else {
-                                resolve();
-                            }
-                        });
-                    });
-                });
-            };
-
-            // Check if diary_logs table exists and migrate data
-            const migrateData = () => {
-                return new Promise((resolve, reject) => {
-                    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='diary_logs'", async (err, result) => {
-                        if (err) {
-                            console.error('Error checking for diary_logs table:', err);
-                            reject(err);
-                            return;
-                        }
-
-                        if (result) {
-                            // Migrate data from diary_logs to notes
-                            db.run(`
-                                INSERT INTO notes (date, timestamp, content, created_at, updated_at)
-                                SELECT date, timestamp, content, created_at, updated_at
-                                FROM diary_logs
-                            `, (err) => {
-                                if (err) {
-                                    console.error('Error migrating data to notes:', err);
-                                    reject(err);
-                                    return;
-                                }
-
-                                // Drop the old diary_logs table
-                                db.run(`DROP TABLE diary_logs`, (err) => {
-                                    if (err) {
-                                        console.error('Error dropping diary_logs table:', err);
-                                        reject(err);
-                                    } else {
-                                        resolve();
-                                    }
-                                });
-                            });
                         } else {
-                            // No diary_logs table exists, nothing to migrate
                             resolve();
                         }
                     });
                 });
-            };
 
-            // Execute migration steps
-            createNotesTable()
-                .then(migrateData)
-                .then(resolve)
-                .catch(reject);
-        });
-    });
-}
-
-// Initialize database
-function initializeDatabase() {
-    return new Promise((resolve, reject) => {
-        const dbPath = path.join(app.getPath('userData'), 'screenshots.db');
-        db = new sqlite3.Database(dbPath, async (err) => {
-            if (err) {
-                console.error('Database initialization error:', err);
-                reject(err);
-                return;
-            }
-
-            try {
-                // Migrate from diary_logs to notes if necessary
-                await migrateDiaryLogsToNotes();
+                // Create notes index
+                await new Promise((resolve, reject) => {
+                    db.run(`
+                        CREATE INDEX IF NOT EXISTS idx_notes_date 
+                        ON notes(date)
+                    `, (err) => {
+                        if (err) {
+                            console.error('Error creating notes index:', err);
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
 
                 // Create screenshots table
                 await new Promise((resolve, reject) => {
