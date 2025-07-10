@@ -827,6 +827,102 @@ async function getDayAnalysis(date) {
     });
 }
 
+// Get daily category stats for the current month
+function getDailyCategoryStats(currentDate, intervalMinutes) {
+    return new Promise((resolve, reject) => {
+        const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        // Get all screenshots for the month with their timestamps
+        db.all(`
+            SELECT 
+                DATE(timestamp) as date,
+                timestamp,
+                category,
+                LEAD(timestamp) OVER (ORDER BY timestamp ASC) as next_timestamp
+            FROM screenshots 
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
+            ORDER BY timestamp ASC
+        `, [
+            startOfMonth.toISOString(),
+            endOfMonth.toISOString()
+        ], (err, timeResults) => {
+            if (err) {
+                console.error('Error getting daily category stats:', err);
+                reject(err);
+                return;
+            }
+
+            // Initialize data structure for daily stats
+            const dailyStats = {};
+
+            // Process results
+            if (timeResults && timeResults.length > 0) {
+                // Group results by date
+                timeResults.forEach(row => {
+                    const date = row.date;
+                    
+                    // Initialize stats for this date if not exists
+                    if (!dailyStats[date]) {
+                        dailyStats[date] = {
+                            percentages: {},
+                            timeInHours: {},
+                            categoryMinutes: {},
+                            categoryCounts: {},
+                            totalScreenshots: 0
+                        };
+                        
+                        // Initialize categories
+                        categories.filter(category => category !== 'UNKNOWN').forEach(category => {
+                            dailyStats[date].percentages[category] = 0;
+                            dailyStats[date].timeInHours[category] = 0;
+                            dailyStats[date].categoryMinutes[category] = 0;
+                            dailyStats[date].categoryCounts[category] = 0;
+                        });
+                    }
+
+                    // Count screenshots
+                    dailyStats[date].categoryCounts[row.category]++;
+                    dailyStats[date].totalScreenshots++;
+
+                    // Calculate time spent
+                    if (row.next_timestamp) {
+                        const currentTime = new Date(row.timestamp);
+                        const nextTime = new Date(row.next_timestamp);
+                        const diffMinutes = Math.abs((nextTime - currentTime) / (1000 * 60));
+
+                        // Only count if difference is 5 minutes or less
+                        if (diffMinutes <= 5) {
+                            dailyStats[date].categoryMinutes[row.category] += diffMinutes;
+                        }
+                    } else {
+                        // For the last screenshot of a sequence, count a default duration
+                        const defaultDuration = Math.min(intervalMinutes, 5);
+                        dailyStats[date].categoryMinutes[row.category] += defaultDuration;
+                    }
+                });
+
+                // Calculate percentages and hours for each date
+                Object.keys(dailyStats).forEach(date => {
+                    const stats = dailyStats[date];
+                    if (stats.totalScreenshots > 0) {
+                        categories.filter(category => category !== 'UNKNOWN').forEach(category => {
+                            // Calculate percentage
+                            stats.percentages[category] = 
+                                (stats.categoryCounts[category] / stats.totalScreenshots) * 100;
+                            
+                            // Calculate hours
+                            stats.timeInHours[category] = stats.categoryMinutes[category] / 60;
+                        });
+                    }
+                });
+            }
+
+            resolve(dailyStats);
+        });
+    });
+}
+
 module.exports = {
     initializeDatabase,
     getActivityStats,
@@ -844,5 +940,6 @@ module.exports = {
     getNotesInRange,
     getDayDataForAnalysis,
     saveDayAnalysis,
-    getDayAnalysis
+    getDayAnalysis,
+    getDailyCategoryStats
 }; 

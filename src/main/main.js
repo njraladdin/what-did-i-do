@@ -384,12 +384,18 @@ async function generateDayAnalysis(date) {
     try {
         appLogger.info('Starting day analysis generation for date:', date);
         
-        const data = await database.getDayDataForAnalysis(date);
+        // Get all required data in parallel
+        const [data, dailyStats] = await Promise.all([
+            database.getDayDataForAnalysis(date),
+            database.getDailyCategoryStats(new Date(date), 5) // Using 5 minutes as default interval
+        ]);
+
         appLogger.info('Retrieved data for analysis:', {
             screenshotsCount: data.screenshots.length,
             notesCount: data.notes.length,
             historicalNotesCount: data.historicalData.notes.length,
-            historicalAnalysesCount: data.historicalData.analyses.length
+            historicalAnalysesCount: data.historicalData.analyses.length,
+            daysWithStats: Object.keys(dailyStats).length
         });
 
         if (!ai) {
@@ -412,11 +418,14 @@ The report must have three distinct sections:
 
 2. Based on Todays data: **Behavioral Analysis:** Write a very concise and focused analysis of the user's behavior from a third-person, objective perspective. Use a numbered list. Identify 3-4 key, actionable patterns related to focus, context-switching, activity triggers, or the alignment between the user's actions and stated intentions. Get straight to the point. give direct observation (1-2 sentences max).
 
-3. Based on Todays data and Historical data: **Monthly Progress & Trends:** Based on the historical data provided, analyze how today's behavior compares to recent days. Be very direct and use a numbered list. Identify any improvements or regressions in productivity patterns, highlight emerging habits (both positive and concerning), and note any progress toward previously identified goals or recommendations. where is the user going?
-
-
+3. Based on Todays data and Historical data: **Monthly Progress & Trends:** Based on the historical data and daily category statistics provided, analyze how today's behavior compares to recent days. Be very direct and use a numbered list. Identify any improvements or regressions in productivity patterns, highlight emerging habits (both positive and concerning), and note any progress toward previously identified goals or recommendations. Use the daily category statistics to support your observations with concrete data. Where is the user going?
 
 **Historical Data from This Month for more context for the progress and trends analysis:**
+
+
+**Daily Category Statistics for Current Month:**
+This shows the percentage of time spent and hours spent in each category for each day this month:
+${JSON.stringify(dailyStats, null, 2)}
 
 Previous Days' Notes (before ${new Date(date).toISOString().split('T')[0]}):
 ${JSON.stringify(data.historicalData.notes, null, 2)}
@@ -427,11 +436,12 @@ ${JSON.stringify(data.historicalData.analyses, null, 2)}
 Generate the report following the specified structure and tone. IMPORTANT: Do not include any introductory text like "Of course, here is the report." Just return the raw markdown content of the report.
 
 When analyzing trends and progress:
-1. Compare today's activities with patterns from previous days
+1. Compare today's activities with patterns from previous days using the daily category statistics
 2. Note any improvements in areas previously identified as needing work
 3. Identify if previously suggested strategies have been implemented
 4. Look for consistency or changes in daily routines
-5. Consider how today's behavior aligns with patterns from earlier in the month`;
+5. Consider how today's behavior aligns with patterns from earlier in the month
+6. Use the category statistics to identify any shifts in time allocation patterns`;
 
         appLogger.info('Sending request to Gemini API', { prompt: (prompt) });
         const result = await ai.models.generateContent({
