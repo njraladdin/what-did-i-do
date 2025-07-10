@@ -50,10 +50,7 @@ function initializeDatabase() {
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         date TEXT NOT NULL,
                         timestamp TEXT NOT NULL,
-                        title TEXT,
                         content TEXT NOT NULL,
-                        mood TEXT,
-                        tags TEXT,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                     )
@@ -566,7 +563,7 @@ function exportData(startDate, endDate, includeMedia, includeStats) {
 }
 
 // Diary logs functions
-function saveDiaryLog(date, title, content, mood, tags) {
+function saveDiaryLog(date, content) {
     return new Promise((resolve, reject) => {
         const timestamp = new Date().toISOString();
         const dateStr = new Date(date).toISOString().split('T')[0]; // Format as YYYY-MM-DD
@@ -575,19 +572,13 @@ function saveDiaryLog(date, title, content, mood, tags) {
             INSERT INTO diary_logs (
                 date, 
                 timestamp, 
-                title, 
-                content, 
-                mood, 
-                tags,
+                content,
                 updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?)
         `, [
             dateStr,
             timestamp,
-            title,
             content,
-            mood,
-            tags,
             timestamp
         ], function(err) {
             if (err) {
@@ -609,10 +600,7 @@ function getDiaryLogsForDate(date) {
                 id,
                 date,
                 timestamp,
-                title,
                 content,
-                mood,
-                tags,
                 created_at,
                 updated_at
             FROM diary_logs 
@@ -629,10 +617,7 @@ function getDiaryLogsForDate(date) {
                 id: log.id,
                 date: log.date,
                 timestamp: log.timestamp,
-                title: log.title,
                 content: log.content,
-                mood: log.mood,
-                tags: log.tags ? log.tags.split(',') : [],
                 created_at: log.created_at,
                 updated_at: log.updated_at
             }));
@@ -642,19 +627,16 @@ function getDiaryLogsForDate(date) {
     });
 }
 
-function updateDiaryLog(id, title, content, mood, tags) {
+function updateDiaryLog(id, content) {
     return new Promise((resolve, reject) => {
         const timestamp = new Date().toISOString();
         
         db.run(`
             UPDATE diary_logs 
-            SET title = ?, content = ?, mood = ?, tags = ?, updated_at = ?
+            SET content = ?, updated_at = ?
             WHERE id = ?
         `, [
-            title,
             content,
-            mood,
-            tags,
             timestamp,
             id
         ], function(err) {
@@ -691,10 +673,7 @@ function getDiaryLogsInRange(startDate, endDate) {
                 id,
                 date,
                 timestamp,
-                title,
                 content,
-                mood,
-                tags,
                 created_at,
                 updated_at
             FROM diary_logs 
@@ -711,10 +690,7 @@ function getDiaryLogsInRange(startDate, endDate) {
                 id: log.id,
                 date: log.date,
                 timestamp: log.timestamp,
-                title: log.title,
                 content: log.content,
-                mood: log.mood,
-                tags: log.tags ? log.tags.split(',') : [],
                 created_at: log.created_at,
                 updated_at: log.updated_at
             }));
@@ -748,9 +724,9 @@ async function getDayDataForAnalysis(date) {
             // Get all diary logs except previous analyses
             new Promise((resolve, reject) => {
                 db.all(`
-                    SELECT timestamp, content, tags
+                    SELECT timestamp, content
                     FROM diary_logs 
-                    WHERE date = ? AND tags NOT LIKE '%day_analysis%'
+                    WHERE date = ?
                     ORDER BY timestamp ASC
                 `, [startOfDay.toISOString().split('T')[0]], 
                 (err, logs) => err ? reject(err) : resolve(logs))
