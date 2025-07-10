@@ -21,6 +21,7 @@ let mainWindow;
 let isTracking = false;
 let ai;
 let scheduler;
+let dayAnalysisScheduler; // Add new scheduler for day analysis
 
 // Get categories from database module
 const { categories } = database;
@@ -601,6 +602,18 @@ function showWindowAndOpenDiaryModal() {
     }
 }
 
+// Add this function to handle periodic day analysis
+async function runPeriodicDayAnalysis() {
+    try {
+        appLogger.info('Running periodic day analysis');
+        const today = new Date();
+        await generateDayAnalysis(today);
+        appLogger.info('Periodic day analysis completed successfully');
+    } catch (error) {
+        appLogger.error('Error in periodic day analysis:', error);
+        // Don't throw - let the scheduler continue
+    }
+}
 
 
 app.whenReady().then(async () => {
@@ -613,6 +626,13 @@ app.whenReady().then(async () => {
             intervalMinutes: store.get('interval'),
             maxRetries: 2,
             idleThresholdMinutes: store.get('interval') // Skip if idle for interval duration
+        });
+
+        // Initialize day analysis scheduler (every 6 hours = 360 minutes)
+        dayAnalysisScheduler = new SimpleRobustScheduler(appLogger, {
+            intervalMinutes: 360,
+            maxRetries: 2,
+            idleThresholdMinutes: 0 // No idle threshold - run analysis regardless of system state
         });
         
         await handleFirstRun();
@@ -648,7 +668,7 @@ app.whenReady().then(async () => {
             getSchedulerStatus,
             getLastAnalysisError,
             clearAnalysisError,
-            generateDayAnalysis // Pass the function instead of ai instance
+            generateDayAnalysis
         });
         
         // Only start tracking if API key exists
@@ -656,6 +676,10 @@ app.whenReady().then(async () => {
         if (apiKey) {
             await initializeGeminiAPI(apiKey);
             startTracking();
+            // Start day analysis scheduler
+            dayAnalysisScheduler.start(runPeriodicDayAnalysis);
+            // Run initial analysis
+            await runPeriodicDayAnalysis();
         } else {
             pauseTracking();
         }
@@ -682,6 +706,9 @@ app.on('activate', () => {
 app.on('will-quit', async () => {
     if (scheduler) {
         scheduler.stop();
+    }
+    if (dayAnalysisScheduler) {
+        dayAnalysisScheduler.stop();
     }
     await database.closeDatabase();
     if (tray) {
