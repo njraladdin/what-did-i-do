@@ -892,7 +892,7 @@
     }
 
 /* Diary Logs Styles */
-.add-diary-btn {
+.add-note-btn {
     background: var(--color-primary);
     color: white;
     border: none;
@@ -908,7 +908,7 @@
     position: relative;
 }
 
-.add-diary-btn:hover {
+.add-note-btn:hover {
     background: var(--color-primary-hover);
 }
 
@@ -919,12 +919,12 @@
     font-weight: 400;
 }
 
-.diary-modal-content {
+.note-modal-content {
     max-width: 700px;
     width: 95%;
 }
 
-.modal-previous-logs {
+.modal-previous-notes {
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 1px solid var(--color-border);
@@ -933,14 +933,14 @@
 }
 
 /* Reuse the same styles as main page for consistency */
-.modal-log-item {
+.modal-note-item {
     background: transparent;
     border: none;
     border-radius: 0;
     padding: 8px 0;
 }
 
-.modal-log-header {
+.modal-note-header {
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: flex-start;
@@ -948,7 +948,7 @@
     margin-bottom: 0;
 }
 
-.modal-log-time {
+.modal-note-time {
     font-size: 11px;
     color: var(--color-text-muted);
     font-weight: 400;
@@ -956,18 +956,18 @@
     opacity: 0.7;
 }
 
-.modal-log-content-wrapper {
+.modal-note-content-wrapper {
     flex: 1;
 }
 
-.modal-log-content {
+.modal-note-content {
     color: var(--color-text-primary);
     line-height: 1.4;
     font-size: 14px;
     white-space: pre-wrap;
 }
 
-.diary-form {
+.note-form {
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -1014,7 +1014,7 @@
 
 
 
-.diary-actions {
+    .note-actions {
     display: flex;
     gap: 12px;
     justify-content: flex-end;
@@ -1061,13 +1061,13 @@
     background: var(--color-bg-elevated);
 }
 
-.diary-logs-container {
+.notes-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.no-diary-logs {
+.no-notes {
     text-align: center;
     padding: 24px 0;
     color: var(--color-text-muted);
@@ -1076,14 +1076,14 @@
     border: none;
 }
 
-.diary-log-item {
+.note-item {
     background: transparent;
     border: none;
     border-radius: 0;
     padding: 8px 0;
 }
 
-.diary-log-header {
+.note-header {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: flex-start;
@@ -1091,7 +1091,7 @@
     margin-bottom: 0;
 }
 
-.diary-log-time {
+.note-time {
     font-size: 11px;
     color: var(--color-text-muted);
     font-weight: 400;
@@ -1099,11 +1099,11 @@
     opacity: 0.7;
 }
 
-.diary-log-content-wrapper {
+.note-content-wrapper {
     flex: 1;
 }
 
-.diary-log-actions {
+.note-actions {
     display: flex;
     gap: 4px;
 }
@@ -1124,7 +1124,7 @@
     opacity: 0.5;
 }
 
-.diary-log-content {
+.note-content {
     color: var(--color-text-primary);
     line-height: 1.4;
     font-size: 14px;
@@ -1133,17 +1133,17 @@
 
 /* Mobile responsiveness for diary logs */
 @media (max-width: 768px) {
-    .diary-actions {
+    .note-actions {
         flex-direction: column;
     }
     
-    .diary-log-header {
+    .note-header {
         flex-direction: column;
         gap: 8px;
         align-items: flex-start;
     }
     
-    .diary-log-actions {
+    .note-actions {
         align-self: flex-end;
     }
 }

@@ -387,7 +387,7 @@ async function generateDayAnalysis(date) {
         const data = await database.getDayDataForAnalysis(date);
         appLogger.info('Retrieved data for analysis:', {
             screenshotsCount: data.screenshots.length,
-            diaryLogsCount: data.diaryLogs.length
+            notesCount: data.notes.length
         });
 
         if (!ai) {
@@ -408,7 +408,7 @@ Here is my data for analysis:
 ${JSON.stringify(data.screenshots, null, 2)}
 
 **Diary Logs from the day:**
-${JSON.stringify(data.diaryLogs, null, 2)}
+${JSON.stringify(data.notes, null, 2)}
 
 Generate the report following the specified structure and tone. IMPORTANT: Do not include any introductory text like "Of course, here is the report." Just return the raw markdown content of the report.
 `;

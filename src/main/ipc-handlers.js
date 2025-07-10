@@ -80,7 +80,7 @@ function initializeIpcHandlers(dependencies) {
                     timeInHours: data.timeInHours
                 },
                 screenshots: data.screenshots,
-                diaryLogs: data.diaryLogs,
+                notes: data.diaryLogs,
                 dayAnalysis: data.dayAnalysis
             };
         } catch (error) {
@@ -91,7 +91,7 @@ function initializeIpcHandlers(dependencies) {
                     timeInHours: {}
                 },
                 screenshots: [],
-                diaryLogs: [],
+                notes: [],
                 dayAnalysis: null
             };
         }
@@ -106,7 +106,7 @@ function initializeIpcHandlers(dependencies) {
                     timeInHours: data.timeInHours
                 },
                 screenshots: data.screenshots,
-                diaryLogs: data.diaryLogs,
+                notes: data.diaryLogs,
                 dayAnalysis: data.dayAnalysis
             };
         } catch (error) {
@@ -117,7 +117,7 @@ function initializeIpcHandlers(dependencies) {
                     timeInHours: {}
                 },
                 screenshots: [],
-                diaryLogs: [],
+                notes: [],
                 dayAnalysis: null
             };
         }
@@ -130,7 +130,7 @@ function initializeIpcHandlers(dependencies) {
             stats: data.stats,
             timeInHours: data.timeInHours,
             screenshots: data.screenshots,
-            diaryLogs: data.diaryLogs,
+            notes: data.diaryLogs,
             dayAnalysis: data.dayAnalysis
         };
     });
@@ -235,13 +235,98 @@ function initializeIpcHandlers(dependencies) {
         }
     });
 
-    ipcMain.handle('load-more-screenshots', async (event, offset = 0, limit = 50) => {
+    // Get activity data for a specific date
+    ipcMain.handle('get-activity-data', async (event, date) => {
         try {
-            const screenshots = await database.getMoreScreenshots(getCurrentDate(), offset, limit);
-            return { success: true, screenshots };
+            const data = await database.getActivityStats(date, SCREENSHOT_INTERVAL_MINUTES);
+            return {
+                success: true,
+                stats: data.stats,
+                timeInHours: data.timeInHours,
+                screenshots: data.screenshots,
+                notes: data.diaryLogs,
+                dayAnalysis: data.dayAnalysis
+            };
+        } catch (error) {
+            console.error('Error getting activity data:', error);
+            return {
+                success: false,
+                stats: {},
+                timeInHours: {},
+                screenshots: [],
+                notes: [],
+                dayAnalysis: null
+            };
+        }
+    });
+
+    // Load more screenshots for a date
+    ipcMain.handle('load-more-screenshots', async (event, date, offset) => {
+        try {
+            const data = await database.getMoreScreenshots(date, offset);
+            return {
+                success: true,
+                screenshots: data,
+                notes: data.diaryLogs
+            };
         } catch (error) {
             console.error('Error loading more screenshots:', error);
-            return { success: false, screenshots: [] };
+            return {
+                success: false,
+                screenshots: [],
+                notes: []
+            };
+        }
+    });
+
+    // Note handlers
+    ipcMain.handle('save-note', async (event, date, content) => {
+        try {
+            const noteId = await database.saveNote(date, content);
+            return { success: true, id: noteId };
+        } catch (error) {
+            console.error('Error saving note:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('get-notes-for-date', async (event, date) => {
+        try {
+            const notes = await database.getNotesForDate(date);
+            return { success: true, notes: notes };
+        } catch (error) {
+            console.error('Error getting notes:', error);
+            return { success: false, notes: [] };
+        }
+    });
+
+    ipcMain.handle('update-note', async (event, id, content) => {
+        try {
+            const success = await database.updateNote(id, content);
+            return { success };
+        } catch (error) {
+            console.error('Error updating note:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('delete-note', async (event, id) => {
+        try {
+            const success = await database.deleteNote(id);
+            return { success };
+        } catch (error) {
+            console.error('Error deleting note:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('get-notes-range', async (event, startDate, endDate) => {
+        try {
+            const notes = await database.getNotesInRange(startDate, endDate);
+            return { success: true, notes: notes };
+        } catch (error) {
+            console.error('Error getting notes in range:', error);
+            return { success: false, notes: [] };
         }
     });
 

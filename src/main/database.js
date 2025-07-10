@@ -14,54 +14,142 @@ const categories = [
     'UNKNOWN'         // Internal use only - for failed analyses, not shown in UI
 ];
 
+// Migration function to transition from diary_logs to notes
+function migrateDiaryLogsToNotes() {
+    return new Promise((resolve, reject) => {
+        // First check if the notes table exists
+        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='notes'", (err, result) => {
+            if (err) {
+                console.error('Error checking for notes table:', err);
+                reject(err);
+                return;
+            }
+
+            // If notes table doesn't exist, create it
+            const createNotesTable = () => {
+                return new Promise((resolve, reject) => {
+                    db.run(`
+                        CREATE TABLE IF NOT EXISTS notes (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            date TEXT NOT NULL,
+                            timestamp TEXT NOT NULL,
+                            content TEXT NOT NULL,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    `, (err) => {
+                        if (err) {
+                            console.error('Error creating notes table:', err);
+                            reject(err);
+                            return;
+                        }
+                        
+                        // Create index on notes date
+                        db.run(`
+                            CREATE INDEX IF NOT EXISTS idx_notes_date 
+                            ON notes(date)
+                        `, (err) => {
+                            if (err) {
+                                console.error('Error creating notes index:', err);
+                                reject(err);
+                            } else {
+                                resolve();
+                            }
+                        });
+                    });
+                });
+            };
+
+            // Check if diary_logs table exists and migrate data
+            const migrateData = () => {
+                return new Promise((resolve, reject) => {
+                    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='diary_logs'", async (err, result) => {
+                        if (err) {
+                            console.error('Error checking for diary_logs table:', err);
+                            reject(err);
+                            return;
+                        }
+
+                        if (result) {
+                            // Migrate data from diary_logs to notes
+                            db.run(`
+                                INSERT INTO notes (date, timestamp, content, created_at, updated_at)
+                                SELECT date, timestamp, content, created_at, updated_at
+                                FROM diary_logs
+                            `, (err) => {
+                                if (err) {
+                                    console.error('Error migrating data to notes:', err);
+                                    reject(err);
+                                    return;
+                                }
+
+                                // Drop the old diary_logs table
+                                db.run(`DROP TABLE diary_logs`, (err) => {
+                                    if (err) {
+                                        console.error('Error dropping diary_logs table:', err);
+                                        reject(err);
+                                    } else {
+                                        resolve();
+                                    }
+                                });
+                            });
+                        } else {
+                            // No diary_logs table exists, nothing to migrate
+                            resolve();
+                        }
+                    });
+                });
+            };
+
+            // Execute migration steps
+            createNotesTable()
+                .then(migrateData)
+                .then(resolve)
+                .catch(reject);
+        });
+    });
+}
+
 // Initialize database
 function initializeDatabase() {
     return new Promise((resolve, reject) => {
         const dbPath = path.join(app.getPath('userData'), 'screenshots.db');
-        db = new sqlite3.Database(dbPath, (err) => {
+        db = new sqlite3.Database(dbPath, async (err) => {
             if (err) {
                 console.error('Database initialization error:', err);
                 reject(err);
                 return;
             }
 
-            // Create screenshots table
-            db.run(`
-                CREATE TABLE IF NOT EXISTS screenshots (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    activity TEXT NOT NULL,
-                    image_data BLOB NOT NULL,
-                    thumbnail_data BLOB NOT NULL,
-                    description TEXT,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            `, (err) => {
-                if (err) {
-                    console.error('Table creation error:', err);
-                    reject(err);
-                    return;
-                }
-                
-                // Create diary_logs table
-                db.run(`
-                    CREATE TABLE IF NOT EXISTS diary_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        date TEXT NOT NULL,
-                        timestamp TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-                    )
-                `, (err) => {
-                    if (err) {
-                        console.error('Diary logs table creation error:', err);
-                        reject(err);
-                        return;
-                    }
+            try {
+                // Migrate from diary_logs to notes if necessary
+                await migrateDiaryLogsToNotes();
 
-                    // Create day_analyses table
+                // Create screenshots table
+                await new Promise((resolve, reject) => {
+                    db.run(`
+                        CREATE TABLE IF NOT EXISTS screenshots (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            timestamp TEXT NOT NULL,
+                            category TEXT NOT NULL,
+                            activity TEXT NOT NULL,
+                            image_data BLOB NOT NULL,
+                            thumbnail_data BLOB NOT NULL,
+                            description TEXT,
+                            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                        )
+                    `, (err) => {
+                        if (err) {
+                            console.error('Table creation error:', err);
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+
+                // Create day_analyses table
+                await new Promise((resolve, reject) => {
                     db.run(`
                         CREATE TABLE IF NOT EXISTS day_analyses (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,60 +162,39 @@ function initializeDatabase() {
                         if (err) {
                             console.error('Day analyses table creation error:', err);
                             reject(err);
-                            return;
+                        } else {
+                            resolve();
                         }
+                    });
+                });
 
-                        // Create index on day_analyses date for faster filtering
+                // Create indices
+                await Promise.all([
+                    new Promise((resolve, reject) => {
+                        db.run(`
+                            CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp 
+                            ON screenshots(timestamp)
+                        `, (err) => err ? reject(err) : resolve());
+                    }),
+                    new Promise((resolve, reject) => {
+                        db.run(`
+                            CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp_category 
+                            ON screenshots(timestamp, category)
+                        `, (err) => err ? reject(err) : resolve());
+                    }),
+                    new Promise((resolve, reject) => {
                         db.run(`
                             CREATE INDEX IF NOT EXISTS idx_day_analyses_date 
                             ON day_analyses(date)
-                        `, (err) => {
-                            if (err) {
-                                console.error('Day analyses index creation error:', err);
-                                reject(err);
-                                return;
-                            }
+                        `, (err) => err ? reject(err) : resolve());
+                    })
+                ]);
 
-                            // Continue with existing indices creation
-                            db.run(`
-                                CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp 
-                                ON screenshots(timestamp)
-                            `, (err) => {
-                                if (err) {
-                                    console.error('Index creation error:', err);
-                                    reject(err);
-                                    return;
-                                }
-                                
-                                // Create composite index for timestamp and category aggregations
-                                db.run(`
-                                    CREATE INDEX IF NOT EXISTS idx_screenshots_timestamp_category 
-                                    ON screenshots(timestamp, category)
-                                `, (err) => {
-                                    if (err) {
-                                        console.error('Composite index creation error:', err);
-                                        reject(err);
-                                        return;
-                                    }
-                                    
-                                    // Create index on diary_logs date for faster filtering
-                                    db.run(`
-                                        CREATE INDEX IF NOT EXISTS idx_diary_logs_date 
-                                        ON diary_logs(date)
-                                    `, (err) => {
-                                        if (err) {
-                                            console.error('Diary logs index creation error:', err);
-                                            reject(err);
-                                            return;
-                                        }
-                                        resolve();
-                                    });
-                                });
-                            });
-                        });
-                    });
-                });
-            });
+                resolve();
+            } catch (error) {
+                console.error('Error during database initialization:', error);
+                reject(error);
+            }
         });
     });
 }
@@ -250,26 +317,26 @@ function getActivityStats(currentDate, intervalMinutes) {
 
                 // Get diary logs and day analysis for the current date
                 Promise.all([
-                    getDiaryLogsForDate(currentDate),
+                    getNotesForDate(currentDate),
                     getDayAnalysis(currentDate)
-                ]).then(([diaryLogs, dayAnalysis]) => {
+                ]).then(([notes, dayAnalysis]) => {
                     const result = {
                         stats,
                         timeInHours,
                         screenshots: processedScreenshots,
-                        diaryLogs: diaryLogs,
+                        notes: notes,
                         dayAnalysis: dayAnalysis
                     };
 
                     resolve(result);
                 }).catch(err => {
-                    console.error('Error getting diary logs or day analysis:', err);
-                    // Still resolve with empty diary logs and analysis if there's an error
+                    console.error('Error getting notes or day analysis:', err);
+                    // Still resolve with empty notes and analysis if there's an error
                     const result = {
                         stats,
                         timeInHours,
                         screenshots: processedScreenshots,
-                        diaryLogs: [],
+                        notes: [],
                         dayAnalysis: null
                     };
 
@@ -562,14 +629,14 @@ function exportData(startDate, endDate, includeMedia, includeStats) {
     });
 }
 
-// Diary logs functions
-function saveDiaryLog(date, content) {
+// Notes functions
+function saveNote(date, content) {
     return new Promise((resolve, reject) => {
         const timestamp = new Date().toISOString();
         const dateStr = new Date(date).toISOString().split('T')[0]; // Format as YYYY-MM-DD
         
         db.run(`
-            INSERT INTO diary_logs (
+            INSERT INTO notes (
                 date, 
                 timestamp, 
                 content,
@@ -582,7 +649,7 @@ function saveDiaryLog(date, content) {
             timestamp
         ], function(err) {
             if (err) {
-                console.error('Error saving diary log:', err);
+                console.error('Error saving note:', err);
                 reject(err);
                 return;
             }
@@ -591,7 +658,7 @@ function saveDiaryLog(date, content) {
     });
 }
 
-function getDiaryLogsForDate(date) {
+function getNotesForDate(date) {
     return new Promise((resolve, reject) => {
         const dateStr = new Date(date).toISOString().split('T')[0]; // Format as YYYY-MM-DD
         
@@ -603,36 +670,36 @@ function getDiaryLogsForDate(date) {
                 content,
                 created_at,
                 updated_at
-            FROM diary_logs 
+            FROM notes 
             WHERE date = ?
             ORDER BY timestamp DESC
-        `, [dateStr], (err, logs) => {
+        `, [dateStr], (err, notes) => {
             if (err) {
-                console.error('Error getting diary logs:', err);
+                console.error('Error getting notes:', err);
                 reject(err);
                 return;
             }
             
-            const processedLogs = (logs || []).map(log => ({
-                id: log.id,
-                date: log.date,
-                timestamp: log.timestamp,
-                content: log.content,
-                created_at: log.created_at,
-                updated_at: log.updated_at
+            const processedNotes = (notes || []).map(note => ({
+                id: note.id,
+                date: note.date,
+                timestamp: note.timestamp,
+                content: note.content,
+                created_at: note.created_at,
+                updated_at: note.updated_at
             }));
             
-            resolve(processedLogs);
+            resolve(processedNotes);
         });
     });
 }
 
-function updateDiaryLog(id, content) {
+function updateNote(id, content) {
     return new Promise((resolve, reject) => {
         const timestamp = new Date().toISOString();
         
         db.run(`
-            UPDATE diary_logs 
+            UPDATE notes 
             SET content = ?, updated_at = ?
             WHERE id = ?
         `, [
@@ -641,7 +708,7 @@ function updateDiaryLog(id, content) {
             id
         ], function(err) {
             if (err) {
-                console.error('Error updating diary log:', err);
+                console.error('Error updating note:', err);
                 reject(err);
                 return;
             }
@@ -650,11 +717,11 @@ function updateDiaryLog(id, content) {
     });
 }
 
-function deleteDiaryLog(id) {
+function deleteNote(id) {
     return new Promise((resolve, reject) => {
-        db.run('DELETE FROM diary_logs WHERE id = ?', [id], function(err) {
+        db.run('DELETE FROM notes WHERE id = ?', [id], function(err) {
             if (err) {
-                console.error('Error deleting diary log:', err);
+                console.error('Error deleting note:', err);
                 reject(err);
                 return;
             }
@@ -663,7 +730,7 @@ function deleteDiaryLog(id) {
     });
 }
 
-function getDiaryLogsInRange(startDate, endDate) {
+function getNotesInRange(startDate, endDate) {
     return new Promise((resolve, reject) => {
         const startDateStr = new Date(startDate).toISOString().split('T')[0];
         const endDateStr = new Date(endDate).toISOString().split('T')[0];
@@ -676,26 +743,26 @@ function getDiaryLogsInRange(startDate, endDate) {
                 content,
                 created_at,
                 updated_at
-            FROM diary_logs 
+            FROM notes 
             WHERE date BETWEEN ? AND ?
             ORDER BY date DESC, timestamp DESC
-        `, [startDateStr, endDateStr], (err, logs) => {
+        `, [startDateStr, endDateStr], (err, notes) => {
             if (err) {
-                console.error('Error getting diary logs in range:', err);
+                console.error('Error getting notes in range:', err);
                 reject(err);
                 return;
             }
             
-            const processedLogs = (logs || []).map(log => ({
-                id: log.id,
-                date: log.date,
-                timestamp: log.timestamp,
-                content: log.content,
-                created_at: log.created_at,
-                updated_at: log.updated_at
+            const processedNotes = (notes || []).map(note => ({
+                id: note.id,
+                date: note.date,
+                timestamp: note.timestamp,
+                content: note.content,
+                created_at: note.created_at,
+                updated_at: note.updated_at
             }));
             
-            resolve(processedLogs);
+            resolve(processedNotes);
         });
     });
 }
@@ -721,18 +788,18 @@ async function getDayDataForAnalysis(date) {
                 `, [startOfDay.toISOString(), endOfDay.toISOString()], 
                 (err, screenshots) => err ? reject(err) : resolve(screenshots))
             }),
-            // Get all diary logs except previous analyses
+            // Get all notes
             new Promise((resolve, reject) => {
                 db.all(`
                     SELECT timestamp, content
-                    FROM diary_logs 
+                    FROM notes 
                     WHERE date = ?
                     ORDER BY timestamp ASC
                 `, [startOfDay.toISOString().split('T')[0]], 
-                (err, logs) => err ? reject(err) : resolve(logs))
+                (err, notes) => err ? reject(err) : resolve(notes))
             })
-        ]).then(([screenshots, diaryLogs]) => {
-            resolve({ screenshots, diaryLogs });
+        ]).then(([screenshots, notes]) => {
+            resolve({ screenshots, notes });
         }).catch(reject);
     });
 }
@@ -793,11 +860,11 @@ module.exports = {
     categories,
     getMonthlyAverages,
     exportData,
-    saveDiaryLog,
-    getDiaryLogsForDate,
-    updateDiaryLog,
-    deleteDiaryLog,
-    getDiaryLogsInRange,
+    saveNote,
+    getNotesForDate,
+    updateNote,
+    deleteNote,
+    getNotesInRange,
     getDayDataForAnalysis,
     saveDayAnalysis,
     getDayAnalysis

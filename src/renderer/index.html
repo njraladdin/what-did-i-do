@@ -264,17 +264,17 @@
                     <div class="analytics-cards" id="monthlyAnalytics"></div>
                 </div>
 
-                <!-- Diary Logs Section -->
+                <!-- Notes Section -->
                 <div class="stats-section">
                     <div class="section-header">
-                        <h2>Diary Logs</h2>
-                        <button class="add-diary-btn" onclick="showAddDiaryModal()">
+                        <h2>Notes</h2>
+                        <button class="add-note-btn" onclick="showAddNoteModal()">
                             <i class="fas fa-plus"></i>
-                            Add Log
+                            Add Note
                             <span class="shortcut-hint">Ctrl+Shift+D</span>
                         </button>
                     </div>
-                    <div id="diaryLogs" class="diary-logs-container"></div>
+                    <div id="notes" class="notes-container"></div>
                 </div>
 
                 <!-- Day Analysis Section -->
@@ -347,28 +347,28 @@
         </div>
     </div>
 
-    <div id="diaryModal" class="modal">
-        <div class="modal-content diary-modal-content">
-            <button class="modal-close" onclick="closeDiaryModal()">
+    <div id="noteModal" class="modal">
+        <div class="modal-content note-modal-content">
+            <button class="modal-close" onclick="closeNoteModal()">
                 <i class="fas fa-times"></i>
             </button>
-            <h2 id="diaryModalTitle">Add Diary Log</h2>
+            <h2 id="noteModalTitle">Add Note</h2>
             
-            <div id="modalPreviousLogs" class="modal-previous-logs" style="display: none;">
-                <div id="modalLogsList"></div>
+            <div id="modalPreviousNotes" class="modal-previous-notes" style="display: none;">
+                <div id="modalNotesList"></div>
             </div>
             
-            <div class="diary-form">
+            <div class="note-form">
                 <div class="form-group">
-                    <textarea id="diaryContent" placeholder="What did you do today? Any thoughts or reflections..." rows="4"></textarea>
+                    <textarea id="noteContent" placeholder="What did you do today? Any thoughts or reflections..." rows="4"></textarea>
                 </div>
                 
-                <div class="diary-actions">
-                    <button onclick="saveDiaryLog()" id="saveDiaryBtn" class="primary-btn">
+                <div class="note-actions">
+                    <button onclick="saveNote()" id="saveNoteBtn" class="primary-btn">
                         <i class="fas fa-save"></i>
-                        Save Log
+                        Save Note
                     </button>
-                    <button onclick="closeDiaryModal()" class="secondary-btn">Cancel</button>
+                    <button onclick="closeNoteModal()" class="secondary-btn">Cancel</button>
                 </div>
             </div>
         </div>
@@ -994,10 +994,10 @@
                 }
 
                 // Update diary logs for the new date
-                if (data.diaryLogs) {
-                    displayDiaryLogs(data.diaryLogs);
+                if (data.notes) {
+                    displayNotes(data.notes);
                 } else {
-                    await refreshDiaryLogs();
+                    await refreshNotes();
                 }
 
                 // Update day analysis
@@ -1059,11 +1059,11 @@
                 currentPage = 1;
                 displayScreenshots();
                 
-                // Display diary logs
-                if (data.diaryLogs) {
-                    displayDiaryLogs(data.diaryLogs);
+                // Display notes
+                if (data.notes) {
+                    displayNotes(data.notes);
                 } else {
-                    await refreshDiaryLogs();
+                    await refreshNotes();
                 }
 
                 // Update day analysis
@@ -1086,9 +1086,9 @@
             hideAnalysisError();
         });
 
-        // Listen for global shortcut to open diary modal
-        ipcRenderer.on('open-diary-modal', () => {
-            showAddDiaryModal();
+        // Listen for global shortcut to open note modal
+        ipcRenderer.on('open-note-modal', () => {
+            showAddNoteModal();
         });
 
         // Update the updateCategoryStats function in your script section
@@ -1503,64 +1503,64 @@
             }
         }
 
-        // Diary Log Functions
-        let editingDiaryLogId = null;
+        // Notes Log Functions
+        let editingNoteId = null;
 
-        async function showAddDiaryModal() {
-            editingDiaryLogId = null;
-            document.getElementById('diaryModalTitle').textContent = 'Add Diary Log';
-            document.getElementById('diaryContent').value = '';
-            document.getElementById('saveDiaryBtn').innerHTML = '<i class="fas fa-save"></i> Save Log';
+        async function showAddNoteModal() {
+            editingNoteId = null;
+            document.getElementById('noteModalTitle').textContent = 'Add Note';
+            document.getElementById('noteContent').value = '';
+            document.getElementById('saveNoteBtn').innerHTML = '<i class="fas fa-save"></i> Save Note';
             
-            // Load and display previous logs
-            await loadPreviousLogsInModal();
+            // Load and display previous notes
+            await loadPreviousNotesInModal();
             
-            document.getElementById('diaryModal').style.display = 'flex';
+            document.getElementById('noteModal').style.display = 'flex';
             
             // Focus with a small delay to ensure modal is fully rendered
             setTimeout(() => {
-                document.getElementById('diaryContent').focus();
+                document.getElementById('noteContent').focus();
             }, 100);
         }
 
-        async function showEditDiaryModal(log) {
-            editingDiaryLogId = log.id;
-            document.getElementById('diaryModalTitle').textContent = 'Edit Diary Log';
-            document.getElementById('diaryContent').value = log.content || '';
-            document.getElementById('saveDiaryBtn').innerHTML = '<i class="fas fa-save"></i> Update Log';
+        async function showEditNoteModal(note) {
+            editingNoteId = note.id;
+            document.getElementById('noteModalTitle').textContent = 'Edit Note';
+            document.getElementById('noteContent').value = note.content || '';
+            document.getElementById('saveNoteBtn').innerHTML = '<i class="fas fa-save"></i> Update Note';
             
-            // Load and display previous logs (excluding the one being edited)
-            await loadPreviousLogsInModal(log.id);
+            // Load and display previous notes (excluding the one being edited)
+            await loadPreviousNotesInModal(note.id);
             
-            document.getElementById('diaryModal').style.display = 'flex';
+            document.getElementById('noteModal').style.display = 'flex';
             
             // Focus with a small delay to ensure modal is fully rendered
             setTimeout(() => {
-                const textarea = document.getElementById('diaryContent');
+                const textarea = document.getElementById('noteContent');
                 textarea.focus();
                 // Place cursor at the end of the text
                 textarea.setSelectionRange(textarea.value.length, textarea.value.length);
             }, 100);
         }
 
-        function closeDiaryModal() {
-            document.getElementById('diaryModal').style.display = 'none';
-            editingDiaryLogId = null;
+        function closeNoteModal() {
+            document.getElementById('noteModal').style.display = 'none';
+            editingNoteId = null;
         }
 
-        async function loadPreviousLogsInModal(excludeId = null) {
+        async function loadPreviousNotesInModal(excludeId = null) {
             try {
-                const result = await ipcRenderer.invoke('get-diary-logs-for-date', currentDate.toISOString());
-                if (result.success && result.logs && result.logs.length > 0) {
-                    // Filter out the log being edited and reverse order (oldest first, newest last)
-                    const filteredLogs = result.logs
-                        .filter(log => log.id !== excludeId)
+                const result = await ipcRenderer.invoke('get-notes-for-date', currentDate.toISOString());
+                if (result.success && result.notes && result.notes.length > 0) {
+                    // Filter out the note being edited and reverse order (oldest first, newest last)
+                    const filteredNotes = result.notes
+                        .filter(note => note.id !== excludeId)
                         .reverse();
                     
-                    if (filteredLogs.length > 0) {
-                        const modalLogsList = document.getElementById('modalLogsList');
-                        modalLogsList.innerHTML = filteredLogs.map(log => {
-                            const timestamp = new Date(log.timestamp);
+                    if (filteredNotes.length > 0) {
+                        const modalNotesList = document.getElementById('modalNotesList');
+                        modalNotesList.innerHTML = filteredNotes.map(note => {
+                            const timestamp = new Date(note.timestamp);
                             const timeString = timestamp.toLocaleTimeString(undefined, {
                                 hour: 'numeric',
                                 minute: '2-digit',
@@ -1568,131 +1568,129 @@
                             });
                             
                             return `
-                                <div class="modal-log-item">
-                                    <div class="modal-log-header">
-                                        <span class="modal-log-time">${timeString}</span>
-                                        <div class="modal-log-content-wrapper">
-                                            <div class="modal-log-content">${log.content.replace(/\n/g, '<br>')}</div>
+                                <div class="modal-note-item">
+                                    <div class="modal-note-header">
+                                        <span class="modal-note-time">${timeString}</span>
+                                        <div class="modal-note-content-wrapper">
+                                            <div class="modal-note-content">${note.content.replace(/\n/g, '<br>')}</div>
                                         </div>
                                     </div>
                                 </div>
                             `;
                         }).join('');
                         
-                        document.getElementById('modalPreviousLogs').style.display = 'block';
+                        document.getElementById('modalPreviousNotes').style.display = 'block';
                         
-                        // Scroll to bottom to show latest logs
+                        // Scroll to bottom to show latest notes
                         setTimeout(() => {
-                            const modalPreviousLogs = document.getElementById('modalPreviousLogs');
-                            modalPreviousLogs.scrollTop = modalPreviousLogs.scrollHeight;
+                            const modalPreviousNotes = document.getElementById('modalPreviousNotes');
+                            modalPreviousNotes.scrollTop = modalPreviousNotes.scrollHeight;
                         }, 0);
                     } else {
-                        document.getElementById('modalPreviousLogs').style.display = 'none';
+                        document.getElementById('modalPreviousNotes').style.display = 'none';
                     }
                 } else {
-                    document.getElementById('modalPreviousLogs').style.display = 'none';
+                    document.getElementById('modalPreviousNotes').style.display = 'none';
                 }
             } catch (error) {
-                console.error('Error loading previous logs in modal:', error);
-                document.getElementById('modalPreviousLogs').style.display = 'none';
+                console.error('Error loading previous notes in modal:', error);
+                document.getElementById('modalPreviousNotes').style.display = 'none';
             }
         }
 
-        // Add keyboard support for diary modal
+        // Add keyboard support for note modal
         document.addEventListener('keydown', (e) => {
-            const diaryModal = document.getElementById('diaryModal');
-            if (diaryModal.style.display === 'flex') {
+            const noteModal = document.getElementById('noteModal');
+            if (noteModal.style.display === 'flex') {
                 if (e.key === 'Escape') {
-                    closeDiaryModal();
+                    closeNoteModal();
                 } else if (e.key === 'Enter' && e.ctrlKey) {
                     // Ctrl+Enter to save
-                    saveDiaryLog();
-                } else if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'diaryContent') {
+                    saveNote();
+                } else if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'noteContent') {
                     // Enter to save (Shift+Enter for new line)
                     e.preventDefault();
-                    saveDiaryLog();
+                    saveNote();
                 }
             }
         });
 
-        async function saveDiaryLog() {
-            const content = document.getElementById('diaryContent').value.trim();
+        async function saveNote() {
+            const content = document.getElementById('noteContent').value.trim();
 
             if (!content) {
                 // Just close the modal if no content, don't show alert
-                closeDiaryModal();
+                closeNoteModal();
                 return;
             }
 
-            const saveBtn = document.getElementById('saveDiaryBtn');
+            const saveBtn = document.getElementById('saveNoteBtn');
             const originalText = saveBtn.innerHTML;
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            saveBtn.disabled = true;
 
             try {
                 let result;
 
-                if (editingDiaryLogId) {
-                    result = await ipcRenderer.invoke('update-diary-log', editingDiaryLogId, '', content, '', []);
+                if (editingNoteId) {
+                    result = await ipcRenderer.invoke('update-note', editingNoteId, content);
                 } else {
-                    result = await ipcRenderer.invoke('save-diary-log', currentDate.toISOString(), '', content, '', []);
+                    result = await ipcRenderer.invoke('save-note', currentDate.toISOString(), content);
                 }
 
                 if (result.success) {
-                    closeDiaryModal();
-                    await refreshDiaryLogs();
+                    closeNoteModal();
+                    await refreshNotes();
                 } else {
-                    alert('Failed to save diary log: ' + result.error);
+                    alert('Failed to save note: ' + result.error);
                 }
             } catch (error) {
-                console.error('Error saving diary log:', error);
-                alert('Failed to save diary log: ' + error.message);
+                console.error('Error saving note:', error);
+                alert('Failed to save note: ' + error.message);
             } finally {
                 saveBtn.innerHTML = originalText;
-                saveBtn.disabled = false;
             }
         }
 
-        async function deleteDiaryLog(id) {
-            if (confirm('Are you sure you want to delete this diary log?')) {
+        async function deleteNote(id) {
+            if (confirm('Are you sure you want to delete this note?')) {
                 try {
-                    const result = await ipcRenderer.invoke('delete-diary-log', id);
+                    const result = await ipcRenderer.invoke('delete-note', id);
                     if (result.success) {
-                        await refreshDiaryLogs();
+                        await refreshNotes();
                     } else {
-                        alert('Failed to delete diary log.');
+                        alert('Failed to delete note.');
                     }
                 } catch (error) {
-                    console.error('Error deleting diary log:', error);
-                    alert('Failed to delete diary log: ' + error.message);
+                    console.error('Error deleting note:', error);
+                    alert('Failed to delete note: ' + error.message);
                 }
             }
         }
 
-        async function refreshDiaryLogs() {
+        async function refreshNotes() {
             try {
-                const result = await ipcRenderer.invoke('get-diary-logs-for-date', currentDate.toISOString());
+                const result = await ipcRenderer.invoke('get-notes-for-date', currentDate.toISOString());
                 if (result.success) {
-                    displayDiaryLogs(result.logs);
+                    displayNotes(result.notes);
                 }
             } catch (error) {
-                console.error('Error refreshing diary logs:', error);
+                console.error('Error refreshing notes:', error);
             }
         }
 
-        function displayDiaryLogs(logs) {
-            const container = document.getElementById('diaryLogs');
+        function displayNotes(notes) {
+            const container = document.getElementById('notes');
             
-            if (!logs || logs.length === 0) {
-                container.innerHTML = '<div class="no-diary-logs">No diary logs for this date. Click "Add Log" to create one.</div>';
+            if (!notes || notes.length === 0) {
+                container.innerHTML = '<div class="no-notes">No notes for this date. Click "Add Note" to create one.</div>';
                 return;
             }
 
-            // Reverse the logs to show oldest first, newest last
-            const reversedLogs = [...logs].reverse();
+            // Reverse the notes to show oldest first, newest last
+            const reversedNotes = [...notes].reverse();
             
-            container.innerHTML = reversedLogs.map(log => {
-                const timestamp = new Date(log.timestamp);
+            container.innerHTML = reversedNotes.map(note => {
+                const timestamp = new Date(note.timestamp);
                 const timeString = timestamp.toLocaleTimeString(undefined, {
                     hour: 'numeric',
                     minute: '2-digit',
@@ -1700,17 +1698,17 @@
                 });
 
                 return `
-                    <div class="diary-log-item">
-                        <div class="diary-log-header">
-                            <span class="diary-log-time">${timeString}</span>
-                            <div class="diary-log-content-wrapper">
-                                <div class="diary-log-content">${log.content.replace(/\n/g, '<br>')}</div>
+                    <div class="note-item">
+                        <div class="note-header">
+                            <span class="note-time">${timeString}</span>
+                            <div class="note-content-wrapper">
+                                <div class="note-content">${note.content.replace(/\n/g, '<br>')}</div>
                             </div>
-                            <div class="diary-log-actions">
-                                <button onclick="showEditDiaryModal(${JSON.stringify(log).replace(/"/g, '&quot;')})" class="edit-btn" title="Edit">
+                            <div class="note-actions">
+                                <button onclick="showEditNoteModal(${JSON.stringify(note).replace(/"/g, '&quot;')})" class="edit-btn" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deleteDiaryLog(${log.id})" class="delete-btn" title="Delete">
+                                <button onclick="deleteNote(${note.id})" class="delete-btn" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -1720,7 +1718,7 @@
             }).join('');
         }
 
-        // Update the existing refresh UI and initial data functions to include diary logs
+        // Update the existing refresh UI and initial data functions to include notes
         const originalRefreshUI = ipcRenderer.on('refresh-ui', async () => {
             try {
                 const data = await ipcRenderer.invoke('request-refresh');
@@ -1737,11 +1735,11 @@
                     currentPage = 1;
                     displayScreenshots();
                     
-                    // Refresh diary logs
-                    if (data.diaryLogs) {
-                        displayDiaryLogs(data.diaryLogs);
+                    // Refresh notes
+                    if (data.notes) {
+                        displayNotes(data.notes);
                     } else {
-                        await refreshDiaryLogs();
+                        await refreshNotes();
                     }
                 }
             } catch (error) {
@@ -1763,11 +1761,11 @@
                 currentPage = 1;
                 displayScreenshots();
                 
-                // Display diary logs
-                if (data.diaryLogs) {
-                    displayDiaryLogs(data.diaryLogs);
+                // Display notes
+                if (data.notes) {
+                    displayNotes(data.notes);
                 } else {
-                    await refreshDiaryLogs();
+                    await refreshNotes();
                 }
             }
         });
