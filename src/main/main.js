@@ -186,7 +186,16 @@ async function captureAndAnalyze() {
                 name: uploadResult.name,
                 mimeType: uploadResult.mimeType
             });
-            
+
+            // Get last 10 screenshots for context
+            const recentScreenshots = await database.getLastNScreenshotsMetadata(20);
+            const recentHistoryContext = recentScreenshots.length > 0 
+                ? `\nRecent activity history (last ${recentScreenshots.length} screenshots, from newest to oldest) as helpful context to what the user have been doing. if you notice a pattern or a shared thing in the recent history, mention it in the context. if the user is still doing the same thing, only mention what's new about it, don't repeat the same thing:\n` +
+                  recentScreenshots.map(ss => 
+                    `- [${new Date(ss.timestamp).toLocaleTimeString()}] Category: ${ss.category}, Activity: ${ss.activity}\n  Description: ${ss.description}`
+                  ).join('\n')
+                : '';
+            console.log(recentHistoryContext);
             const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
             Return a JSON object with "category", "activity", and "description" fields, where category must be EXACTLY one of these values: 
             ${categories.join(', ')}. 
@@ -203,8 +212,11 @@ async function captureAndAnalyze() {
             Example response: {
               "category": "WORK", 
               "activity": "software development",
-              "description": "The user is engaged in software development work in an IDE. They appear to be writing JavaScript code for a web application, with multiple files open in tabs. The code seems to be related to data processing or API integration based on the function names visible. The user has a terminal open at the bottom of the screen showing recent command executions. There's also a browser window partially visible with what looks like documentation or Stack Overflow. The overall context suggests focused programming work on a professional project."
-            }`;
+              "description": "The user is engaged in software development work in an IDE. They appear to be writing JavaScript code for a web application, with multiple files open in tabs. The code seems to be related to data processing or API integration based on the function names visible. The user has a terminal open at the bottom of the screen showing recent command executions. There's also a browser window partially visible with what looks like documentation or Stack Overflow. The overall context suggests focused programming work on a professional project. "
+            }
+
+              
+            ${recentHistoryContext}`;
             
             try {
                 appLogger.info('Starting Gemini analysis...');

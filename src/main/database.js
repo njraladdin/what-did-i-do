@@ -994,6 +994,30 @@ function getYearlyMonthlyCategoryStats(year, intervalMinutes) {
     });
 }
 
+// Get the last N screenshots metadata
+function getLastNScreenshotsMetadata(n = 10) {
+    return new Promise((resolve, reject) => {
+        db.all(`
+            SELECT 
+                timestamp,
+                category,
+                activity,
+                description
+            FROM screenshots 
+            WHERE category != 'UNKNOWN'
+            ORDER BY timestamp DESC
+            LIMIT ?
+        `, [n], (err, screenshots) => {
+            if (err) {
+                console.error('Error getting last N screenshots:', err);
+                reject(err);
+                return;
+            }
+            resolve(screenshots || []);
+        });
+    });
+}
+
 module.exports = {
     initializeDatabase,
     getActivityStats,
@@ -1013,5 +1037,6 @@ module.exports = {
     saveDayAnalysis,
     getDayAnalysis,
     getDailyCategoryStats,
-    getYearlyMonthlyCategoryStats
+    getYearlyMonthlyCategoryStats,
+    getLastNScreenshotsMetadata
 }; 
