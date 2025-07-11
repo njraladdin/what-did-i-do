@@ -1,12 +1,66 @@
-const { ipcMain, dialog } = require('electron');
-const fs = require('fs');
-const axios = require('axios');
+import { ipcMain, IpcMainInvokeEvent, dialog, app, shell } from 'electron';
+import * as fs from 'fs';
+import axios from 'axios';
+const { GoogleGenerativeAI } = require('@google/genai');
+
+interface Dependencies {
+    database: any; // TODO: Add proper database type
+    store: {
+        get: (key: string) => any;
+        set: (key: string, value: any) => void;
+        delete: (key: string) => void;
+    };
+    logger: {
+        info: (message: string, ...args: any[]) => void;
+        error: (message: string, ...args: any[]) => void;
+        getLogPath: () => string;
+        getRecentLogs: () => Promise<string[]>;
+    };
+    mainWindow: Electron.BrowserWindow;
+    autoLauncher: {
+        enable: () => Promise<void>;
+        disable: () => Promise<void>;
+        isEnabled: () => Promise<boolean>;
+    };
+    initializeGeminiAPI: (apiKey: string) => Promise<any>;
+    pauseTracking: () => void;
+    captureAndAnalyze: () => Promise<void>;
+    getCurrentDate: () => Date;
+    setCurrentDate: (date: Date) => void;
+    getIsTracking: () => boolean;
+    setIsTracking: (value: boolean) => void;
+    setIsQuitting: (value: boolean) => void;
+    sleep: (ms: number) => Promise<void>;
+    startTracking: () => boolean;
+    stopTracking: () => void;
+    updateSchedulerInterval: (interval: number) => void;
+    getSchedulerStatus: () => boolean;
+    getLastAnalysisError: () => string | null;
+    clearAnalysisError: () => void;
+    generateDayAnalysis: (date: string) => Promise<any>;
+}
+
+interface ExportOptions {
+    startDate: string;
+    endDate: string;
+    rangeType: string;
+}
+
+interface Screenshot {
+    id: string;
+    timestamp: string;
+    category: string;
+    activity: string;
+    description: string;
+}
+
+const SCREENSHOT_INTERVAL_MINUTES = 5; // Default interval
 
 /**
  * Initialize all IPC handlers for the application
  * @param {Object} dependencies - Object containing all required dependencies
  */
-function initializeIpcHandlers(dependencies) {
+function initializeIpcHandlers(dependencies: Dependencies) {
     const {
         database,
         store,
@@ -32,7 +86,7 @@ function initializeIpcHandlers(dependencies) {
     } = dependencies;
 
     // API-related handlers
-    ipcMain.handle('initialize-api', async (event, apiKey) => {
+    ipcMain.handle('initialize-api', async (event: IpcMainInvokeEvent, apiKey: string) => {
         try {
             const result = await initializeGeminiAPI(apiKey);
             return result;
@@ -40,7 +94,7 @@ function initializeIpcHandlers(dependencies) {
             console.error('Error initializing API:', error);
             return { 
                 success: false, 
-                error: error.message || 'Failed to initialize API'
+                error: (error as Error).message || 'Failed to initialize API'
             };
         }
     });
@@ -123,7 +177,7 @@ function initializeIpcHandlers(dependencies) {
         }
     });
 
-    ipcMain.handle('update-current-date', async (event, newDateString) => {
+    ipcMain.handle('update-current-date', async (event: IpcMainInvokeEvent, newDateString: string) => {
         setCurrentDate(new Date(newDateString));
         const data = await database.getActivityStats(getCurrentDate(), store.get('interval'));
         return {
@@ -136,7 +190,7 @@ function initializeIpcHandlers(dependencies) {
     });
 
     // Tracking handlers
-    ipcMain.handle('toggle-tracking', async (event, shouldTrack) => {
+    ipcMain.handle('toggle-tracking', async (event: IpcMainInvokeEvent, shouldTrack: boolean) => {
         const apiKey = store.get('apiKey');
         if (!apiKey) {
             pauseTracking();
@@ -171,7 +225,7 @@ function initializeIpcHandlers(dependencies) {
     });
 
     // Settings handlers
-    ipcMain.handle('update-interval', async (event, interval) => {
+    ipcMain.handle('update-interval', async (event: IpcMainInvokeEvent, interval: number) => {
         store.set('interval', interval);
         updateSchedulerInterval(interval);
         return true;
@@ -196,7 +250,7 @@ function initializeIpcHandlers(dependencies) {
         }
     });
 
-    ipcMain.handle('toggle-auto-launch', async (event, enable) => {
+    ipcMain.handle('toggle-auto-launch', async (event: IpcMainInvokeEvent, enable: boolean) => {
         try {
             if (enable) {
                 await autoLauncher.enable();
@@ -225,7 +279,7 @@ function initializeIpcHandlers(dependencies) {
     });
 
     // Screenshot management handlers
-    ipcMain.handle('delete-screenshot', async (event, id) => {
+    ipcMain.handle('delete-screenshot', async (event: IpcMainInvokeEvent, id: string) => {
         try {
             const success = await database.deleteScreenshot(id);
             return success;
@@ -236,7 +290,7 @@ function initializeIpcHandlers(dependencies) {
     });
 
     // Get activity data for a specific date
-    ipcMain.handle('get-activity-data', async (event, date) => {
+    ipcMain.handle('get-activity-data', async (event: IpcMainInvokeEvent, date: string) => {
         try {
             const data = await database.getActivityStats(date, SCREENSHOT_INTERVAL_MINUTES);
             return {
@@ -261,7 +315,7 @@ function initializeIpcHandlers(dependencies) {
     });
 
     // Load more screenshots for a date
-    ipcMain.handle('load-more-screenshots', async (event, date, offset) => {
+    ipcMain.handle('load-more-screenshots', async (event: IpcMainInvokeEvent, date: string, offset: number) => {
         try {
             const data = await database.getMoreScreenshots(date, offset);
             return {
@@ -280,53 +334,53 @@ function initializeIpcHandlers(dependencies) {
     });
 
     // Note handlers
-    ipcMain.handle('save-note', async (event, date, content) => {
+    ipcMain.handle('save-note', async (event: IpcMainInvokeEvent, date: string, content: string) => {
         try {
             const noteId = await database.saveNote(date, content);
             return { success: true, id: noteId };
         } catch (error) {
             console.error('Error saving note:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: getErrorMessage(error) };
         }
     });
 
-    ipcMain.handle('get-notes-for-date', async (event, date) => {
+    ipcMain.handle('get-notes-for-date', async (event: IpcMainInvokeEvent, date: string) => {
         try {
             const notes = await database.getNotesForDate(date);
             return { success: true, notes: notes };
         } catch (error) {
             console.error('Error getting notes:', error);
-            return { success: false, notes: [] };
+            return { success: false, notes: [], error: getErrorMessage(error) };
         }
     });
 
-    ipcMain.handle('update-note', async (event, id, content) => {
+    ipcMain.handle('update-note', async (event: IpcMainInvokeEvent, id: string, content: string) => {
         try {
             const success = await database.updateNote(id, content);
             return { success };
         } catch (error) {
             console.error('Error updating note:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: getErrorMessage(error) };
         }
     });
 
-    ipcMain.handle('delete-note', async (event, id) => {
+    ipcMain.handle('delete-note', async (event: IpcMainInvokeEvent, id: string) => {
         try {
             const success = await database.deleteNote(id);
             return { success };
         } catch (error) {
             console.error('Error deleting note:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: getErrorMessage(error) };
         }
     });
 
-    ipcMain.handle('get-notes-range', async (event, startDate, endDate) => {
+    ipcMain.handle('get-notes-range', async (event: IpcMainInvokeEvent, startDate: string, endDate: string) => {
         try {
             const notes = await database.getNotesInRange(startDate, endDate);
             return { success: true, notes: notes };
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error getting notes in range:', error);
-            return { success: false, notes: [] };
+            return { success: false, notes: [], error: getErrorMessage(error) };
         }
     });
 
@@ -349,7 +403,7 @@ function initializeIpcHandlers(dependencies) {
         }
     });
 
-    ipcMain.handle('update-current-month', async (event, year, month) => {
+    ipcMain.handle('update-current-month', async (event: IpcMainInvokeEvent, year: number, month: number) => {
         try {
             const currentDate = getCurrentDate();
             const newDate = new Date(currentDate);
@@ -386,21 +440,21 @@ function initializeIpcHandlers(dependencies) {
             console.error('Error getting daily category stats:', error);
             return {
                 success: false,
-                error: error.message,
+                error: getErrorMessage(error),
                 dailyStats: {}
             };
         }
     });
 
     // Yearly monthly stats handler
-    ipcMain.handle('get-yearly-monthly-category-stats', async (event, year) => {
+    ipcMain.handle('get-yearly-monthly-category-stats', async (event: IpcMainInvokeEvent, year: number) => {
         try {
             const interval = store.get('interval') || 5;
             const data = await database.getYearlyMonthlyCategoryStats(year, interval);
             return { success: true, data };
         } catch (error) {
             console.error('Error getting yearly monthly category stats:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: getErrorMessage(error) };
         }
     });
 
@@ -424,7 +478,7 @@ function initializeIpcHandlers(dependencies) {
     });
 
     // Export data handler
-    ipcMain.handle('export-data', async (event, options) => {
+    ipcMain.handle('export-data', async (event: IpcMainInvokeEvent, options: ExportOptions) => {
         try {
             console.log('Starting data export with options:', options);
             
@@ -466,7 +520,7 @@ function initializeIpcHandlers(dependencies) {
                     categories: database.categories,
                     version: "1.0"
                 },
-                screenshots: exportData.screenshots.map(screenshot => ({
+                screenshots: exportData.screenshots.map((screenshot: Screenshot) => ({
                     id: screenshot.id,
                     timestamp: screenshot.timestamp,
                     category: screenshot.category,
@@ -488,7 +542,7 @@ function initializeIpcHandlers(dependencies) {
 
         } catch (error) {
             console.error('Export error:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: (error as Error).message };
         }
     });
 
@@ -507,7 +561,7 @@ function initializeIpcHandlers(dependencies) {
         return store.get('geminiModel') || 'gemini-2.0-flash';
     });
 
-    ipcMain.handle('set-gemini-model', (event, model) => {
+    ipcMain.handle('set-gemini-model', (event: IpcMainInvokeEvent, model: string) => {
         try {
             const trimmedModel = model.trim();
             if (!trimmedModel) {
@@ -517,11 +571,11 @@ function initializeIpcHandlers(dependencies) {
             return { success: true };
         } catch (error) {
             console.error('Error setting Gemini model:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: getErrorMessage(error) };
         }
     });
 
-    ipcMain.handle('test-gemini-model', async (event, model) => {
+    ipcMain.handle('test-gemini-model', async (event: IpcMainInvokeEvent, model: string) => {
         try {
             const apiKey = store.get('apiKey');
             if (!apiKey) {
@@ -529,7 +583,7 @@ function initializeIpcHandlers(dependencies) {
             }
 
             // Test the model with a simple request
-            const ai = new (require('@google/genai').GoogleGenAI)({apiKey: apiKey});
+            const ai = new GoogleGenerativeAI({apiKey: apiKey});
             
             const result = await ai.models.generateContent({
                 model: model.trim(),
@@ -545,7 +599,7 @@ function initializeIpcHandlers(dependencies) {
             console.error('Error testing Gemini model:', error);
             return { 
                 success: false, 
-                error: error.message || 'Failed to test model'
+                error: getErrorMessage(error) || 'Failed to test model'
             };
         }
     });
@@ -565,8 +619,8 @@ function initializeIpcHandlers(dependencies) {
 
             if (response.data && response.data.models) {
                 const models = response.data.models
-                    .filter(model => model.name.includes('gemini'))
-                    .map(model => ({
+                    .filter((model: { name: string }) => model.name.includes('gemini'))
+                    .map((model: { name: string; displayName?: string; description?: string }) => ({
                         name: model.name.replace('models/', ''),
                         displayName: model.displayName || model.name.replace('models/', ''),
                         description: model.description || ''
@@ -580,24 +634,24 @@ function initializeIpcHandlers(dependencies) {
             console.error('Error fetching models:', error);
             return { 
                 success: false, 
-                error: error.message || 'Failed to fetch models'
+                error: getErrorMessage(error) || 'Failed to fetch models'
             };
         }
     });
 
     // Diary log handlers
-    ipcMain.handle('save-diary-log', async (event, date, title, content, mood, tags) => {
+    ipcMain.handle('save-diary-log', async (event: IpcMainInvokeEvent, date: string, title: string, content: string, mood: string, tags: string[]) => {
         try {
             const tagsString = Array.isArray(tags) ? tags.join(',') : tags || '';
             const logId = await database.saveDiaryLog(date, title, content, mood, tagsString);
             return { success: true, id: logId };
         } catch (error) {
             console.error('Error saving diary log:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: getErrorMessage(error) };
         }
     });
 
-    ipcMain.handle('get-diary-logs-for-date', async (event, date) => {
+    ipcMain.handle('get-diary-logs-for-date', async (event: IpcMainInvokeEvent, date: string) => {
         try {
             const logs = await database.getDiaryLogsForDate(date);
             return { success: true, logs };
@@ -607,28 +661,28 @@ function initializeIpcHandlers(dependencies) {
         }
     });
 
-    ipcMain.handle('update-diary-log', async (event, id, title, content, mood, tags) => {
+    ipcMain.handle('update-diary-log', async (event: IpcMainInvokeEvent, id: string, title: string, content: string, mood: string, tags: string[]) => {
         try {
             const tagsString = Array.isArray(tags) ? tags.join(',') : tags || '';
             const success = await database.updateDiaryLog(id, title, content, mood, tagsString);
             return { success };
         } catch (error) {
             console.error('Error updating diary log:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: getErrorMessage(error) };
         }
     });
 
-    ipcMain.handle('delete-diary-log', async (event, id) => {
+    ipcMain.handle('delete-diary-log', async (event: IpcMainInvokeEvent, id: string) => {
         try {
             const success = await database.deleteDiaryLog(id);
             return { success };
         } catch (error) {
             console.error('Error deleting diary log:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: getErrorMessage(error) };
         }
     });
 
-    ipcMain.handle('get-diary-logs-in-range', async (event, startDate, endDate) => {
+    ipcMain.handle('get-diary-logs-in-range', async (event: IpcMainInvokeEvent, startDate: string, endDate: string) => {
         try {
             const logs = await database.getDiaryLogsInRange(startDate, endDate);
             return { success: true, logs };
@@ -639,7 +693,7 @@ function initializeIpcHandlers(dependencies) {
     });
 
     // Update day analysis handlers
-    ipcMain.handle('generate-day-analysis', async (event, date) => {
+    ipcMain.handle('generate-day-analysis', async (event: IpcMainInvokeEvent, date: string) => {
         logger.info('Received generate-day-analysis request for date:', date);
         try {
             const analysis = await generateDayAnalysis(date);
@@ -651,7 +705,7 @@ function initializeIpcHandlers(dependencies) {
         }
     });
 
-    ipcMain.handle('get-day-analysis', async (event, date) => {
+    ipcMain.handle('get-day-analysis', async (event: IpcMainInvokeEvent, date: string) => {
         logger.info('Received get-day-analysis request for date:', date);
         try {
             const analysis = await database.getDayAnalysis(date);
@@ -662,6 +716,27 @@ function initializeIpcHandlers(dependencies) {
             throw error;
         }
     });
+}
+
+// Add error type interface
+interface ErrorWithMessage {
+    message: string;
+}
+
+function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
+    return (
+        typeof error === 'object' &&
+        error !== null &&
+        'message' in error &&
+        typeof (error as Record<string, unknown>).message === 'string'
+    );
+}
+
+function getErrorMessage(error: unknown): string {
+    if (isErrorWithMessage(error)) {
+        return error.message;
+    }
+    return String(error);
 }
 
 module.exports = {
