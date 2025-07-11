@@ -17,7 +17,7 @@ const categories = [
 // Initialize database
 function initializeDatabase() {
     return new Promise((resolve, reject) => {
-        const dbPath = path.join(app.getPath('userData'), 'screenshots.db');
+        const dbPath = path.join(app.getPath('userData'), 'whatdidido.db');
         db = new sqlite3.Database(dbPath, async (err) => {
             if (err) {
                 console.error('Database initialization error:', err);
