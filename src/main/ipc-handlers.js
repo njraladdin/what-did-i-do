@@ -244,7 +244,7 @@ function initializeIpcHandlers(dependencies) {
                 stats: data.stats,
                 timeInHours: data.timeInHours,
                 screenshots: data.screenshots,
-                notes: data.diaryLogs,
+                notes: data.notes,
                 dayAnalysis: data.dayAnalysis
             };
         } catch (error) {
@@ -267,7 +267,7 @@ function initializeIpcHandlers(dependencies) {
             return {
                 success: true,
                 screenshots: data,
-                notes: data.diaryLogs
+                notes: []
             };
         } catch (error) {
             console.error('Error loading more screenshots:', error);

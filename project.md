@@ -22,7 +22,8 @@
 - day analysis: use past context to generate a day analysis, to see what changed, what direction the user has taken, done
 - chart: add chart to see trend in activites for the past days in month, and for past months in year, done 
 
-- screenshot logs with context: provide screenshot logs descirption with previous logs 
+- screenshot logs with context: provide screenshot logs descirption with previous logs, done 
+
 
 - data chat: ask anything about current month data (includes screenshots descriptions, notes, analyses). 
 "best productive time perio "most sustainable working durations" "patterns that make you stop working for a long period"

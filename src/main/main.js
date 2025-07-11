@@ -10,7 +10,7 @@ const store = new Store({
     }
 });
 const AutoLaunch = require('auto-launch');
-const database = require('./database');
+const database = require('./db');
 const logger = require('./logger');
 const ScreenshotCapture = require('./screenshot');
 const SimpleRobustScheduler = require('./scheduler');
