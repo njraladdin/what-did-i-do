@@ -396,13 +396,13 @@ async function updateDailyProgressChart() {
         const daysWithData = Object.keys(dailyStats).sort();
         if (daysWithData.length === 0) return;
 
-        // For each day, get the top 3 categories
+        // For each day, get the top 3 categories by hours
         const categorySet = new Set();
         const topCategoriesPerDay = daysWithData.map(day => {
-            const percentages = dailyStats[day]?.percentages || {};
-            // Get top 3 categories for this day
-            const top3 = Object.entries(percentages)
-                .filter(([, pct]) => pct > 0)
+            const hours = dailyStats[day]?.timeInHours || {};
+            // Get top 3 categories for this day by hours
+            const top3 = Object.entries(hours)
+                .filter(([, h]) => h > 0)
                 .sort(([, a], [, b]) => b - a)
                 .slice(0, 3)
                 .map(([cat]) => cat);
@@ -435,7 +435,7 @@ async function updateDailyProgressChart() {
                 data: daysWithData.map((day, i) => {
                     const top3 = topCategoriesPerDay[i];
                     if (top3.includes(category)) {
-                        return dailyStats[day].percentages[category] || 0;
+                        return dailyStats[day].timeInHours[category] || 0;
                     } else {
                         return 0;
                     }
@@ -448,6 +448,15 @@ async function updateDailyProgressChart() {
                 maxBarThickness: 32
             };
         });
+
+        // Find the max hours value for scaling
+        let maxHours = 1;
+        datasets.forEach(ds => {
+            ds.data.forEach(val => {
+                if (val > maxHours) maxHours = val;
+            });
+        });
+        maxHours = Math.ceil(maxHours + 0.5); // round up for nice axis
 
         // X-axis labels: days (e.g., Jul 5, Jul 6, ...)
         const chartLabels = daysWithData.map(day => {
@@ -493,7 +502,7 @@ async function updateDailyProgressChart() {
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + 'h';
                             }
                         }
                     }
@@ -513,13 +522,18 @@ async function updateDailyProgressChart() {
                     y: {
                         stacked: false,
                         beginAtZero: true,
-                        max: 100,
+                        max: maxHours,
                         grid: {
                             color: 'rgba(0, 0, 0, 0.1)'
                         },
+                        title: {
+                            display: true,
+                            text: 'Hours',
+                            font: { size: 13 }
+                        },
                         ticks: {
                             callback: function(value) {
-                                return value + '%';
+                                return value.toFixed(1) + 'h';
                             },
                             font: {
                                 size: 12
