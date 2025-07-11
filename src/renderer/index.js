@@ -7,6 +7,7 @@ let editingNoteId = null;
 let hasShownMinimizeMessage = false;
 let currentPage = 1;
 let allScreenshots = [];
+let dailyProgressChart = null;
 
 const SCREENSHOTS_PER_PAGE = 5;
 
@@ -267,6 +268,9 @@ async function updateMonthlyAverages() {
         
         // Update the next month button state
         updateNextMonthButtonState();
+        
+        // Update the daily progress chart
+        await updateDailyProgressChart();
     } catch (error) {
         console.error('Error updating monthly averages:', error);
     }
@@ -338,6 +342,9 @@ async function changeMonth(offset) {
         // Update the next month button state
         updateNextMonthButtonState();
         
+        // Update the daily progress chart
+        await updateDailyProgressChart();
+        
         // Also update the daily view to match the month
         document.getElementById('currentDate').textContent = formatDate(currentDate);
         document.getElementById('nextDateBtn').disabled = isToday(currentDate);
@@ -369,6 +376,168 @@ function isCurrentMonth(date) {
 function updateNextMonthButtonState() {
     document.getElementById('nextMonthBtn').disabled = isCurrentMonth(currentDate);
 } 
+
+// Chart Functions
+async function updateDailyProgressChart() {
+    try {
+        const result = await ipcRenderer.invoke('get-daily-category-stats');
+        if (!result.success) {
+            console.error('Error getting daily stats for chart:', result.error);
+            return;
+        }
+
+        const dailyStats = result.dailyStats;
+        if (!dailyStats || Object.keys(dailyStats).length === 0) {
+            console.log('No daily stats available for chart');
+            return;
+        }
+
+        // Get all days in the month with data, sorted
+        const daysWithData = Object.keys(dailyStats).sort();
+        if (daysWithData.length === 0) return;
+
+        // For each day, get the top 3 categories
+        const categorySet = new Set();
+        const topCategoriesPerDay = daysWithData.map(day => {
+            const percentages = dailyStats[day]?.percentages || {};
+            // Get top 3 categories for this day
+            const top3 = Object.entries(percentages)
+                .filter(([, pct]) => pct > 0)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 3)
+                .map(([cat]) => cat);
+            top3.forEach(cat => categorySet.add(cat));
+            return top3;
+        });
+        // All categories that were ever in a top 3
+        const allTopCategories = Array.from(categorySet);
+
+        // Color mapping for categories
+        const categoryColors = {
+            WORK: 'rgba(37, 99, 235, 0.8)',           // Blue
+            LEARN: 'rgba(34, 197, 94, 0.8)',          // Green
+            SOCIAL: 'rgba(162, 28, 175, 0.8)',        // Purple
+            ENTERTAINMENT: 'rgba(239, 68, 68, 0.8)',  // Red
+            OTHER: 'rgba(100, 116, 139, 0.8)'         // Gray
+        };
+        const borderColors = {
+            WORK: 'rgba(37, 99, 235, 1)',
+            LEARN: 'rgba(34, 197, 94, 1)',
+            SOCIAL: 'rgba(162, 28, 175, 1)',
+            ENTERTAINMENT: 'rgba(239, 68, 68, 1)',
+            OTHER: 'rgba(100, 116, 139, 1)'
+        };
+
+        // For each category, build a dataset with values for each day (0 if not in top 3 for that day)
+        const datasets = allTopCategories.map(category => {
+            return {
+                label: formatCategoryName(category),
+                data: daysWithData.map((day, i) => {
+                    const top3 = topCategoriesPerDay[i];
+                    if (top3.includes(category)) {
+                        return dailyStats[day].percentages[category] || 0;
+                    } else {
+                        return 0;
+                    }
+                }),
+                backgroundColor: categoryColors[category] || 'rgba(180,180,180,0.7)',
+                borderColor: borderColors[category] || 'rgba(180,180,180,1)',
+                borderWidth: 1,
+                borderRadius: 4,
+                borderSkipped: false,
+                maxBarThickness: 32
+            };
+        });
+
+        // X-axis labels: days (e.g., Jul 5, Jul 6, ...)
+        const chartLabels = daysWithData.map(day => {
+            const d = new Date(day);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+
+        // Destroy existing chart if it exists
+        if (dailyProgressChart) {
+            dailyProgressChart.destroy();
+        }
+
+        // Create new chart
+        const ctx = document.getElementById('dailyProgressChart');
+        if (!ctx) {
+            console.error('Chart canvas not found');
+            return;
+        }
+
+        dailyProgressChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: false,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        stacked: false,
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            },
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error updating daily progress chart:', error);
+    }
+}
 
 // Screenshot Display Functions
 function displayScreenshots() {
@@ -1127,6 +1296,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             allScreenshots = data.screenshots || [];
             currentPage = 1;
             displayScreenshots();
+            
+            // Initialize the daily progress chart
+            await updateDailyProgressChart();
         }
     } catch (error) {
         console.error('Error initializing data:', error);
@@ -1311,6 +1483,9 @@ ipcRenderer.on('refresh-ui', async () => {
             } else {
                 contentDiv.textContent = 'No analysis generated yet for this day.';
             }
+            
+            // Update the daily progress chart
+            await updateDailyProgressChart();
         }
     } catch (error) {
         console.error('Error refreshing UI:', error);
@@ -1345,6 +1520,9 @@ ipcRenderer.on('initial-data', async (event, data) => {
         } else {
             contentDiv.textContent = 'No analysis generated yet for this day.';
         }
+        
+        // Update the daily progress chart
+        await updateDailyProgressChart();
     }
 });
 

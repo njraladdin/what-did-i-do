@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="index.css">
     <!-- Add marked library from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Add Chart.js library from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -264,6 +266,14 @@
                         </div>
                     </div>
                     <div class="analytics-cards" id="monthlyAnalytics"></div>
+                
+                <!-- Daily Progress Chart -->
+                <div class="chart-section">
+                    <h4>Daily Progress - Top 3 Categories</h4>
+                    <div class="chart-container">
+                        <canvas id="dailyProgressChart"></canvas>
+                    </div>
+                </div>
                 </div>
 
                 <!-- Notes Section -->

@@ -6,7 +6,13 @@
     
     /* Text colors - higher contrast */ --color-text-primary: #111827; /* Near black */ --color-text-secondary: #4B5563; /* Medium gray */ --color-text-muted: #6B7280; /* Light gray */
     
-    /* Updated category colors */ --color-work: #6366F1; /* Indigo */ --color-learn: #8B5CF6; /* Purple */ --color-social: #10B981; /* Emerald */ --color-entertainment: #EC4899; /* Pink */ --color-other: #F59E0B; /* Amber */ }
+    /* Updated category colors */
+    --color-work: #2563eb; /* Blue */
+    --color-learn: #22c55e; /* Green */
+    --color-social: #a21caf; /* Purple */
+    --color-entertainment: #ef4444; /* Red */
+    --color-other: #64748b; /* Gray */
+}
     
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--color-bg-main); color: var(--color-text-secondary); line-height: 1.6; margin: 0; padding: 0; }
     
@@ -1146,4 +1152,26 @@
     .note-actions {
         align-self: flex-end;
     }
+}
+
+/* Chart Section Styles */
+.chart-section {
+    margin-top: 32px;
+    padding: 24px;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+}
+
+.chart-section h4 {
+    margin: 0 0 20px 0;
+    color: var(--color-text-primary);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
 }

@@ -621,14 +621,14 @@ function showTrayNotification() {
     }
 }
 
-// Function to show window and open diary modal
-function showWindowAndOpenDiaryModal() {
+// Function to show window and open note modal
+function showWindowAndOpenNoteModal() {
     if (mainWindow) {
         mainWindow.show();
         mainWindow.focus();
         
-        // Send message to renderer to open diary modal
-        mainWindow.webContents.send('open-diary-modal');
+        // Send message to renderer to open note modal
+        mainWindow.webContents.send('open-note-modal');
     }
 }
 
@@ -683,9 +683,9 @@ app.whenReady().then(async () => {
         createTray();
         initializeIdleMonitor();
         
-        // Register global shortcut for diary modal
+        // Register global shortcut for note modal
         globalShortcut.register('CommandOrControl+Shift+D', () => {
-            showWindowAndOpenDiaryModal();
+            showWindowAndOpenNoteModal();
         });
         
         // Initialize IPC handlers

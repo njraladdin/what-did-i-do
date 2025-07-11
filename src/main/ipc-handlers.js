@@ -374,6 +374,24 @@ function initializeIpcHandlers(dependencies) {
         }
     });
 
+    // Get daily category stats for chart
+    ipcMain.handle('get-daily-category-stats', async () => {
+        try {
+            const data = await database.getDailyCategoryStats(getCurrentDate(), store.get('interval'));
+            return {
+                success: true,
+                dailyStats: data
+            };
+        } catch (error) {
+            console.error('Error getting daily category stats:', error);
+            return {
+                success: false,
+                error: error.message,
+                dailyStats: {}
+            };
+        }
+    });
+
     // Logging handlers
     ipcMain.handle('open-logs', () => {
         const logPath = logger.getLogPath();
