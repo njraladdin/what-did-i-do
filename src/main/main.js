@@ -645,6 +645,18 @@ async function runPeriodicDayAnalysis() {
     }
 }
 
+// Add this function to delay the initial day analysis
+function scheduleInitialDayAnalysis() {
+    appLogger.info('Scheduling initial day analysis to run after 1 hour');
+    setTimeout(async () => {
+        try {
+            await runPeriodicDayAnalysis();
+            appLogger.info('Initial day analysis completed successfully');
+        } catch (error) {
+            appLogger.error('Error in initial day analysis:', error);
+        }
+    }, 60 * 60 * 1000); // 1 hour in milliseconds
+}
 
 app.whenReady().then(async () => {
     try {
@@ -708,8 +720,8 @@ app.whenReady().then(async () => {
             startTracking();
             // Start day analysis scheduler
             dayAnalysisScheduler.start(runPeriodicDayAnalysis);
-            // Run initial analysis
-            await runPeriodicDayAnalysis();
+            // Schedule initial analysis to run after 1 hour instead of immediately
+            scheduleInitialDayAnalysis();
         } else {
             pauseTracking();
         }

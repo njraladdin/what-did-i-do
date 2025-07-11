@@ -19,8 +19,7 @@
 - diary logs: text logs: shortcut to open window to enter logs, and see other logs (would be used in the future), done 
 - calculation: when changing the interval, it also changes the existing tracked times, done 
 - Other : add 'other' tag for tasks that are not work or entertainement or social or learn, done 
+- day analysis: use previous context of the same day to generate a new log, to see what changed, what direction the user has taken, so in the end we'll have a day's summary, done
 
 
-- logs with context / day log / day analysis: use previous context of the same day to generate a new log, to see what changed, what direction the user has taken, so in the end we'll have a day's summary 
-or more  than a summary, sometihng more like an analysis (in terms of productivity and behaviour) 
 
