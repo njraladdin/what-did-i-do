@@ -1,7 +1,26 @@
-const { powerMonitor } = require('electron');
+import { powerMonitor } from 'electron';
+import { Logger } from './logger';
+
+interface SchedulerOptions {
+    intervalMinutes?: number;
+    maxRetries?: number;
+    idleThresholdMinutes?: number;
+}
+
+type TaskFunction = () => Promise<void>;
 
 class SimpleRobustScheduler {
-    constructor(logger, options = {}) {
+    private readonly logger: Logger;
+    private intervalMinutes: number;
+    private readonly maxRetries: number;
+    private readonly idleThresholdMinutes: number;
+    
+    private isRunning: boolean;
+    private currentTimer: NodeJS.Timeout | null;
+    private taskFunction: TaskFunction | null;
+    private wasRunningBeforeSuspend: boolean;
+
+    constructor(logger: Logger, options: SchedulerOptions = {}) {
         this.logger = logger;
         this.intervalMinutes = options.intervalMinutes || 1;
         this.maxRetries = options.maxRetries || 2;
@@ -11,6 +30,7 @@ class SimpleRobustScheduler {
         this.isRunning = false;
         this.currentTimer = null;
         this.taskFunction = null;
+        this.wasRunningBeforeSuspend = false;
         
         this.setupPowerMonitoring();
     }
@@ -18,7 +38,7 @@ class SimpleRobustScheduler {
     /**
      * Setup power monitoring for system integration
      */
-    setupPowerMonitoring() {
+    private setupPowerMonitoring(): void {
         powerMonitor.on('suspend', () => {
             this.logger.info('System suspended, pausing scheduler');
             this.pause();
@@ -27,7 +47,7 @@ class SimpleRobustScheduler {
         powerMonitor.on('resume', () => {
             this.logger.info('System resumed, resuming scheduler');
             if (this.wasRunningBeforeSuspend) {
-                this.start(this.taskFunction);
+                this.start(this.taskFunction!);
             }
         });
     }
@@ -35,7 +55,7 @@ class SimpleRobustScheduler {
     /**
      * Start the scheduler
      */
-    start(taskFunction) {
+    start(taskFunction: TaskFunction): void {
         if (this.isRunning) {
             this.logger.warn('Scheduler already running');
             return;
@@ -55,7 +75,7 @@ class SimpleRobustScheduler {
     /**
      * Stop the scheduler
      */
-    stop() {
+    stop(): void {
         if (!this.isRunning) {
             return;
         }
@@ -72,7 +92,7 @@ class SimpleRobustScheduler {
     /**
      * Pause the scheduler (can be resumed)
      */
-    pause() {
+    pause(): void {
         if (this.isRunning) {
             this.wasRunningBeforeSuspend = true;
             this.stop();
@@ -82,7 +102,7 @@ class SimpleRobustScheduler {
     /**
      * Update the interval and restart if running
      */
-    updateInterval(newIntervalMinutes) {
+    updateInterval(newIntervalMinutes: number): void {
         const wasRunning = this.isRunning;
         const taskFunction = this.taskFunction;
         
@@ -101,7 +121,7 @@ class SimpleRobustScheduler {
     /**
      * Schedule the next execution
      */
-    scheduleNext() {
+    private scheduleNext(): void {
         if (!this.isRunning) {
             return;
         }
@@ -109,14 +129,14 @@ class SimpleRobustScheduler {
         const intervalMs = this.intervalMinutes * 60 * 1000;
         
         this.currentTimer = setTimeout(() => {
-            this.executeTask();
+            void this.executeTask();
         }, intervalMs);
     }
 
     /**
      * Execute the scheduled task with basic retry logic
      */
-    async executeTask() {
+    private async executeTask(): Promise<void> {
         if (!this.isRunning) {
             return;
         }
@@ -137,7 +157,7 @@ class SimpleRobustScheduler {
             this.logger.debug('Task executed successfully');
 
         } catch (error) {
-            this.logger.error('Task execution failed:', error.message);
+            this.logger.error('Task execution failed:', (error as Error).message);
         }
 
         // Always schedule next execution
@@ -147,16 +167,16 @@ class SimpleRobustScheduler {
     /**
      * Execute task with basic retry logic
      */
-    async executeWithRetry() {
-        let lastError;
+    private async executeWithRetry(): Promise<void> {
+        let lastError: Error | null = null;
         
         for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
             try {
-                await this.taskFunction();
+                await this.taskFunction!();
                 return; // Success
             } catch (error) {
-                lastError = error;
-                this.logger.warn(`Task attempt ${attempt} failed: ${error.message}`);
+                lastError = error as Error;
+                this.logger.warn(`Task attempt ${attempt} failed: ${(error as Error).message}`);
                 
                 if (attempt < this.maxRetries) {
                     await this.sleep(2000); // 2 second retry delay
@@ -170,7 +190,7 @@ class SimpleRobustScheduler {
     /**
      * Force immediate execution (for testing)
      */
-    async executeNow() {
+    async executeNow(): Promise<void> {
         if (!this.taskFunction) {
             throw new Error('No task function configured');
         }
@@ -182,7 +202,7 @@ class SimpleRobustScheduler {
     /**
      * Get basic scheduler status
      */
-    getStatus() {
+    getStatus(): { isRunning: boolean; intervalMinutes: number } {
         return {
             isRunning: this.isRunning,
             intervalMinutes: this.intervalMinutes
@@ -192,9 +212,9 @@ class SimpleRobustScheduler {
     /**
      * Utility sleep function
      */
-    sleep(ms) {
+    private sleep(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 
-module.exports = SimpleRobustScheduler; 
+export default SimpleRobustScheduler; 

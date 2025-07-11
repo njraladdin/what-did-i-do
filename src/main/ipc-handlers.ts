@@ -739,6 +739,4 @@ function getErrorMessage(error: unknown): string {
     return String(error);
 }
 
-module.exports = {
-    initializeIpcHandlers
-}; 
+export { initializeIpcHandlers }; 

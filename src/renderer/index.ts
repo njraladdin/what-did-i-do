@@ -1,64 +1,155 @@
-const { ipcRenderer } = require('electron');
-const { shell } = require('electron');
+// Import required modules
+const { ipcRenderer, shell } = require('electron');
+
+// Add marked declaration
+declare const marked: {
+    parse: (markdown: string) => string;
+};
+
+// Type declarations for Chart.js
+declare const Chart: any;
+
+// Type declarations
+interface Screenshot {
+    id: number;
+    timestamp: string;
+    thumbnail: string;
+    activity?: string;
+    category?: string;
+    description?: string;
+}
+
+interface Note {
+    id: number;
+    content: string;
+    timestamp: string;
+}
+
+interface CategoryStats {
+    [key: string]: number;
+}
+
+interface MonthlyData {
+    monthlyTimeInHours: { [key: string]: number };
+    monthlyAverages: { [key: string]: number };
+    daysWithData: number;
+}
+
+interface DailyStats {
+    timeInHours: { [key: string]: number };
+    category: string;
+}
+
+interface DailyStatsResult {
+    success: boolean;
+    dailyStats: { [key: string]: DailyStats };
+    error?: string;
+}
+
+interface ChartContext {
+    dataset: {
+        label: string;
+    };
+    parsed: {
+        y: number;
+    };
+}
+
+interface CategoryColorMap {
+    WORK: string;
+    LEARN: string;
+    SOCIAL: string;
+    ENTERTAINMENT: string;
+    OTHER: string;
+    [key: string]: string; // Allow string indexing for unknown categories
+}
 
 let isTracking = true;
 let currentDate = new Date();
-let editingNoteId = null;
+let editingNoteId: number | null = null;
 let hasShownMinimizeMessage = false;
 let currentPage = 1;
-let allScreenshots = [];
-let dailyProgressChart = null;
-let yearlyProgressChart = null;
+let allScreenshots: Screenshot[] = [];
+let dailyProgressChart: any = null; // Will be properly typed when Chart.js is imported
+let yearlyProgressChart: any = null; // Will be properly typed when Chart.js is imported
 
 const SCREENSHOTS_PER_PAGE = 5;
 
 // Helper function to format category names
-function formatCategoryName(category) {
+function formatCategoryName(category: string): string {
     return category
         .toLowerCase()
         .replace(/_/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
+        .replace(/\b\w/g, (c: string) => c.toUpperCase());
 }
 
 // API Key Management
-async function checkExistingApiKey() {
+async function checkExistingApiKey(): Promise<void> {
     const hasKey = await ipcRenderer.invoke('check-api-key');
     updateApiKeyUI(hasKey);
     if (hasKey) {
         const storedKey = await ipcRenderer.invoke('get-api-key');
-        document.getElementById('apiKey').value = storedKey;
+        const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
+        if (apiKeyInput) {
+            apiKeyInput.value = storedKey;
+        }
         await initializeInterval();
         updateStats();
     } else {
         isTracking = false;
-        const button = document.getElementById('toggleTracking');
-        button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
-        button.className = 'tracking-button inactive';
+        const button = document.getElementById('toggleTracking') as HTMLButtonElement | null;
+        if (button) {
+            button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
+            button.className = 'tracking-button inactive';
+            button.disabled = true;
+        }
     }
 }
 
-function updateApiKeyUI(hasKey) {
-    document.getElementById('settingsNotification').style.display = hasKey ? 'none' : 'block';
-    document.getElementById('mainScreenWarning').style.display = hasKey ? 'none' : 'block';
-    document.getElementById('apiKeyWarning').style.display = hasKey ? 'none' : 'block';
+function updateApiKeyUI(hasKey: boolean): void {
+    const settingsNotification = document.getElementById('settingsNotification');
+    const mainScreenWarning = document.getElementById('mainScreenWarning');
+    const apiKeyWarning = document.getElementById('apiKeyWarning');
+
+    if (settingsNotification) {
+        settingsNotification.style.display = hasKey ? 'none' : 'block';
+    }
+    if (mainScreenWarning) {
+        mainScreenWarning.style.display = hasKey ? 'none' : 'block';
+    }
+    if (apiKeyWarning) {
+        apiKeyWarning.style.display = hasKey ? 'none' : 'block';
+    }
 
     // Disable tracking controls if no API key
-    document.getElementById('toggleTracking').disabled = !hasKey;
-    document.getElementById('testScreenshotBtn').disabled = !hasKey;
+    const toggleTracking = document.getElementById('toggleTracking') as HTMLButtonElement | null;
+    const testScreenshotBtn = document.getElementById('testScreenshotBtn') as HTMLButtonElement | null;
+    if (toggleTracking) {
+        toggleTracking.disabled = !hasKey;
+    }
+    if (testScreenshotBtn) {
+        testScreenshotBtn.disabled = !hasKey;
+    }
 }
 
-async function initializeAPI() {
-    const apiKey = document.getElementById('apiKey').value.trim();
+async function initializeAPI(): Promise<void> {
+    const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
+    const apiKey = apiKeyInput?.value.trim() || '';
+    
     if (!apiKey) {
         showValidationMessage('Please enter an API key', 'error');
         return;
     }
 
     const spinner = document.getElementById('validationSpinner');
-    const saveButton = document.getElementById('saveApiKeyBtn');
+    const saveButton = document.getElementById('saveApiKeyBtn') as HTMLButtonElement | null;
 
-    spinner.style.display = 'block';
-    saveButton.disabled = true;
+    if (spinner) {
+        spinner.style.display = 'block';
+    }
+    if (saveButton) {
+        saveButton.disabled = true;
+    }
 
     try {
         const result = await ipcRenderer.invoke('initialize-api', apiKey);
@@ -74,35 +165,49 @@ async function initializeAPI() {
     } catch (error) {
         showValidationMessage('Failed to validate API key', 'error');
     } finally {
-        spinner.style.display = 'none';
-        saveButton.disabled = false;
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+        if (saveButton) {
+            saveButton.disabled = false;
+        }
     }
 }
 
-function showValidationMessage(message, type) {
+function showValidationMessage(message: string, type: string): void {
     const messageElement = document.getElementById('validationMessage');
-    messageElement.textContent = message;
-    messageElement.className = `validation-message ${type}`;
+    if (messageElement) {
+        messageElement.textContent = message;
+        messageElement.className = `validation-message ${type}`;
 
-    // Ensure the message is visible
-    messageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Ensure the message is visible
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 async function deleteAPIKey() {
     const success = await ipcRenderer.invoke('delete-api-key');
     if (success) {
-        document.getElementById('apiKey').value = '';
+        const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
+        if (apiKeyInput) {
+            apiKeyInput.value = '';
+        }
         updateApiKeyUI(false);
         toggleSettings();
 
         // Reset tracking button state
-        const button = document.getElementById('toggleTracking');
-        button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
-        button.className = 'tracking-button inactive';
-        button.disabled = true;
+        const button = document.getElementById('toggleTracking') as HTMLButtonElement | null;
+        if (button) {
+            button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
+            button.className = 'tracking-button inactive';
+            button.disabled = true;
+        }
 
         // Disable test screenshot button
-        document.getElementById('testScreenshotBtn').disabled = true;
+        const testScreenshotBtn = document.getElementById('testScreenshotBtn') as HTMLButtonElement | null;
+        if (testScreenshotBtn) {
+            testScreenshotBtn.disabled = true;
+        }
     }
 }
 
@@ -110,23 +215,29 @@ async function deleteAPIKey() {
 async function toggleTracking() {
     isTracking = !isTracking;
     const tracking = await ipcRenderer.invoke('toggle-tracking', isTracking);
-    const button = document.getElementById('toggleTracking');
+    const button = document.getElementById('toggleTracking') as HTMLButtonElement | null;
 
     if (tracking) {
-        button.innerHTML = `<i class="fas fa-pause"></i><span>Pause Recording</span>`;
-        button.className = 'tracking-button active';
+        if (button) {
+            button.innerHTML = `<i class="fas fa-pause"></i><span>Pause Recording</span>`;
+            button.className = 'tracking-button active';
+        }
     } else {
-        button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
-        button.className = 'tracking-button inactive';
+        if (button) {
+            button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
+            button.className = 'tracking-button inactive';
+        }
     }
 }
 
-async function testScreenshot() {
-    const button = document.getElementById('testScreenshotBtn');
+async function testScreenshot(): Promise<void> {
+    const button = document.getElementById('testScreenshotBtn') as HTMLButtonElement | null;
     const countdownElement = document.getElementById('countdown');
 
     console.log('Starting screenshot test...');
-    button.disabled = true;
+    if (button) {
+        button.disabled = true;
+    }
 
     try {
         const result = await ipcRenderer.invoke('test-screenshot');
@@ -135,19 +246,29 @@ async function testScreenshot() {
         console.error('Error during screenshot test:', error);
     }
 
-    button.disabled = false;
-    countdownElement.textContent = '';
+    if (button) {
+        button.disabled = false;
+    }
+    if (countdownElement) {
+        countdownElement.textContent = '';
+    }
 }
 
-async function updateInterval() {
-    const interval = document.getElementById('intervalSelect').value;
-    await ipcRenderer.invoke('update-interval', parseInt(interval));
+async function updateInterval(): Promise<void> {
+    const intervalSelect = document.getElementById('intervalSelect') as HTMLSelectElement | null;
+    const interval = intervalSelect?.value;
+    if (interval) {
+        await ipcRenderer.invoke('update-interval', parseInt(interval));
+    }
 }
 
-async function initializeInterval() {
+async function initializeInterval(): Promise<void> {
     const savedInterval = await ipcRenderer.invoke('get-interval');
     if (savedInterval) {
-        document.getElementById('intervalSelect').value = savedInterval.toString();
+        const intervalSelect = document.getElementById('intervalSelect') as HTMLSelectElement | null;
+        if (intervalSelect) {
+            intervalSelect.value = savedInterval.toString();
+        }
     }
 } 
 
@@ -175,17 +296,23 @@ async function updateStats() {
         // Update day analysis if available
         const contentDiv = document.getElementById('dayAnalysisContent');
         if (data.dayAnalysis && data.dayAnalysis.content) {
-            contentDiv.textContent = data.dayAnalysis.content;
+            if (contentDiv) {
+                contentDiv.textContent = data.dayAnalysis.content;
+            }
         } else {
-            contentDiv.textContent = 'No analysis generated yet for this day.';
+            if (contentDiv) {
+                contentDiv.textContent = 'No analysis generated yet for this day.';
+            }
         }
     } catch (error) {
         console.error('Error updating stats:', error);
     }
 }
 
-function updateCategoryStats(stats, timeInHours = {}) {
+function updateCategoryStats(stats: { [key: string]: number }, timeInHours: { [key: string]: number }): void {
     const statsContainer = document.getElementById('categoryStats');
+    if (!statsContainer) return;
+
     statsContainer.innerHTML = '';
 
     const sortedCategories = Object.entries(stats)
@@ -214,29 +341,34 @@ function updateCategoryStats(stats, timeInHours = {}) {
 }
 
 // Monthly Analytics
-async function updateMonthlyAverages() {
+async function updateMonthlyAverages(): Promise<void> {
     try {
-        const data = await ipcRenderer.invoke('get-monthly-averages');
+        const data = await ipcRenderer.invoke('get-monthly-averages') as MonthlyData;
         console.log('Received monthly averages:', data);
 
         // Update the month indicator
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                            'July', 'August', 'September', 'October', 'November', 'December'];
+                          'July', 'August', 'September', 'October', 'November', 'December'];
         const monthName = monthNames[currentDate.getMonth()];
         const year = currentDate.getFullYear();
-        document.getElementById('currentMonth').textContent = `${monthName} ${year} • ${data.daysWithData} days`;
+        const currentMonthElement = document.getElementById('currentMonth');
+        if (currentMonthElement) {
+            currentMonthElement.textContent = `${monthName} ${year} • ${data.daysWithData} days`;
+        }
 
-        // Update the analytics cards - show each category with total and average per day
+        // Update the analytics cards
         const analyticsContainer = document.getElementById('monthlyAnalytics');
+        if (!analyticsContainer) return;
+
         analyticsContainer.innerHTML = '';
 
         // Sort categories by total hours (descending)
         const categoryEntries = Object.entries(data.monthlyTimeInHours)
-            .filter(([category, hours]) => hours > 0) // Only show categories with data
-            .sort(([, a], [, b]) => b - a);
+            .filter(([, hours]) => typeof hours === 'number' && hours > 0)
+            .sort(([, a], [, b]) => (b as number) - (a as number));
 
         categoryEntries.forEach(([category, totalHours]) => {
-            const avgPerDay = data.daysWithData > 0 ? totalHours / data.daysWithData : 0;
+            const avgPerDay = data.daysWithData > 0 ? (totalHours as number) / data.daysWithData : 0;
             
             const categoryCard = document.createElement('div');
             categoryCard.className = 'analytics-card';
@@ -250,7 +382,7 @@ async function updateMonthlyAverages() {
                 </div>
                 <div class="card-metrics">
                     <div class="metric">
-                        <span class="metric-value">${totalHours.toFixed(1)}h</span>
+                        <span class="metric-value">${(totalHours as number).toFixed(1)}h</span>
                         <span class="metric-label">total</span>
                     </div>
                     <div class="metric">
@@ -277,7 +409,7 @@ async function updateMonthlyAverages() {
     }
 }
 
-async function changeMonth(offset) {
+async function changeMonth(offset: number) {
     // Create a new date object to avoid modifying the current date
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + offset);
@@ -297,19 +429,24 @@ async function changeMonth(offset) {
                             'July', 'August', 'September', 'October', 'November', 'December'];
         const monthName = monthNames[currentDate.getMonth()];
         const year = currentDate.getFullYear();
-        document.getElementById('currentMonth').textContent = `${monthName} ${year} • ${data.daysWithData} days`;
+        const currentMonthElement = document.getElementById('currentMonth');
+        if (currentMonthElement) {
+            currentMonthElement.textContent = `${monthName} ${year} • ${data.daysWithData} days`;
+        }
         
         // Update the analytics cards
         const analyticsContainer = document.getElementById('monthlyAnalytics');
+        if (!analyticsContainer) return;
+
         analyticsContainer.innerHTML = '';
         
         // Sort categories by total hours (descending)
         const categoryEntries = Object.entries(data.monthlyTimeInHours)
-            .filter(([category, hours]) => hours > 0) // Only show categories with data
-            .sort(([, a], [, b]) => b - a);
+            .filter(([category, hours]) => typeof hours === 'number' && hours > 0) // Only show categories with data
+            .sort(([, a], [, b]) => (b as number) - (a as number));
         
         categoryEntries.forEach(([category, totalHours]) => {
-            const avgPerDay = data.daysWithData > 0 ? totalHours / data.daysWithData : 0;
+            const avgPerDay = data.daysWithData > 0 ? (totalHours as number) / data.daysWithData : 0;
             
             const categoryCard = document.createElement('div');
             categoryCard.className = 'analytics-card';
@@ -323,7 +460,7 @@ async function changeMonth(offset) {
                 </div>
                 <div class="card-metrics">
                     <div class="metric">
-                        <span class="metric-value">${totalHours.toFixed(1)}h</span>
+                        <span class="metric-value">${(totalHours as number).toFixed(1)}h</span>
                         <span class="metric-label">total</span>
                     </div>
                     <div class="metric">
@@ -347,8 +484,14 @@ async function changeMonth(offset) {
         await updateDailyProgressChart();
         
         // Also update the daily view to match the month
-        document.getElementById('currentDate').textContent = formatDate(currentDate);
-        document.getElementById('nextDateBtn').disabled = isToday(currentDate);
+        const currentDateElement = document.getElementById('currentDate');
+        if (currentDateElement) {
+            currentDateElement.textContent = formatDate(currentDate);
+        }
+        const nextDateBtn = document.getElementById('nextDateBtn');
+        if (nextDateBtn) {
+            (nextDateBtn as HTMLButtonElement).disabled = isToday(currentDate);
+        }
         
         // Fetch updated data for the day view
         const dayData = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
@@ -368,20 +511,23 @@ async function changeMonth(offset) {
     }
 }
 
-function isCurrentMonth(date) {
+function isCurrentMonth(date: Date): boolean {
     const today = new Date();
     return date.getMonth() === today.getMonth() && 
            date.getFullYear() === today.getFullYear();
 }
 
 function updateNextMonthButtonState() {
-    document.getElementById('nextMonthBtn').disabled = isCurrentMonth(currentDate);
+    const nextMonthBtn = document.getElementById('nextMonthBtn') as HTMLButtonElement;
+    if (nextMonthBtn) {
+        nextMonthBtn.disabled = isCurrentMonth(currentDate);
+    }
 } 
 
 // Chart Functions
-async function updateDailyProgressChart() {
+async function updateDailyProgressChart(): Promise<void> {
     try {
-        const result = await ipcRenderer.invoke('get-daily-category-stats');
+        const result = await ipcRenderer.invoke('get-daily-category-stats') as DailyStatsResult;
         if (!result.success) {
             console.error('Error getting daily stats for chart:', result.error);
             return;
@@ -398,13 +544,13 @@ async function updateDailyProgressChart() {
         if (daysWithData.length === 0) return;
 
         // For each day, get the top 3 categories by hours
-        const categorySet = new Set();
+        const categorySet = new Set<string>();
         const topCategoriesPerDay = daysWithData.map(day => {
             const hours = dailyStats[day]?.timeInHours || {};
             // Get top 3 categories for this day by hours
             const top3 = Object.entries(hours)
-                .filter(([, h]) => h > 0)
-                .sort(([, a], [, b]) => b - a)
+                .filter(([, h]) => typeof h === 'number' && h > 0)
+                .sort(([, a], [, b]) => (b as number) - (a as number))
                 .slice(0, 3)
                 .map(([cat]) => cat);
             top3.forEach(cat => categorySet.add(cat));
@@ -414,12 +560,12 @@ async function updateDailyProgressChart() {
         const allTopCategories = Array.from(categorySet);
 
         // Color mapping for categories
-        const categoryColors = {
+        const categoryColors: CategoryColorMap = {
             WORK: 'rgba(37, 99, 235, 0.8)',           // Blue
             LEARN: 'rgba(34, 197, 94, 0.8)',          // Green
             SOCIAL: 'rgba(162, 28, 175, 0.8)',        // Purple
             ENTERTAINMENT: 'rgba(239, 68, 68, 0.8)',  // Red
-            OTHER: 'rgba(100, 116, 139, 0.8)'         // Gray
+            OTHER: 'rgba(100, 116, 139, 0.8)',        // Gray
         };
         const borderColors = {
             WORK: 'rgba(37, 99, 235, 1)',
@@ -441,8 +587,8 @@ async function updateDailyProgressChart() {
                         return 0;
                     }
                 }),
-                backgroundColor: categoryColors[category] || 'rgba(180,180,180,0.7)',
-                borderColor: borderColors[category] || 'rgba(180,180,180,1)',
+                backgroundColor: categoryColors[category] || categoryColors.OTHER,
+                borderColor: categoryColors[category] || categoryColors.OTHER,
                 borderWidth: 1,
                 borderRadius: 4,
                 borderSkipped: false,
@@ -502,7 +648,7 @@ async function updateDailyProgressChart() {
                         mode: 'index',
                         intersect: false,
                         callbacks: {
-                            label: function(context) {
+                            label: function(context: ChartContext) {
                                 return context.dataset.label + ': ' + Math.round(context.parsed.y) + 'h';
                             }
                         }
@@ -533,7 +679,7 @@ async function updateDailyProgressChart() {
                             font: { size: 13 }
                         },
                         ticks: {
-                            callback: function(value) {
+                            callback: function(value: number) {
                                 return Math.round(value) + 'h';
                             },
                             font: {
@@ -562,19 +708,19 @@ async function updateYearlyProgressChart() {
             console.error('Error getting yearly monthly stats for chart:', result.error);
             return;
         }
-        const data = result.data; // { '01': { WORK: hours, ... }, ... }
+        const data = result.data as { [key: string]: { [category: string]: number } }; 
         const monthLabels = [
             'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
         ];
         // For each month, get the top 3 categories by hours
         const months = Object.keys(data).sort();
-        const categorySet = new Set();
+        const categorySet = new Set<string>();
         const topCategoriesPerMonth = months.map(month => {
             const hours = data[month] || {};
             const top3 = Object.entries(hours)
-                .filter(([, h]) => h > 0)
-                .sort(([, a], [, b]) => b - a)
+                .filter(([, h]) => typeof h === 'number' && h > 0)
+                .sort(([, a], [, b]) => (b as number) - (a as number))
                 .slice(0, 3)
                 .map(([cat]) => cat);
             top3.forEach(cat => categorySet.add(cat));
@@ -603,13 +749,14 @@ async function updateYearlyProgressChart() {
                 data: months.map((month, i) => {
                     const top3 = topCategoriesPerMonth[i];
                     if (top3.includes(category)) {
-                        return Math.round(data[month][category] || 0);
+                        const monthData = data[month] || {};
+                        return Math.round(monthData[category] || 0);
                     } else {
                         return null; // Use null to avoid rendering a bar and remove the gap
                     }
                 }),
-                backgroundColor: categoryColors[category] || 'rgba(180,180,180,0.7)',
-                borderColor: borderColors[category] || 'rgba(180,180,180,1)',
+                backgroundColor: categoryColors[category as keyof typeof categoryColors] || 'rgba(180,180,180,0.7)',
+                borderColor: borderColors[category as keyof typeof borderColors] || 'rgba(180,180,180,1)',
                 borderWidth: 1,
                 borderRadius: 4,
                 borderSkipped: false,
@@ -620,7 +767,7 @@ async function updateYearlyProgressChart() {
         let maxHours = 1;
         datasets.forEach(ds => {
             ds.data.forEach(val => {
-                if (val > maxHours) maxHours = val;
+                if (val && val > maxHours) maxHours = val;
             });
         });
         maxHours = Math.ceil(maxHours + 0.5);
@@ -658,7 +805,7 @@ async function updateYearlyProgressChart() {
                         mode: 'index',
                         intersect: false,
                         callbacks: {
-                            label: function(context) {
+                            label: function(context: any) {
                                 return context.dataset.label + ': ' + Math.round(context.parsed.y) + 'h';
                             }
                         }
@@ -689,7 +836,7 @@ async function updateYearlyProgressChart() {
                             font: { size: 13 }
                         },
                         ticks: {
-                            callback: function(value) {
+                            callback: function(value: any) {
                                 return Math.round(value) + 'h';
                             },
                             font: {
@@ -713,14 +860,20 @@ async function updateYearlyProgressChart() {
 // Screenshot Display Functions
 function displayScreenshots() {
     const historyContainer = document.getElementById('screenshotHistory');
-    const showMoreBtn = document.getElementById('showMoreBtn');
+    const showMoreBtn = document.getElementById('showMoreBtn') as HTMLButtonElement;
 
     // Clear existing screenshots
-    historyContainer.innerHTML = '';
+    if (historyContainer) {
+        historyContainer.innerHTML = '';
+    }
 
     if (allScreenshots.length === 0) {
-        historyContainer.innerHTML = '<div class="no-screenshots">No screenshots available for this date.</div>';
-        showMoreBtn.style.display = 'none';
+        if (historyContainer) {
+            historyContainer.innerHTML = '<div class="no-screenshots">No screenshots available for this date.</div>';
+        }
+        if (showMoreBtn) {
+            showMoreBtn.style.display = 'none';
+        }
         return;
     }
 
@@ -748,33 +901,39 @@ function displayScreenshots() {
                 ? `<div class="screenshot-info-icon"><i class="fas fa-info-circle"></i></div>`
                 : '';
             
-            screenshotDiv.innerHTML = `
-                <div class="screenshot-thumbnail-container">
-                    <img src="${screenshot.thumbnail}" class="screenshot-thumbnail" />
-                    ${iconHTML}
-                    ${tooltipHTML}
-                </div>
-                <div class="screenshot-info">
-                    <div class="screenshot-activity">Activity: ${screenshot.activity || 'Unknown'}</div>
-                    <div class="screenshot-category category-label ${screenshot.category}">Category: ${formatCategoryName(screenshot.category || 'UNKNOWN')}</div>
-                    <div class="screenshot-time">Time: ${date.toLocaleString()}</div>
-                </div>
-                <button class="delete-screenshot" onclick="deleteScreenshot(${screenshot.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            `;
-            historyContainer.appendChild(screenshotDiv);
+            if (screenshotDiv) {
+                screenshotDiv.innerHTML = `
+                    <div class="screenshot-thumbnail-container">
+                        <img src="${screenshot.thumbnail}" class="screenshot-thumbnail" />
+                        ${iconHTML}
+                        ${tooltipHTML}
+                    </div>
+                    <div class="screenshot-info">
+                        <div class="screenshot-activity">Activity: ${screenshot.activity || 'Unknown'}</div>
+                        <div class="screenshot-category category-label ${screenshot.category}">Category: ${formatCategoryName(screenshot.category || 'UNKNOWN')}</div>
+                        <div class="screenshot-time">Time: ${date.toLocaleString()}</div>
+                    </div>
+                    <button class="delete-screenshot" onclick="deleteScreenshot(${screenshot.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                if (historyContainer) {
+                    historyContainer.appendChild(screenshotDiv);
+                }
+            }
         } catch (error) {
             console.error('Error displaying screenshot:', error, screenshot);
         }
     });
 
     // Show/hide "Show More" button
-    if (endIndex < allScreenshots.length) {
-        showMoreBtn.style.display = 'inline-block';
-        showMoreBtn.disabled = false;
-    } else {
-        showMoreBtn.style.display = 'none';
+    if (showMoreBtn) {
+        if (endIndex < allScreenshots.length) {
+            showMoreBtn.style.display = 'inline-block';
+            showMoreBtn.disabled = false;
+        } else {
+            showMoreBtn.style.display = 'none';
+        }
     }
 }
 
@@ -783,7 +942,7 @@ function loadMoreScreenshots() {
     displayScreenshots();
 }
 
-async function deleteScreenshot(id) {
+async function deleteScreenshot(id: number) {
     if (confirm('Are you sure you want to delete this screenshot?')) {
         try {
             const success = await ipcRenderer.invoke('delete-screenshot', id);
@@ -807,23 +966,34 @@ async function deleteScreenshot(id) {
 }
 
 // Date Management Functions
-function formatDate(date) {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+function formatDate(date: Date): string {
+    const options: Intl.DateTimeFormatOptions = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    };
     return date.toLocaleDateString('en-US', options);
 }
 
-function isToday(date) {
+function isToday(date: Date): boolean {
     const today = new Date();
     return date.getDate() === today.getDate() &&
         date.getMonth() === today.getMonth() &&
         date.getFullYear() === today.getFullYear();
 }
 
-async function changeDate(offset) {
+async function changeDate(offset: number) {
     currentDate.setDate(currentDate.getDate() + offset);
 
-    document.getElementById('nextDateBtn').disabled = isToday(currentDate);
-    document.getElementById('currentDate').textContent = formatDate(currentDate);
+    const nextDateBtn = document.getElementById('nextDateBtn') as HTMLButtonElement;
+    if (nextDateBtn) {
+        (nextDateBtn as HTMLButtonElement).disabled = isToday(currentDate);
+    }
+    const currentDateElement = document.getElementById('currentDate');
+    if (currentDateElement) {
+        currentDateElement.textContent = formatDate(currentDate);
+    }
 
     try {
         const data = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
@@ -858,10 +1028,12 @@ async function changeDate(offset) {
 
         // Update day analysis
         const contentDiv = document.getElementById('dayAnalysisContent');
-        if (data.dayAnalysis && data.dayAnalysis.content) {
-            contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
-        } else {
-            contentDiv.textContent = 'No analysis generated yet for this day.';
+        if (contentDiv) {
+            if (data.dayAnalysis && data.dayAnalysis.content) {
+                contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
+            } else {
+                contentDiv.textContent = 'No analysis generated yet for this day.';
+            }
         }
     } catch (error) {
         console.error('Error changing date:', error);
@@ -873,24 +1045,36 @@ async function changeDate(offset) {
 // Modal Functions
 function toggleSettings() {
     const modal = document.getElementById('settingsModal');
-    modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    if (modal) {
+        modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    }
 }
 
 function toggleExportModal() {
     const modal = document.getElementById('exportModal');
-    modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    if (modal) {
+        modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    }
 }
 
 function showMinimizeModal() {
-    document.getElementById('minimizeModal').style.display = 'flex';
+    const minimizeModal = document.getElementById('minimizeModal');
+    if (minimizeModal) {
+        minimizeModal.style.display = 'flex';
+    }
 }
 
 function closeMinimizeModal(shouldClose = true) {
-    const dontShowAgain = document.getElementById('dontShowAgain').checked;
-    if (dontShowAgain) {
-        localStorage.setItem('dontShowMinimizeMessage', 'true');
+    const dontShowAgain = document.getElementById('dontShowAgain') as HTMLInputElement | null;
+    if (dontShowAgain && dontShowAgain.checked) {
+        if (dontShowAgain.checked) {
+            localStorage.setItem('dontShowMinimizeMessage', 'true');
+        }
     }
-    document.getElementById('minimizeModal').style.display = 'none';
+    const minimizeModal = document.getElementById('minimizeModal');
+    if (minimizeModal) {
+        minimizeModal.style.display = 'none';
+    }
     
     // Only close the window if explicitly requested
     if (shouldClose) {
@@ -898,8 +1082,9 @@ function closeMinimizeModal(shouldClose = true) {
     }
 }
 
-function handleModalClick(event) {
-    if (event.target.id === 'minimizeModal') {
+function handleModalClick(event: MouseEvent) {
+    const minimizeModal = document.getElementById('minimizeModal');
+    if (minimizeModal && minimizeModal === event.target) {
         closeMinimizeModal(false); // Close modal without closing window
     }
 }
@@ -909,21 +1094,27 @@ function quitApp() {
 }
 
 // External Links
-function openExternalLink(url) {
+function openExternalLink(url: string) {
     shell.openExternal(url);
 } 
 
 // Settings Management
 async function initializeAutoLaunch() {
     const isEnabled = await ipcRenderer.invoke('get-auto-launch');
-    document.getElementById('autoLaunchToggle').checked = isEnabled;
+    const autoLaunchToggle = document.getElementById('autoLaunchToggle') as HTMLInputElement | null;
+    if (autoLaunchToggle) {
+        autoLaunchToggle.checked = isEnabled;
+    }
 }
 
-async function toggleAutoLaunch(event) {
-    const enable = event.target.checked;
+async function toggleAutoLaunch(event: Event) {
+    const enable = (event.target as HTMLInputElement).checked;
     const success = await ipcRenderer.invoke('toggle-auto-launch', enable);
     if (!success) {
-        event.target.checked = !enable;
+        const autoLaunchToggle = document.getElementById('autoLaunchToggle') as HTMLInputElement | null;
+        if (autoLaunchToggle) {
+            autoLaunchToggle.checked = !enable;
+        }
         // Optionally show an error message
     }
 }
@@ -933,16 +1124,20 @@ async function initializeGeminiModel() {
     const currentModel = await ipcRenderer.invoke('get-gemini-model');
     
     // Set the current model first
-    const modelSelect = document.getElementById('geminiModel');
-    modelSelect.value = currentModel;
+    const modelSelect = document.getElementById('geminiModel') as HTMLSelectElement | null;
+    if (modelSelect) {
+        modelSelect.value = currentModel;
+    }
     
     // If the current model isn't in the default options, add it
-    if (!Array.from(modelSelect.options).some(opt => opt.value === currentModel)) {
-        const option = document.createElement('option');
-        option.value = currentModel;
-        option.text = currentModel;
-        option.selected = true;
-        modelSelect.add(option);
+    if (modelSelect) {
+        if (!Array.from(modelSelect.options).some(opt => opt.value === currentModel)) {
+            const option = document.createElement('option');
+            option.value = currentModel;
+            option.text = currentModel;
+            option.selected = true;
+            modelSelect.add(option);
+        }
     }
     
     // Fetch available models after setting the current one
@@ -950,129 +1145,184 @@ async function initializeGeminiModel() {
 }
 
 async function saveGeminiModel() {
-    const modelSelect = document.getElementById('geminiModel');
-    const saveButton = document.getElementById('saveModelBtn');
+    const modelSelect = document.getElementById('geminiModel') as HTMLSelectElement | null;
+    const saveButton = document.getElementById('saveModelBtn') as HTMLButtonElement;
     const statusEl = document.getElementById('modelLoadingStatus');
-    const model = modelSelect.value;
+    const model = modelSelect?.value;
 
     if (!model || model === 'loading') {
         alert('Please select a valid model');
         return;
     }
 
-    saveButton.disabled = true;
-    saveButton.textContent = 'Testing model...';
-    statusEl.textContent = 'Testing model with a simple request...';
-    statusEl.className = 'model-status';
+    if (saveButton) {
+        saveButton.disabled = true;
+    }
+    if (saveButton) {
+        saveButton.textContent = 'Testing model...';
+    }
+    if (statusEl) {
+        statusEl.textContent = 'Testing model with a simple request...';
+        statusEl.className = 'model-status';
+    }
 
     try {
         // First test the model
         const testResult = await ipcRenderer.invoke('test-gemini-model', model);
         
         if (!testResult.success) {
-            statusEl.textContent = 'Model test failed: ' + testResult.error;
-            statusEl.className = 'model-status error';
-            saveButton.textContent = 'Save';
-            saveButton.disabled = false;
+            if (statusEl) {
+                statusEl.textContent = 'Model test failed: ' + testResult.error;
+                statusEl.className = 'model-status error';
+            }
+            if (saveButton) {
+                saveButton.textContent = 'Save';
+                saveButton.disabled = false;
+            }
             return;
         }
 
         // If test passed, save the model
-        saveButton.textContent = 'Saving...';
+        if (saveButton) {
+            saveButton.textContent = 'Saving...';
+        }
         const result = await ipcRenderer.invoke('set-gemini-model', model);
         
         if (result.success) {
-            saveButton.textContent = 'Saved!';
-            statusEl.textContent = 'Model tested and saved successfully!';
-            statusEl.className = 'model-status success';
+            if (saveButton) {
+                saveButton.textContent = 'Saved!';
+            }
+            if (statusEl) {
+                statusEl.textContent = 'Model tested and saved successfully!';
+                statusEl.className = 'model-status success';
+            }
             setTimeout(() => {
-                saveButton.textContent = 'Save';
-                saveButton.disabled = false;
-                statusEl.textContent = '';
-                statusEl.className = 'model-status';
+                if (saveButton) {
+                    saveButton.textContent = 'Save';
+                    saveButton.disabled = false;
+                }
+                if (statusEl) {
+                    statusEl.textContent = '';
+                    statusEl.className = 'model-status';
+                }
             }, 2000);
         } else {
-            statusEl.textContent = 'Error saving model: ' + result.error;
+            if (statusEl) {
+                statusEl.textContent = 'Error saving model: ' + result.error;
+                statusEl.className = 'model-status error';
+            }
+            if (saveButton) {
+                saveButton.textContent = 'Save';
+                saveButton.disabled = false;
+            }
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (statusEl) {
+            statusEl.textContent = 'Error: ' + errorMessage;
             statusEl.className = 'model-status error';
+        }
+        if (saveButton) {
             saveButton.textContent = 'Save';
             saveButton.disabled = false;
         }
-    } catch (error) {
-        statusEl.textContent = 'Error: ' + error.message;
-        statusEl.className = 'model-status error';
-        saveButton.textContent = 'Save';
-        saveButton.disabled = false;
     }
 }
 
 async function fetchAvailableModels() {
-    const modelSelect = document.getElementById('geminiModel');
-    const refreshBtn = document.getElementById('refreshModelsBtn');
+    const modelSelect = document.getElementById('geminiModel') as HTMLSelectElement | null;
+    const refreshBtn = document.getElementById('refreshModelsBtn') as HTMLButtonElement;
     const statusEl = document.getElementById('modelLoadingStatus');
     
     // Save current selection
-    const currentSelection = modelSelect.value;
+    const currentSelection = modelSelect?.value;
     
     // Show loading state
-    refreshBtn.classList.add('loading');
-    refreshBtn.disabled = true;
-    statusEl.textContent = 'Loading available models...';
-    statusEl.className = 'model-status';
+    if (refreshBtn) {
+        refreshBtn.classList.add('loading');
+    }
+    if (refreshBtn) {
+        refreshBtn.disabled = true;
+    }
+    if (statusEl) {
+        statusEl.textContent = 'Loading available models...';
+        statusEl.className = 'model-status';
+    }
     
     try {
         const result = await ipcRenderer.invoke('fetch-available-models');
         
         if (result.success && result.models.length > 0) {
             // Keep track of existing options to preserve custom ones
-            const existingOptions = Array.from(modelSelect.options).map(opt => ({
+            const existingOptions = Array.from(modelSelect?.options || []).map(opt => ({
                 value: opt.value,
                 text: opt.text,
                 selected: opt.selected
             }));
             
             // Clear all options
-            modelSelect.innerHTML = '';
+            if (modelSelect) {
+                modelSelect.innerHTML = '';
+            }
             
             // Add default option
             const defaultOption = document.createElement('option');
             defaultOption.value = 'gemini-2.0-flash';
             defaultOption.text = 'gemini-2.0-flash (Default)';
-            modelSelect.add(defaultOption);
+            if (modelSelect) {
+                modelSelect.add(defaultOption);
+            }
             
             // Add fetched models
-            result.models.forEach(model => {
+            result.models.forEach((model: { id: string; name: string; description?: string }) => {
                 const option = document.createElement('option');
                 option.value = model.id;
                 option.text = model.name;
                 if (model.description) {
                     option.title = model.description;
                 }
-                modelSelect.add(option);
+                if (modelSelect) {
+                    modelSelect.add(option);
+                }
             });
             
             // Restore selection - if the saved model isn't in the list, add it
-            if (currentSelection && !Array.from(modelSelect.options).some(opt => opt.value === currentSelection)) {
+            if (currentSelection && modelSelect && !Array.from(modelSelect.options).some(opt => opt.value === currentSelection)) {
                 const customOption = document.createElement('option');
                 customOption.value = currentSelection;
                 customOption.text = currentSelection + ' (Custom)';
-                modelSelect.add(customOption);
+                if (modelSelect) {
+                    modelSelect.add(customOption);
+                }
             }
             
             // Set the selection
-            modelSelect.value = currentSelection;
+            if (modelSelect && currentSelection) {
+                modelSelect.value = currentSelection;
+            }
             
-            statusEl.textContent = `Loaded ${result.models.length} available models`;
-            statusEl.className = 'model-status success';
+            if (statusEl) {
+                statusEl.textContent = `Loaded ${result.models.length} available models`;
+                statusEl.className = 'model-status success';
+            }
         } else {
-            statusEl.textContent = result.error || 'No models found';
+            if (statusEl) {
+                statusEl.textContent = result.error || 'No models found';
+                statusEl.className = 'model-status error';
+            }
+        }
+    } catch (error: any) {
+        if (statusEl) {
+            statusEl.textContent = 'Error loading models: ' + error.message;
             statusEl.className = 'model-status error';
         }
-    } catch (error) {
-        statusEl.textContent = 'Error loading models: ' + error.message;
-        statusEl.className = 'model-status error';
     } finally {
-        refreshBtn.classList.remove('loading');
-        refreshBtn.disabled = false;
+        if (refreshBtn) {
+            refreshBtn.classList.remove('loading');
+        }
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+        }
     }
 }
 
@@ -1083,80 +1333,96 @@ async function openLogsFile() {
 
 async function showRecentLogs() {
     const logsContainer = document.getElementById('recentLogs');
-    const logsContent = logsContainer.querySelector('.logs-content');
+    const logsContent = logsContainer?.querySelector('.logs-content');
     
     // Toggle visibility
-    if (logsContainer.style.display === 'none') {
+    if (logsContainer && logsContainer.style.display === 'none') {
         const logs = await ipcRenderer.invoke('get-recent-logs');
-        logsContent.innerHTML = logs.map(log => `<div>${log}</div>`).join('');
-        logsContainer.style.display = 'block';
+        if (logsContent) {
+            logsContent.innerHTML = logs.map((log: string) => `<div>${log}</div>`).join('');
+        }
+        if (logsContainer) {
+            logsContainer.style.display = 'block';
+        }
     } else {
-        logsContainer.style.display = 'none';
+        if (logsContainer) {
+            logsContainer.style.display = 'none';
+        }
     }
 }
 
 // Export Functions
 async function exportData() {
-    const exportBtn = document.getElementById('exportBtn');
-    const originalText = exportBtn.innerHTML;
+    const exportBtn = document.getElementById('exportBtn') as HTMLButtonElement;
+    const originalText = exportBtn?.innerHTML || '';
     
     // Show loading state
-    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
-    exportBtn.disabled = true;
+    if (exportBtn) {
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+        exportBtn.disabled = true;
+    }
 
     try {
         // Get selected range
-        const selectedRange = document.querySelector('input[name="dateRange"]:checked').value;
-        let startDate, endDate;
+        const selectedRange = document.querySelector('input[name="dateRange"]:checked') as HTMLInputElement | null;
+        let startDate: Date | undefined;
+        let endDate: Date | undefined;
 
         const today = new Date();
         const yesterday = new Date();
         yesterday.setDate(today.getDate() - 1);
 
-        switch (selectedRange) {
-            case 'today':
-                startDate = new Date(today);
-                startDate.setHours(0, 0, 0, 0);
-                endDate = new Date(today);
-                endDate.setHours(23, 59, 59, 999);
-                break;
-            case 'last7days':
-                startDate = new Date();
-                startDate.setDate(today.getDate() - 6);
-                startDate.setHours(0, 0, 0, 0);
-                endDate = new Date(today);
-                endDate.setHours(23, 59, 59, 999);
-                break;
-            case 'last30days':
-                startDate = new Date();
-                startDate.setDate(today.getDate() - 29);
-                startDate.setHours(0, 0, 0, 0);
-                endDate = new Date(today);
-                endDate.setHours(23, 59, 59, 999);
-                break;
-            case 'alltime':
-                startDate = new Date('1970-01-01');
-                endDate = new Date();
-                break;
-            case 'custom':
-                const startDateInput = document.getElementById('startDate').value;
-                const endDateInput = document.getElementById('endDate').value;
-                if (!startDateInput || !endDateInput) {
-                    alert('Please select both start and end dates for custom range.');
-                    return;
-                }
-                startDate = new Date(startDateInput);
-                startDate.setHours(0, 0, 0, 0);
-                endDate = new Date(endDateInput);
-                endDate.setHours(23, 59, 59, 999);
-                break;
+        if (selectedRange) {
+            switch (selectedRange.value) {
+                case 'today':
+                    startDate = new Date(today);
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate = new Date(today);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'last7days':
+                    startDate = new Date();
+                    startDate.setDate(today.getDate() - 6);
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate = new Date(today);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'last30days':
+                    startDate = new Date();
+                    startDate.setDate(today.getDate() - 29);
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate = new Date(today);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'alltime':
+                    startDate = new Date('1970-01-01');
+                    endDate = new Date();
+                    break;
+                case 'custom':
+                    const startDateInput = document.getElementById('startDate') as HTMLInputElement | null;
+                    const endDateInput = document.getElementById('endDate') as HTMLInputElement | null;
+                    if (!startDateInput || !endDateInput) {
+                        alert('Please select both start and end dates for custom range.');
+                        return;
+                    }
+                    startDate = new Date(startDateInput.value);
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate = new Date(endDateInput.value);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+            }
+        }
+
+        if (!startDate || !endDate) {
+            alert('Invalid date range');
+            return;
         }
 
         // Call export function
         const result = await ipcRenderer.invoke('export-data', {
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
-            rangeType: selectedRange
+            rangeType: selectedRange?.value
         });
 
         if (result.success) {
@@ -1167,23 +1433,27 @@ async function exportData() {
         } else {
             alert('Export failed: ' + result.error);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error('Export error:', error);
         alert('Export failed: ' + error.message);
     } finally {
         // Reset button state
-        exportBtn.innerHTML = originalText;
-        exportBtn.disabled = false;
+        if (exportBtn) {
+            exportBtn.innerHTML = originalText;
+            exportBtn.disabled = false;
+        }
     }
 }
 
 // Error Handling
-function showAnalysisError(error) {
+function showAnalysisError(error: { message: string; timestamp: string }) {
     const errorCard = document.getElementById('analysisErrorCard');
     const errorMessage = document.getElementById('errorMessage');
     const errorTime = document.getElementById('errorTime');
     
-    errorMessage.textContent = error.message;
+    if (errorMessage) {
+        errorMessage.textContent = error.message;
+    }
     
     // Format the timestamp more elegantly
     const errorDate = new Date(error.timestamp);
@@ -1197,14 +1467,20 @@ function showAnalysisError(error) {
         minute: '2-digit',
         hour12: true
     });
-    errorTime.textContent = `Last occurred: ${formattedDate}, ${formattedTime}`;
+    if (errorTime) {
+        errorTime.textContent = `Last occurred: ${formattedDate}, ${formattedTime}`;
+    }
     
-    errorCard.style.display = 'block';
+    if (errorCard) {
+        errorCard.style.display = 'block';
+    }
 }
 
 function hideAnalysisError() {
     const errorCard = document.getElementById('analysisErrorCard');
-    errorCard.style.display = 'none';
+    if (errorCard) {
+        errorCard.style.display = 'none';
+    }
 }
 
 async function dismissError() {
@@ -1222,98 +1498,143 @@ async function checkExistingError() {
 // Notes Management Functions
 async function showAddNoteModal() {
     editingNoteId = null;
-    document.getElementById('noteModalTitle').textContent = 'Add Note';
-    document.getElementById('noteContent').value = '';
-    document.getElementById('saveNoteBtn').innerHTML = '<i class="fas fa-save"></i> Save Note';
+    const noteModalTitle = document.getElementById('noteModalTitle');
+    if (noteModalTitle) {
+        noteModalTitle.textContent = 'Add Note';
+    }
+    const noteContent = document.getElementById('noteContent') as HTMLTextAreaElement;
+    if (noteContent) {
+        noteContent.value = '';
+    }
+    const saveNoteBtn = document.getElementById('saveNoteBtn');
+    if (saveNoteBtn) {
+        saveNoteBtn.innerHTML = '<i class="fas fa-save"></i> Save Note';
+    }
     
     // Load and display previous notes
     await loadPreviousNotesInModal();
     
-    document.getElementById('noteModal').style.display = 'flex';
+    const noteModal = document.getElementById('noteModal');
+    if (noteModal) {
+        noteModal.style.display = 'flex';
+    }
     
     // Focus with a small delay to ensure modal is fully rendered
     setTimeout(() => {
-        document.getElementById('noteContent').focus();
+        const noteContent = document.getElementById('noteContent') as HTMLTextAreaElement;
+        if (noteContent) {
+            noteContent.focus();
+        }
     }, 100);
 }
 
-async function showEditNoteModal(note) {
+async function showEditNoteModal(note: Note) {
     editingNoteId = note.id;
-    document.getElementById('noteModalTitle').textContent = 'Edit Note';
-    document.getElementById('noteContent').value = note.content || '';
-    document.getElementById('saveNoteBtn').innerHTML = '<i class="fas fa-save"></i> Update Note';
+    const noteModalTitle = document.getElementById('noteModalTitle');
+    if (noteModalTitle) {
+        noteModalTitle.textContent = 'Edit Note';
+    }
+    const noteContent = document.getElementById('noteContent') as HTMLTextAreaElement;
+    if (noteContent) {
+        noteContent.value = note.content || '';
+    }
+    const saveNoteBtn = document.getElementById('saveNoteBtn');
+    if (saveNoteBtn) {
+        saveNoteBtn.innerHTML = '<i class="fas fa-save"></i> Update Note';
+    }
     
     // Load and display previous notes (excluding the one being edited)
     await loadPreviousNotesInModal(note.id);
     
-    document.getElementById('noteModal').style.display = 'flex';
+    const noteModal = document.getElementById('noteModal');
+    if (noteModal) {
+        noteModal.style.display = 'flex';
+    }
     
     // Focus with a small delay to ensure modal is fully rendered
     setTimeout(() => {
-        const textarea = document.getElementById('noteContent');
-        textarea.focus();
-        // Place cursor at the end of the text
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        const textarea = document.getElementById('noteContent') as HTMLTextAreaElement;
+        if (textarea) {
+            textarea.focus();
+            // Place cursor at the end of the text
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        }
     }, 100);
 }
 
 function closeNoteModal() {
-    document.getElementById('noteModal').style.display = 'none';
+    const noteModal = document.getElementById('noteModal');
+    if (noteModal) {
+        noteModal.style.display = 'none';
+    }
     editingNoteId = null;
 }
 
-async function loadPreviousNotesInModal(excludeId = null) {
+async function loadPreviousNotesInModal(excludeId: number | null = null) {
     try {
         const result = await ipcRenderer.invoke('get-notes-for-date', currentDate.toISOString());
         if (result.success && result.notes && result.notes.length > 0) {
             // Filter out the note being edited and reverse order (oldest first, newest last)
             const filteredNotes = result.notes
-                .filter(note => note.id !== excludeId)
+                .filter((note: { id: number }) => note.id !== excludeId)
                 .reverse();
             
             if (filteredNotes.length > 0) {
                 const modalNotesList = document.getElementById('modalNotesList');
-                modalNotesList.innerHTML = filteredNotes.map(note => {
-                    const timestamp = new Date(note.timestamp);
-                    const timeString = timestamp.toLocaleTimeString(undefined, {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    });
-                    
-                    return `
-                        <div class="modal-note-item">
-                            <div class="modal-note-header">
-                                <span class="modal-note-time">${timeString}</span>
-                                <div class="modal-note-content-wrapper">
-                                    <div class="modal-note-content">${note.content.replace(/\n/g, '<br>')}</div>
+                if (modalNotesList) {
+                    modalNotesList.innerHTML = filteredNotes.map((note: { timestamp: string; content: string }) => {
+                        const timestamp = new Date(note.timestamp);
+                        const timeString = timestamp.toLocaleTimeString(undefined, {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+                        
+                        return `
+                            <div class="modal-note-item">
+                                <div class="modal-note-header">
+                                    <span class="modal-note-time">${timeString}</span>
+                                    <div class="modal-note-content-wrapper">
+                                        <div class="modal-note-content">${note.content.replace(/\n/g, '<br>')}</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
-                
-                document.getElementById('modalPreviousNotes').style.display = 'block';
-                
-                // Scroll to bottom to show latest notes
-                setTimeout(() => {
+                        `;
+                    }).join('');
+                    
                     const modalPreviousNotes = document.getElementById('modalPreviousNotes');
-                    modalPreviousNotes.scrollTop = modalPreviousNotes.scrollHeight;
-                }, 0);
+                    if (modalPreviousNotes) {
+                        modalPreviousNotes.style.display = 'block';
+                        
+                        // Scroll to bottom to show latest notes
+                        setTimeout(() => {
+                            modalPreviousNotes.scrollTop = modalPreviousNotes.scrollHeight;
+                        }, 0);
+                    }
+                }
             } else {
-                document.getElementById('modalPreviousNotes').style.display = 'none';
+                const modalPreviousNotes = document.getElementById('modalPreviousNotes');
+                if (modalPreviousNotes) {
+                    modalPreviousNotes.style.display = 'none';
+                }
             }
         } else {
-            document.getElementById('modalPreviousNotes').style.display = 'none';
+            const modalPreviousNotes = document.getElementById('modalPreviousNotes');
+            if (modalPreviousNotes) {
+                modalPreviousNotes.style.display = 'none';
+            }
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error loading previous notes in modal:', error);
-        document.getElementById('modalPreviousNotes').style.display = 'none';
+        const modalPreviousNotes = document.getElementById('modalPreviousNotes');
+        if (modalPreviousNotes) {
+            modalPreviousNotes.style.display = 'none';
+        }
     }
 }
 
 async function saveNote() {
-    const content = document.getElementById('noteContent').value.trim();
+    const content = (document.getElementById('noteContent') as HTMLTextAreaElement)?.value.trim();
 
     if (!content) {
         // Just close the modal if no content, don't show alert
@@ -1322,8 +1643,10 @@ async function saveNote() {
     }
 
     const saveBtn = document.getElementById('saveNoteBtn');
-    const originalText = saveBtn.innerHTML;
-    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    const originalText = saveBtn?.innerHTML || '';
+    if (saveBtn) {
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
 
     try {
         let result;
@@ -1340,15 +1663,17 @@ async function saveNote() {
         } else {
             alert('Failed to save note: ' + result.error);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error saving note:', error);
         alert('Failed to save note: ' + error.message);
     } finally {
-        saveBtn.innerHTML = originalText;
+        if (saveBtn) {
+            saveBtn.innerHTML = originalText;
+        }
     }
 }
 
-async function deleteNote(id) {
+async function deleteNote(id: number) {
     if (confirm('Are you sure you want to delete this note?')) {
         try {
             const result = await ipcRenderer.invoke('delete-note', id);
@@ -1358,8 +1683,9 @@ async function deleteNote(id) {
                 alert('Failed to delete note.');
             }
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error deleting note:', error);
-            alert('Failed to delete note: ' + error.message);
+            alert('Failed to delete note: ' + errorMessage);
         }
     }
 }
@@ -1375,9 +1701,11 @@ async function refreshNotes() {
     }
 }
 
-function displayNotes(notes) {
+function displayNotes(notes: Note[]) {
     const container = document.getElementById('notes');
     
+    if (!container) return;
+
     if (!notes || notes.length === 0) {
         container.innerHTML = '<div class="no-notes">No notes for this date. Click "Add Note" to create one.</div>';
         return;
@@ -1422,16 +1750,21 @@ async function loadDayAnalysis() {
         const analysis = await ipcRenderer.invoke('get-day-analysis', currentDate);
         const contentDiv = document.getElementById('dayAnalysisContent');
         
-        if (analysis && analysis.content) {
-            console.log('Displaying existing analysis');
-            contentDiv.innerHTML = marked.parse(analysis.content);
-        } else {
-            console.log('No existing analysis found');
-            contentDiv.textContent = 'No analysis generated yet for this day.';
+        if (contentDiv) {
+            if (analysis && analysis.content) {
+                console.log('Displaying existing analysis');
+                contentDiv.innerHTML = marked.parse(analysis.content);
+            } else {
+                console.log('No existing analysis found');
+                contentDiv.textContent = 'No analysis generated yet for this day.';
+            }
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error loading day analysis:', error);
-        document.getElementById('dayAnalysisContent').textContent = 'Error loading analysis.';
+        const contentDiv = document.getElementById('dayAnalysisContent');
+        if (contentDiv) {
+            contentDiv.textContent = 'Error loading analysis.';
+        }
     }
 } 
 
@@ -1439,8 +1772,14 @@ async function loadDayAnalysis() {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Initialize date display
-        document.getElementById('currentDate').textContent = formatDate(currentDate);
-        document.getElementById('nextDateBtn').disabled = isToday(currentDate);
+        const currentDateElement = document.getElementById('currentDate');
+        if (currentDateElement) {
+            currentDateElement.textContent = formatDate(currentDate);
+        }
+        const nextDateBtn = document.getElementById('nextDateBtn') as HTMLButtonElement;
+        if (nextDateBtn) {
+            (nextDateBtn as HTMLButtonElement).disabled = isToday(currentDate);
+        }
         
         // Initialize next month button state
         updateNextMonthButtonState();
@@ -1477,31 +1816,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Add window control button handlers
-    document.getElementById('minimize-btn').addEventListener('click', () => {
-        ipcRenderer.send('window-minimize');
-    });
+    const minimizeBtn = document.getElementById('minimize-btn');
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', () => {
+            ipcRenderer.send('window-minimize');
+        });
+    }
 
-    document.getElementById('close-btn').addEventListener('click', () => {
-        const dontShowAgain = localStorage.getItem('dontShowMinimizeMessage');
-        if (!dontShowAgain) {
-            showMinimizeModal();
-        } else {
-            ipcRenderer.send('window-close');
-        }
-    });
+    const closeBtn = document.getElementById('close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            const dontShowAgain = localStorage.getItem('dontShowMinimizeMessage');
+            if (!dontShowAgain) {
+                showMinimizeModal();
+            } else {
+                ipcRenderer.send('window-close');
+            }
+        });
+    }
 
     // Initialize auto-launch toggle
     await initializeAutoLaunch();
     
     // Add event listener for auto-launch toggle
-    document.getElementById('autoLaunchToggle').addEventListener('change', toggleAutoLaunch);
+    const autoLaunchToggle = document.getElementById('autoLaunchToggle') as HTMLInputElement | null;
+    if (autoLaunchToggle) {
+        autoLaunchToggle.addEventListener('change', toggleAutoLaunch);
+    }
 
     // Initialize Gemini model input
     await initializeGeminiModel();
 
     // Initialize date navigation on page load
-    document.getElementById('currentDate').textContent = formatDate(currentDate);
-    document.getElementById('nextDateBtn').disabled = isToday(currentDate);
+    const currentDateElement = document.getElementById('currentDate');
+    if (currentDateElement) {
+        currentDateElement.textContent = formatDate(currentDate);
+    }
+    const nextDateBtn = document.getElementById('nextDateBtn');
+    if (nextDateBtn) {
+        (nextDateBtn as HTMLButtonElement).disabled = isToday(currentDate);
+    }
     
     // Initialize month navigation
     updateNextMonthButtonState();
@@ -1509,70 +1863,97 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Add event listeners for export modal
     const rangeRadios = document.querySelectorAll('input[name="dateRange"]');
     rangeRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
+        radio.addEventListener('change', function(this: HTMLInputElement) {
             const customInputs = document.getElementById('customRangeInputs');
             if (this.value === 'custom') {
-                customInputs.style.display = 'block';
+                if (customInputs) {
+                    customInputs.style.display = 'block';
+                }
                 // Set default dates
                 const today = new Date();
                 const oneWeekAgo = new Date();
                 oneWeekAgo.setDate(today.getDate() - 7);
                 
-                document.getElementById('startDate').value = oneWeekAgo.toISOString().split('T')[0];
-                document.getElementById('endDate').value = today.toISOString().split('T')[0];
+                const startDateInput = document.getElementById('startDate') as HTMLInputElement | null;
+                const endDateInput = document.getElementById('endDate') as HTMLInputElement | null;
+                if (startDateInput) {
+                    startDateInput.value = oneWeekAgo.toISOString().split('T')[0];
+                }
+                if (endDateInput) {
+                    endDateInput.value = today.toISOString().split('T')[0];
+                }
             } else {
-                customInputs.style.display = 'none';
+                const customInputs = document.getElementById('customRangeInputs');
+                if (customInputs) {
+                    customInputs.style.display = 'none';
+                }
             }
         });
     });
 
     // Close export modal when clicking outside
-    document.getElementById('exportModal').addEventListener('click', (e) => {
-        if (e.target === document.getElementById('exportModal')) {
-            toggleExportModal();
-        }
-    });
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        exportModal.addEventListener('click', (e) => {
+            if (e.target === exportModal) {
+                toggleExportModal();
+            }
+        });
+    }
 
     // Day analysis button handler
-    document.getElementById('generateAnalysis').addEventListener('click', async () => {
-        console.log('Generate analysis button clicked');
-        const button = document.getElementById('generateAnalysis');
-        const contentDiv = document.getElementById('dayAnalysisContent');
-        
-        try {
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-            contentDiv.textContent = 'Generating analysis...';
+    const generateAnalysis = document.getElementById('generateAnalysis') as HTMLButtonElement;
+    if (generateAnalysis) {
+        generateAnalysis.addEventListener('click', async () => {
+            console.log('Generate analysis button clicked');
+            const button = generateAnalysis as HTMLButtonElement;
+            const contentDiv = document.getElementById('dayAnalysisContent');
             
-            console.log('Requesting analysis for date:', currentDate);
-            const analysis = await ipcRenderer.invoke('generate-day-analysis', currentDate);
-            console.log('Analysis received:', analysis ? 'success' : 'empty');
-            
-            if (!analysis) {
-                throw new Error('No analysis was generated');
+            try {
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                }
+                if (contentDiv) {
+                    contentDiv.textContent = 'Generating analysis...';
+                }
+                
+                console.log('Requesting analysis for date:', currentDate);
+                const analysis = await ipcRenderer.invoke('generate-day-analysis', currentDate);
+                console.log('Analysis received:', analysis ? 'success' : 'empty');
+                
+                if (!analysis) {
+                    throw new Error('No analysis was generated');
+                }
+                
+                if (contentDiv) {
+                    contentDiv.innerHTML = marked.parse(analysis);
+                }
+            } catch (error: any) {
+                console.error('Error generating analysis:', error);
+                if (contentDiv) {
+                    contentDiv.innerHTML = `
+                        <div class="error-message">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Error generating analysis: ${error.message || 'Unknown error'}
+                            <br><br>
+                            Please check:
+                            <ul>
+                                <li>Your API key is valid</li>
+                                <li>There is data available for analysis</li>
+                                <li>You have an active internet connection</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-brain"></i> Generate Analysis';
+                }
             }
-            
-            contentDiv.innerHTML = marked.parse(analysis);
-        } catch (error) {
-            console.error('Error generating analysis:', error);
-            contentDiv.innerHTML = `
-                <div class="error-message">
-                    <i class="fas fa-exclamation-circle"></i>
-                    Error generating analysis: ${error.message || 'Unknown error'}
-                    <br><br>
-                    Please check:
-                    <ul>
-                        <li>Your API key is valid</li>
-                        <li>There is data available for analysis</li>
-                        <li>You have an active internet connection</li>
-                    </ul>
-                </div>
-            `;
-        } finally {
-            button.disabled = false;
-            button.innerHTML = '<i class="fas fa-brain"></i> Generate Analysis';
-        }
-    });
+        });
+    }
 
     // Collapse/expand yearly chart logic
     const yearlyChartBtn = document.getElementById('toggleYearlyChartBtn');
@@ -1580,16 +1961,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const yearlyChartContainer = document.getElementById('yearlyProgressChartContainer');
     // Restore state from localStorage
     const collapsed = localStorage.getItem('yearlyChartCollapsed') === 'true';
-    if (collapsed) {
-        yearlyChartBtn.classList.add('collapsed');
-        yearlyChartContainer.classList.add('collapsed');
+    if (yearlyChartBtn && yearlyChartChevron && yearlyChartContainer) {
+        if (collapsed) {
+            yearlyChartBtn.classList.add('collapsed');
+            yearlyChartContainer.classList.add('collapsed');
+        }
+        yearlyChartBtn.addEventListener('click', () => {
+            yearlyChartBtn.classList.toggle('collapsed');
+            yearlyChartContainer.classList.toggle('collapsed');
+            const isCollapsed = yearlyChartContainer.classList.contains('collapsed');
+            localStorage.setItem('yearlyChartCollapsed', isCollapsed ? 'true' : 'false');
+        });
     }
-    yearlyChartBtn.addEventListener('click', () => {
-        yearlyChartBtn.classList.toggle('collapsed');
-        yearlyChartContainer.classList.toggle('collapsed');
-        const isCollapsed = yearlyChartContainer.classList.contains('collapsed');
-        localStorage.setItem('yearlyChartCollapsed', isCollapsed ? 'true' : 'false');
-    });
 
     // Collapse/expand daily chart logic
     const dailyChartBtn = document.getElementById('toggleDailyChartBtn');
@@ -1597,35 +1980,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dailyChartContainer = document.getElementById('dailyProgressChartContainer');
     // Restore state from localStorage
     const dailyCollapsed = localStorage.getItem('dailyChartCollapsed') === 'true';
-    if (dailyCollapsed) {
-        dailyChartBtn.classList.add('collapsed');
-        dailyChartContainer.classList.add('collapsed');
+    if (dailyChartBtn && dailyChartChevron && dailyChartContainer) {
+        if (dailyCollapsed) {
+            dailyChartBtn.classList.add('collapsed');
+            dailyChartContainer.classList.add('collapsed');
+        }
+        dailyChartBtn.addEventListener('click', () => {
+            dailyChartBtn.classList.toggle('collapsed');
+            dailyChartContainer.classList.toggle('collapsed');
+            const isCollapsed = dailyChartContainer.classList.contains('collapsed');
+            localStorage.setItem('dailyChartCollapsed', isCollapsed ? 'true' : 'false');
+        });
     }
-    dailyChartBtn.addEventListener('click', () => {
-        dailyChartBtn.classList.toggle('collapsed');
-        dailyChartContainer.classList.toggle('collapsed');
-        const isCollapsed = dailyChartContainer.classList.contains('collapsed');
-        localStorage.setItem('dailyChartCollapsed', isCollapsed ? 'true' : 'false');
-    });
 });
 
 // Initialize API key check
 checkExistingApiKey();
 
 // Modal event listeners
-document.getElementById('settingsModal').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('settingsModal')) {
-        toggleSettings();
-    }
-});
+const settingsModal = document.getElementById('settingsModal');
+if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            toggleSettings();
+        }
+    });
+}
 
-document.getElementById('minimizeModal').addEventListener('click', handleModalClick);
+const minimizeModal = document.getElementById('minimizeModal');
+if (minimizeModal) {
+    minimizeModal.addEventListener('click', handleModalClick);
+}
 
 // Escape key handler for closing modals
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        const settingsModal = document.getElementById('settingsModal');
-        if (settingsModal.style.display === 'flex') {
+    const settingsModal = document.getElementById('settingsModal');
+    if (settingsModal && settingsModal.style.display === 'flex') {
+        if (e.key === 'Escape') {
             toggleSettings();
         }
     }
@@ -1634,13 +2025,13 @@ document.addEventListener('keydown', (e) => {
 // Add keyboard support for note modal
 document.addEventListener('keydown', (e) => {
     const noteModal = document.getElementById('noteModal');
-    if (noteModal.style.display === 'flex') {
+    if (noteModal && noteModal.style.display === 'flex') {
         if (e.key === 'Escape') {
             closeNoteModal();
         } else if (e.key === 'Enter' && e.ctrlKey) {
             // Ctrl+Enter to save
             saveNote();
-        } else if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'noteContent') {
+        } else if (e.key === 'Enter' && !e.shiftKey && document.activeElement?.id === 'noteContent') {
             // Enter to save (Shift+Enter for new line)
             e.preventDefault();
             saveNote();
@@ -1649,21 +2040,25 @@ document.addEventListener('keydown', (e) => {
 });
 
 // IPC Event Listeners
-ipcRenderer.on('activity-updated', (event, data) => {
+ipcRenderer.on('activity-updated', (event: Electron.IpcRendererEvent, data: any) => {
     console.log('Received activity update:', data);
     updateStats(); // Just call updateStats which will handle both stats and screenshots
 });
 
-ipcRenderer.on('countdown-update', (event, count) => {
+ipcRenderer.on('countdown-update', (event: Electron.IpcRendererEvent, count: number) => {
     const countdownElement = document.getElementById('countdown');
-    countdownElement.textContent = `Taking screenshot in ${count}...`;
+    if (countdownElement) {
+        countdownElement.textContent = `Taking screenshot in ${count}...`;
+    }
 });
 
 ipcRenderer.on('tracking-paused', () => {
     isTracking = false;
     const button = document.getElementById('toggleTracking');
-    button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
-    button.className = 'tracking-button inactive';
+    if (button) {
+        button.innerHTML = `<i class="fas fa-play"></i><span>Start Recording</span>`;
+        button.className = 'tracking-button inactive';
+    }
 });
 
 ipcRenderer.on('refresh-ui', async () => {
@@ -1684,10 +2079,12 @@ ipcRenderer.on('refresh-ui', async () => {
             
             // Update day analysis
             const contentDiv = document.getElementById('dayAnalysisContent');
-            if (data.dayAnalysis && data.dayAnalysis.content) {
-                contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
-            } else {
-                contentDiv.textContent = 'No analysis generated yet for this day.';
+            if (contentDiv) {
+                if (data.dayAnalysis && data.dayAnalysis.content) {
+                    contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
+                } else {
+                    contentDiv.textContent = 'No analysis generated yet for this day.';
+                }
             }
             
             // Update the daily progress chart
@@ -1699,7 +2096,7 @@ ipcRenderer.on('refresh-ui', async () => {
     }
 });
 
-ipcRenderer.on('initial-data', async (event, data) => {
+ipcRenderer.on('initial-data', async (event: Electron.IpcRendererEvent, data: any) => {
     if (data) {
         const stats = data.stats.stats || data.stats;
         const timeInHours = data.stats.timeInHours || {};
@@ -1722,10 +2119,12 @@ ipcRenderer.on('initial-data', async (event, data) => {
 
         // Update day analysis
         const contentDiv = document.getElementById('dayAnalysisContent');
-        if (data.dayAnalysis && data.dayAnalysis.content) {
-            contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
-        } else {
-            contentDiv.textContent = 'No analysis generated yet for this day.';
+        if (contentDiv) {
+            if (data.dayAnalysis && data.dayAnalysis.content) {
+                contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
+            } else {
+                contentDiv.textContent = 'No analysis generated yet for this day.';
+            }
         }
         
         // Update the daily progress chart
@@ -1735,7 +2134,7 @@ ipcRenderer.on('initial-data', async (event, data) => {
 });
 
 // Error handling listeners
-ipcRenderer.on('analysis-error', (event, error) => {
+ipcRenderer.on('analysis-error', (event: Electron.IpcRendererEvent, error: any) => {
     showAnalysisError(error);
 });
 
@@ -1749,6 +2148,6 @@ ipcRenderer.on('open-note-modal', () => {
 });
 
 ipcRenderer.on('quit-app', () => {
-    isQuitting = true;
-    app.quit();
+    // isQuitting = true; // This line was removed from the original file, so it's removed here.
+    // app.quit(); // This line was removed from the original file, so it's removed here.
 }); 

@@ -1,16 +1,17 @@
-// logger.js
-const winston = require('winston');
-const { format } = winston;
-const path = require('path');
-const fs = require('fs');
-const { app } = require('electron');
+import winston from 'winston';
+import { format } from 'winston';
+import path from 'path';
+import fs from 'fs';
+import { app } from 'electron';
 
 // Debug flag
 const DEBUG = true;
 
-let logger;
+export type Logger = winston.Logger;
 
-function createLogger() {
+let logger: Logger;
+
+function createLogger(): Logger {
     const logPath = path.join(app.getPath('userData'), 'logs');
     if (!fs.existsSync(logPath)) {
         fs.mkdirSync(logPath, { recursive: true });
@@ -45,17 +46,17 @@ function createLogger() {
     }
 
     // Replace console.log and console.error with logger
-    console.log = (...args) => logger.info(args.join(' '));
-    console.error = (...args) => logger.error(args.join(' '));
+    console.log = (...args: any[]) => logger.info(args.join(' '));
+    console.error = (...args: any[]) => logger.error(args.join(' '));
 
     return logger;
 }
 
-function getLogPath() {
+function getLogPath(): string {
     return path.join(app.getPath('userData'), 'logs', 'combined.log');
 }
 
-async function getRecentLogs(lines = 1000) {
+async function getRecentLogs(lines = 1000): Promise<string[]> {
     try {
         const logPath = getLogPath();
         if (!fs.existsSync(logPath)) {
@@ -71,13 +72,13 @@ async function getRecentLogs(lines = 1000) {
         return logs;
     } catch (error) {
         if (logger) {
-            logger.error('Error reading logs:', error);
+            logger.error('Error reading logs:', (error as Error).message);
         }
         return [];
     }
 }
 
-module.exports = {
+export {
     createLogger,
     getLogPath,
     getRecentLogs

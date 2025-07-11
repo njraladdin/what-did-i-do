@@ -1,160 +1,164 @@
-const { app, BrowserWindow, ipcMain, screen, powerMonitor, Tray, Menu, globalShortcut } = require('electron');
-const path = require('path');
-const Store = require('electron-store');
-const { GoogleGenAI, Type } = require('@google/genai');
-const fs = require('fs');
-const store = new Store({
+import { app, BrowserWindow, ipcMain, powerMonitor, Tray, Menu, globalShortcut } from 'electron';
+import * as path from 'path';
+import Store from 'electron-store';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as fs from 'fs';
+import AutoLaunch from 'auto-launch';
+import * as database from './db';
+import * as logger from './logger';
+import ScreenshotCapture from './screenshot';
+import SimpleRobustScheduler from './scheduler';
+import { initializeIpcHandlers } from './ipc-handlers';
+import { AppState, AnalysisError, AnalysisResponse, GeminiApiResponse, DayAnalysisData } from './types';
+import { Category, categories, initializeDatabase, closeDatabase } from './db/core';
+
+// Initialize the store with default values
+const store = new Store<{
+    interval: number;
+    geminiModel: string;
+    apiKey?: string;
+}>({
     defaults: {
         interval: 1, // Default to 1 minute
         geminiModel: 'gemini-2.0-flash' // Default Gemini model
     }
 });
-const AutoLaunch = require('auto-launch');
-const database = require('./db');
-const logger = require('./logger');
-const ScreenshotCapture = require('./screenshot');
-const SimpleRobustScheduler = require('./scheduler');
-const { initializeIpcHandlers } = require('./ipc-handlers');
 
+// Initialize app state
+const state: AppState = {
+    mainWindow: null,
+    isTracking: false,
+    ai: null,
+    scheduler: null,
+    dayAnalysisScheduler: null,
+    currentDate: new Date(),
+    tray: null,
+    isQuitting: false,
+    hasShownMinimizeNotification: false,
+    appLogger: null as any, // Will be initialized in app.whenReady()
+    screenshotCapture: null,
+    lastAnalysisError: null,
+    lastActiveTime: Date.now()
+};
 
-let mainWindow;
-let isTracking = false;
-let ai;
-let scheduler;
-let dayAnalysisScheduler; // Add new scheduler for day analysis
-
-// Get categories from database module
-const { categories } = database;
-
-
-// Add this near the top with other global variables
-let currentDate = new Date();
-
-// Add this near other global variables
+// Initialize auto launcher
 const autoLauncher = new AutoLaunch({
     name: 'WhatDidIDo',
     path: app.getPath('exe'),
 });
 
-// Add these global variables near the top
-let tray = null;
-let isQuitting = false;
-
-// Add this near your other global variables
-let hasShownMinimizeNotification = false;
-
-// Initialize logger
-let appLogger;
-let screenshotCapture;
-
-// Add error tracking
-let lastAnalysisError = null;
-
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true
-    },
-    frame: false,
-    focusable: true,
-    show: false,
-    titleBarStyle: 'hidden',
-    icon: path.join(__dirname, '../../assets/icon.ico'),
-  });
+    state.mainWindow = new BrowserWindow({
+        width: 1200,
+        height: 800,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false
+        },
+        frame: false,
+        focusable: true,
+        show: false,
+        titleBarStyle: 'hidden',
+        icon: path.join(__dirname, '../../assets/icon.ico'),
+    });
 
-  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
-  
-  mainWindow.webContents.on('did-finish-load', async () => {
-    try {
-      currentDate = new Date();
-      
-      const initialData = await database.getActivityStats(currentDate, store.get('interval'));
-      console.log('Initial data loaded:', initialData);
-      
-      mainWindow.webContents.send('initial-data', initialData);
-      
-      setTimeout(() => {
-        mainWindow.show();
-        mainWindow.webContents.send('refresh-ui');
-      }, 100);
-    } catch (error) {
-      console.error('Error loading initial data:', error);
-      mainWindow.show();
-    }
-  });
+    state.mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
-  // Add these window event handlers
-  mainWindow.on('close', (event) => {
-    if (!isQuitting) {
-      event.preventDefault();
-      mainWindow.hide();
-      showTrayNotification();
-      return false;
-    }
-    return true;
-  });
+    state.mainWindow.webContents.on('did-finish-load', async () => {
+        try {
+            state.currentDate = new Date();
+            
+            const initialData = await database.stats.getActivityStats(state.currentDate, store.get('interval'));
+            console.log('Initial data loaded:', initialData);
+            
+            state.mainWindow?.webContents.send('initial-data', initialData);
+            
+            setTimeout(() => {
+                state.mainWindow?.show();
+                state.mainWindow?.webContents.send('refresh-ui');
+            }, 100);
+        } catch (error) {
+            console.error('Error loading initial data:', error);
+            state.mainWindow?.show();
+        }
+    });
 
-  mainWindow.on('minimize', (event) => {
-    event.preventDefault();
-    mainWindow.hide();
-  });
+    state.mainWindow.on('close', (event: Electron.Event) => {
+        if (!state.isQuitting) {
+            event.preventDefault();
+            state.mainWindow?.hide();
+            showTrayNotification();
+            return false;
+        }
+        return true;
+    });
+
+    state.mainWindow.on('minimize', (event: Electron.Event) => {
+        event.preventDefault();
+        state.mainWindow?.hide();
+    });
 }
 
 // Initialize Gemini API with file manager
-async function initializeGeminiAPI(apiKey) {
-  try {
-    appLogger.info('Initializing Gemini API...');
-    ai = new GoogleGenAI({apiKey: apiKey});
-    
-    // Test the API key with a simple request
-    const result = await ai.models.generateContent({
-      model: store.get('geminiModel') || 'gemini-2.0-flash',
-      contents: 'Hello, this is a test message.'
-    });
-    
-    if (result && result.text) {
-      store.set('apiKey', apiKey);
-      return { success: true };
+async function initializeGeminiAPI(apiKey: string): Promise<GeminiApiResponse> {
+    try {
+        state.appLogger.info('Initializing Gemini API...');
+        state.ai = new GoogleGenerativeAI(apiKey);
+        
+        // Test the API key with a simple request
+        const result = await state.ai.models.generateContent({
+            model: store.get('geminiModel') || 'gemini-2.0-flash',
+            contents: 'Hello, this is a test message.'
+        });
+        
+        if (result && result.text) {
+            store.set('apiKey', apiKey);
+            return { success: true };
+        }
+        
+        state.appLogger.error('Invalid API response received during initialization');
+        return { success: false, error: 'Invalid API response' };
+    } catch (error) {
+        if (error instanceof Error) {
+            state.appLogger.error('API validation error:', {
+                message: error.message,
+                stack: error.stack,
+                fullError: error
+            });
+            return { 
+                success: false, 
+                error: error.message || 'Invalid API key'
+            };
+        }
+        return {
+            success: false,
+            error: 'Unknown error occurred'
+        };
     }
-    
-    appLogger.error('Invalid API response received during initialization');
-    return { success: false, error: 'Invalid API response' };
-  } catch (error) {
-    appLogger.error('API validation error:', {
-      message: error.message,
-      status: error.status,
-      statusText: error.statusText,
-      stack: error.stack,
-      fullError: error
-    });
-    return { 
-      success: false, 
-      error: error.message || 'Invalid API key'
-    };
-  }
 }
 
 
 // Modify the captureAndAnalyze function
 async function captureAndAnalyze() {
     try {
-        appLogger.info('Starting capture and analyze process...');
+        state.appLogger.info('Starting capture and analyze process...');
         
         const now = new Date();
         const timestamp = now.toISOString();
-        appLogger.info('Created timestamp:', timestamp);
+        state.appLogger.info('Created timestamp:', timestamp);
+
+        // Check if screenshotCapture is initialized
+        if (!state.screenshotCapture) {
+            throw new Error('Screenshot capture module not initialized');
+        }
 
         // Capture screenshot and thumbnail using the new module
-        const { imgBuffer, thumbnailBuffer } = await screenshotCapture.captureWithThumbnail();
+        const { imgBuffer, thumbnailBuffer } = await state.screenshotCapture.captureWithThumbnail();
         
-        appLogger.info('Processing screenshot with Gemini...');
+        state.appLogger.info('Processing screenshot with Gemini...');
         
         // Default response in case of any failure
-        let response = {
+        let response: AnalysisResponse = {
             category: 'UNKNOWN',  // Changed from 'WORK' to 'UNKNOWN' to avoid misleading categorization
             activity: 'screenshot captured (analysis unavailable)',
             description: 'No description available due to analysis failure.'
@@ -174,25 +178,31 @@ async function captureAndAnalyze() {
             fs.writeFileSync(tempFilePath, imgBuffer);
 
             // Try uploading to Gemini
-            appLogger.info('Attempting file upload to Gemini...', { filePath: tempFilePath });
-            const uploadResult = await ai.files.upload({
+            state.appLogger.info('Attempting file upload to Gemini...', { filePath: tempFilePath });
+            // Update AI initialization check and file upload
+            if (!state.ai) {
+                throw new Error('AI is not initialized');
+            }
+            // At this point TypeScript knows state.ai is not null
+            const uploadResult = await state.ai.files.upload({
                 file: tempFilePath,
                 mimeType: 'image/png',
                 displayName: `screenshot-${safeTimestamp}.png`
             });
 
-            appLogger.info('Gemini file upload successful', { 
+            state.appLogger.info('Gemini file upload successful', { 
                 uri: uploadResult.uri,
                 name: uploadResult.name,
                 mimeType: uploadResult.mimeType
             });
 
             // Get last 10 screenshots for context
-            const recentScreenshots = await database.getLastNScreenshotsMetadata(20);
+            const recentScreenshots = await database.screenshots.getLastNScreenshotsMetadata(20);
+            // Update the recentScreenshots mapping
             const recentHistoryContext = recentScreenshots.length > 0 
                 ? `\nRecent activity history (last ${recentScreenshots.length} screenshots, from newest to oldest) as helpful context to what the user have been doing. if you notice a pattern or a shared thing in the recent history, mention it in the context. if the user is still doing the same thing, only mention what's new about it, don't repeat the same thing:\n` +
-                  recentScreenshots.map(ss => 
-                    `- [${new Date(ss.timestamp).toLocaleTimeString()}] Category: ${ss.category}, Activity: ${ss.activity}\n  Description: ${ss.description}`
+                  recentScreenshots.map((ss) => 
+                    `- [${new Date(ss.timestamp).toLocaleTimeString()}] Category: ${ss.category}, Activity: ${ss.activity}\n  Description: ${ss.description || ''}`
                   ).join('\n')
                 : '';
             console.log(recentHistoryContext);
@@ -219,9 +229,14 @@ async function captureAndAnalyze() {
             ${recentHistoryContext}`;
             
             try {
-                appLogger.info('Starting Gemini analysis...');
+                state.appLogger.info('Starting Gemini analysis...');
                 
-                const result = await ai.models.generateContent({
+                // Update AI initialization check
+                if (!state.ai) {
+                    throw new Error('AI is not initialized');
+                }
+                
+                const result = await state.ai.models.generateContent({
                     model: store.get('geminiModel') || 'gemini-2.0-flash',
                     contents: [
                         {
@@ -262,16 +277,16 @@ async function captureAndAnalyze() {
                     }
                 });
 
-                appLogger.info('Received Gemini response');
+                state.appLogger.info('Received Gemini response');
                 
-                // Parse the response text
+                // Update error handling
                 try {
-                    appLogger.info('Raw Gemini response:', { responseText: result.text });
+                    state.appLogger.info('Raw Gemini response:', { responseText: result.text });
                     const parsedResponse = JSON.parse(result.text);
                     
                     // Simple normalization to ensure consistent category casing
                     if (parsedResponse.category && parsedResponse.activity) {
-                        const normalizedCategory = categories.find(cat => 
+                        const normalizedCategory = categories.find((cat: Category) => 
                             cat.toUpperCase() === parsedResponse.category.toUpperCase());
                         
                         if (normalizedCategory) {
@@ -280,54 +295,58 @@ async function captureAndAnalyze() {
                                 activity: parsedResponse.activity,
                                 description: parsedResponse.description || 'No description available.'
                             };
-                            appLogger.info('Successfully parsed Gemini response:', response);
+                            state.appLogger.info('Successfully parsed Gemini response:', response);
                         } else {
                             // Keep default response if category not found
-                            appLogger.error('Invalid category in response:', {
+                            state.appLogger.error('Invalid category in response:', {
                                 receivedCategory: parsedResponse.category,
                                 validCategories: categories,
                                 fullResponse: parsedResponse
                             });
                         }
                     } else {
-                        appLogger.error('Missing required fields in response:', {
+                        state.appLogger.error('Missing required fields in response:', {
                             hasCategory: !!parsedResponse.category,
                             hasActivity: !!parsedResponse.activity,
                             fullResponse: parsedResponse
                         });
                     }
-                } catch (parseError) {
-                    appLogger.error('Error parsing JSON response:', {
-                        error: parseError.message,
-                        rawResponse: result.text,
-                        stack: parseError.stack
-                    });
+                } catch (error) {
+                    if (error instanceof Error) {
+                        state.appLogger.error('Error parsing JSON response:', {
+                            error: error.message,
+                            rawResponse: result.text,
+                            stack: error.stack
+                        });
+                    }
                 }
             } catch (geminiError) {
-                appLogger.error('Error in Gemini content generation:', {
+                if (geminiError instanceof Error) {
+                    state.appLogger.error('Error in Gemini content generation:', {
+                        message: geminiError.message,
+                        stack: geminiError.stack,
+                        fullError: geminiError
+                    });
+                }
+            }
+        } catch (geminiError) {
+            if (geminiError instanceof Error) {
+                state.appLogger.error('Error in Gemini analysis (outer catch):', {
                     message: geminiError.message,
-                    status: geminiError.status,
-                    statusText: geminiError.statusText,
                     stack: geminiError.stack,
                     fullError: geminiError
                 });
             }
-        } catch (geminiError) {
-            appLogger.error('Error in Gemini analysis (outer catch):', {
-                message: geminiError.message,
-                status: geminiError.status,
-                statusText: geminiError.statusText,
-                stack: geminiError.stack,
-                fullError: geminiError
-            });
             // Keep the default response - don't throw error
         } finally {
             // Clean up temp file
             if (tempFilePath && fs.existsSync(tempFilePath)) {
                 try {
                     fs.unlinkSync(tempFilePath);
-                } catch (cleanupError) {
-                    appLogger.error('Error cleaning up temp file:', cleanupError.message);
+                } catch (error) {
+                    if (error instanceof Error) {
+                        state.appLogger.error('Error cleaning up temp file:', error.message);
+                    }
                 }
             }
         }
@@ -336,9 +355,9 @@ async function captureAndAnalyze() {
         if (response.category !== 'UNKNOWN' || response.activity !== 'screenshot captured (analysis unavailable)') {
             // Store in database - wrap in try-catch to prevent database errors from breaking the schedule
             try {
-                await database.saveScreenshot(
+                await database.screenshots.saveScreenshot(
                     timestamp,
-                    response.category,
+                    response.category as Category,
                     response.activity,
                     imgBuffer,
                     thumbnailBuffer,
@@ -346,63 +365,69 @@ async function captureAndAnalyze() {
                 );
                 
                 // Clear any previous analysis error on success
-                lastAnalysisError = null;
+                state.lastAnalysisError = null;
                 
                 // Try to update UI, but don't let it break the process
                 try {
-                    const updatedData = await database.getActivityStats(currentDate, store.get('interval'));
+                    const updatedData = await database.stats.getActivityStats(state.currentDate, store.get('interval'));
                     
-                    if (mainWindow && !mainWindow.isDestroyed()) {
-                        mainWindow.webContents.send('activity-updated', updatedData);
-                        mainWindow.webContents.send('analysis-error-cleared'); // Clear error in UI
+                    if (state.mainWindow?.webContents) {
+                        state.mainWindow.webContents.send('activity-updated', updatedData);
+                        state.mainWindow.webContents.send('analysis-error-cleared'); // Clear error in UI
                         setTimeout(() => {
-                            mainWindow.webContents.send('refresh-ui');
+                            state.mainWindow?.webContents.send('refresh-ui');
                         }, 100);
                     }
-                } catch (uiError) {
-                    appLogger.error('Error updating UI (non-critical):', uiError.message);
+                } catch (error) {
+                    if (error instanceof Error) {
+                        state.appLogger.error('Error updating UI (non-critical):', error.message);
+                    }
                 }
                 
-                appLogger.info('Screenshot capture and analysis completed successfully');
-            } catch (dbError) {
-                appLogger.error('Database operation failed (non-critical):', dbError.message);
+                state.appLogger.info('Screenshot capture and analysis completed successfully');
+            } catch (error) {
+                if (error instanceof Error) {
+                    state.appLogger.error('Database operation failed (non-critical):', error.message);
+                }
             }
         } else {
             // Analysis failed - track the error and notify UI
             const errorMessage = 'AI analysis failed - screenshot captured but could not be categorized';
-            lastAnalysisError = {
+            state.lastAnalysisError = {
                 timestamp: new Date().toISOString(),
                 message: errorMessage,
                 type: 'analysis_failed'
             };
             
-            appLogger.info('Screenshot capture completed, but analysis FAILED - skipping database insertion');
+            state.appLogger.info('Screenshot capture completed, but analysis FAILED - skipping database insertion');
             
             // Send error to UI
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('analysis-error', lastAnalysisError);
+            if (state.mainWindow && !state.mainWindow.isDestroyed()) {
+                state.mainWindow.webContents.send('analysis-error', state.lastAnalysisError);
             }
         }
 
     } catch (error) {
-        appLogger.error('Error in capture and analyze:', error);
-        appLogger.error('Stack trace:', error.stack);
+        if (error instanceof Error) {
+            state.appLogger.error('Error in capture and analyze:', error);
+            state.appLogger.error('Stack trace:', error.stack);
+        }
         // Don't throw - let the schedule continue regardless of any errors
     }
 }
 
 // Add this after captureAndAnalyze function
-async function generateDayAnalysis(date) {
+async function generateDayAnalysis(date: string): Promise<string> {
     try {
-        appLogger.info('Starting day analysis generation for date:', date);
+        state.appLogger.info('Starting day analysis generation for date:', date);
         
         // Get all required data in parallel
         const [data, dailyStats] = await Promise.all([
-            database.getDayDataForAnalysis(date),
-            database.getDailyCategoryStats(new Date(date), 5) // Using 5 minutes as default interval
+            database.getDayDataForAnalysis(new Date(date)),
+            database.stats.getDailyCategoryStats(new Date(date), 5) // Using 5 minutes as default interval
         ]);
 
-        appLogger.info('Retrieved data for analysis:', {
+        state.appLogger.info('Retrieved data for analysis:', {
             screenshotsCount: data.screenshots.length,
             notesCount: data.notes.length,
             historicalNotesCount: data.historicalData.notes.length,
@@ -410,7 +435,7 @@ async function generateDayAnalysis(date) {
             daysWithStats: Object.keys(dailyStats).length
         });
 
-        if (!ai) {
+        if (!state.ai) {
             throw new Error('AI is not initialized. Please check your API key.');
         }
 
@@ -455,8 +480,8 @@ When analyzing trends and progress:
 5. Consider how today's behavior aligns with patterns from earlier in the month
 6. Use the category statistics to identify any shifts in time allocation patterns`;
 
-        appLogger.info('Sending request to Gemini API', { prompt: (prompt) });
-        const result = await ai.models.generateContent({
+        state.appLogger.info('Sending request to Gemini API', { prompt: (prompt) });
+        const result = await state.ai.models.generateContent({
              model: "gemini-2.5-pro",
              contents: prompt,
              config: {
@@ -464,19 +489,21 @@ When analyzing trends and progress:
                 maxOutputTokens: 8192,
             }
         });
-        appLogger.info('Received response from Gemini API');
+        state.appLogger.info('Received response from Gemini API');
 
         if (!result || !result.text) {
             throw new Error('Invalid response from Gemini API');
         }
 
         // Save to the day_analyses table
-        await database.saveDayAnalysis(date, result.text);
-        appLogger.info('Analysis saved to database');
+        await database.dayAnalyses.saveDayAnalysis(new Date(date), result.text);
+        state.appLogger.info('Analysis saved to database');
 
         return result.text;
     } catch (error) {
-        appLogger.error('Error in generateDayAnalysis:', error);
+        if (error instanceof Error) {
+            state.appLogger.error('Error in generateDayAnalysis:', error);
+        }
         throw error;
     }
 }
@@ -484,90 +511,91 @@ When analyzing trends and progress:
 // Add this helper function
 function pauseTracking() {
   stopTracking();
-  ai = null;
-  if (mainWindow) {
-    mainWindow.webContents.send('tracking-paused');
+  state.ai = null;
+  if (state.mainWindow) {
+    state.mainWindow.webContents.send('tracking-paused');
   }
 }
 
 // Helper functions for state management
-function getCurrentDate() {
-  return currentDate;
+function getCurrentDate(): Date {
+  return state.currentDate;
 }
 
-function setCurrentDate(newDate) {
-  currentDate = newDate;
+function setCurrentDate(newDate: Date) {
+  state.currentDate = newDate;
 }
 
-function getIsTracking() {
-  return isTracking;
+function getIsTracking(): boolean {
+  return state.isTracking;
 }
 
-function setIsTracking(tracking) {
-  isTracking = tracking;
+function setIsTracking(tracking: boolean) {
+  state.isTracking = tracking;
 }
 
-function setIsQuitting(quitting) {
-  isQuitting = quitting;
+function setIsQuitting(quitting: boolean) {
+  state.isQuitting = quitting;
 }
 
 // Scheduler management functions
 function startTracking() {
-  if (!scheduler || !ai) {
+  if (!state.scheduler || !state.ai) {
     return false;
   }
   
-  isTracking = true;
-  scheduler.start(captureAndAnalyze);
+  state.isTracking = true;
+  state.scheduler.start(captureAndAnalyze);
   return true;
 }
 
 function stopTracking() {
-  if (scheduler) {
-    scheduler.stop();
+  if (state.scheduler) {
+    state.scheduler.stop();
   }
-  isTracking = false;
+  state.isTracking = false;
 }
 
-function updateSchedulerInterval(newInterval) {
-  if (scheduler) {
-    scheduler.updateInterval(newInterval);
+function updateSchedulerInterval(newInterval: number) {
+  if (state.scheduler) {
+    state.scheduler.updateInterval(newInterval);
   }
 }
 
-function getSchedulerStatus() {
-  return scheduler ? scheduler.getStatus() : null;
+// Update getSchedulerStatus function to return a boolean
+function getSchedulerStatus(): boolean {
+    return state.scheduler ? state.scheduler.getStatus().isRunning : false;
 }
 
 // Error tracking functions
-function getLastAnalysisError() {
-  return lastAnalysisError;
+function getLastAnalysisError(): AnalysisError | null {
+  return state.lastAnalysisError;
 }
 
 function clearAnalysisError() {
-  lastAnalysisError = null;
+  state.lastAnalysisError = null;
 }
 
 // Add this helper function for the countdown
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function sleep(ms: number): Promise<void> {
+  return new Promise<void>(resolve => setTimeout(resolve, ms));
 }
 
 // Add this near your other initialization code (in app.whenReady())
 function initializeIdleMonitor() {
     // Update lastActiveTime whenever system becomes active
     powerMonitor.on('unlock-screen', () => {
-        lastActiveTime = Date.now();
+        state.lastActiveTime = Date.now();
     });
     
     powerMonitor.on('resume', () => {
-        lastActiveTime = Date.now();
+        state.lastActiveTime = Date.now();
     });
 
     // Check for user input events through the main window
-    if (mainWindow) {
-        mainWindow.webContents.on('input-event', () => {
-            lastActiveTime = Date.now();
+    if (state.mainWindow) {
+        state.mainWindow.webContents.on('input-event', () => {
+            state.lastActiveTime = Date.now();
         });
     }
 }
@@ -591,13 +619,13 @@ async function handleFirstRun() {
 
 // Add this function to create the tray
 function createTray() {
-    tray = new Tray(path.join(__dirname, '../../assets/icon.ico'));
+    state.tray = new Tray(path.join(__dirname, '../../assets/icon.ico'));
     
     const contextMenu = Menu.buildFromTemplate([
         {
             label: 'Open What Did I Do',
             click: () => {
-                mainWindow.show();
+                state.mainWindow?.show();
             }
         },
         {
@@ -606,91 +634,91 @@ function createTray() {
         {
             label: 'Quit',
             click: () => {
-                isQuitting = true;
+                state.isQuitting = true;
                 app.quit();
             }
         }
     ]);
 
-    tray.setToolTip('What Did I Do - Running in Background');
-    tray.setContextMenu(contextMenu);
+    state.tray.setToolTip('What Did I Do - Running in Background');
+    state.tray.setContextMenu(contextMenu);
 
-    tray.on('double-click', () => {
-        mainWindow.show();
+    state.tray.on('double-click', () => {
+        state.mainWindow?.show();
     });
 }
 
 // Add this function to show the notification
 function showTrayNotification() {
-    if (!hasShownMinimizeNotification) {
-        tray.displayBalloon({
+    if (!state.hasShownMinimizeNotification) {
+        state.tray?.displayBalloon({
             title: 'What Did I Do is still running',
             content: 'The app will continue running in the background. You can access it anytime from the system tray.',
             icon: path.join(__dirname, '../../assets/icon.ico'),
             iconType: 'custom'
         });
-        hasShownMinimizeNotification = true;
+        state.hasShownMinimizeNotification = true;
     }
 }
 
 // Function to show window and open note modal
 function showWindowAndOpenNoteModal() {
-    if (mainWindow) {
-        mainWindow.show();
-        mainWindow.focus();
+    if (state.mainWindow) {
+        state.mainWindow.show();
+        state.mainWindow.focus();
         
         // Send message to renderer to open note modal
-        mainWindow.webContents.send('open-note-modal');
+        state.mainWindow.webContents.send('open-note-modal');
     }
 }
 
 // Add this function to handle periodic day analysis
 async function runPeriodicDayAnalysis() {
     try {
-        appLogger.info('Running periodic day analysis');
+        state.appLogger.info('Running periodic day analysis');
         const today = new Date();
-        await generateDayAnalysis(today);
-        appLogger.info('Periodic day analysis completed successfully');
+        await generateDayAnalysis(today.toISOString().split('T')[0]);
+        state.appLogger.info('Periodic day analysis completed successfully');
     } catch (error) {
-        appLogger.error('Error in periodic day analysis:', error);
+        state.appLogger.error('Error in periodic day analysis:', error);
         // Don't throw - let the scheduler continue
     }
 }
 
 // Add this function to delay the initial day analysis
 function scheduleInitialDayAnalysis() {
-    appLogger.info('Scheduling initial day analysis to run after 1 hour');
+    state.appLogger.info('Scheduling initial day analysis to run after 1 hour');
     setTimeout(async () => {
         try {
             await runPeriodicDayAnalysis();
-            appLogger.info('Initial day analysis completed successfully');
+            state.appLogger.info('Initial day analysis completed successfully');
         } catch (error) {
-            appLogger.error('Error in initial day analysis:', error);
+            state.appLogger.error('Error in initial day analysis:', error);
         }
     }, 60 * 60 * 1000); // 1 hour in milliseconds
 }
 
 app.whenReady().then(async () => {
     try {
-        appLogger = logger.createLogger();
-        screenshotCapture = new ScreenshotCapture(appLogger);
+        state.appLogger = logger.createLogger();
+        state.screenshotCapture = new ScreenshotCapture(state.appLogger);
         
         // Initialize the simple robust scheduler
-        scheduler = new SimpleRobustScheduler(appLogger, {
+        state.scheduler = new SimpleRobustScheduler(state.appLogger, {
             intervalMinutes: store.get('interval'),
             maxRetries: 2,
             idleThresholdMinutes: store.get('interval') // Skip if idle for interval duration
         });
 
         // Initialize day analysis scheduler (every 6 hours = 360 minutes)
-        dayAnalysisScheduler = new SimpleRobustScheduler(appLogger, {
+        state.dayAnalysisScheduler = new SimpleRobustScheduler(state.appLogger, {
             intervalMinutes: 360,
             maxRetries: 2,
             idleThresholdMinutes: 0 // No idle threshold - run analysis regardless of system state
         });
         
         await handleFirstRun();
-        await database.initializeDatabase();
+        await initializeDatabase();
         createWindow();
         createTray();
         initializeIdleMonitor();
@@ -700,12 +728,21 @@ app.whenReady().then(async () => {
             showWindowAndOpenNoteModal();
         });
         
-        // Initialize IPC handlers
+        // Initialize IPC handlers with type-safe dependencies
         initializeIpcHandlers({
             database,
-            store,
-            logger: appLogger,
-            mainWindow,
+            store: {
+                get: (key: string) => store.get(key as keyof typeof store.store),
+                set: (key: string, value: any) => store.set(key as keyof typeof store.store, value),
+                delete: (key: string) => store.delete(key as keyof typeof store.store)
+            },
+            logger: {
+                info: state.appLogger.info.bind(state.appLogger),
+                error: state.appLogger.error.bind(state.appLogger),
+                getLogPath: () => path.join(app.getPath('userData'), 'logs'),
+                getRecentLogs: async () => []
+            },
+            mainWindow: state.mainWindow!,
             autoLauncher,
             initializeGeminiAPI,
             pauseTracking,
@@ -720,7 +757,10 @@ app.whenReady().then(async () => {
             stopTracking,
             updateSchedulerInterval,
             getSchedulerStatus,
-            getLastAnalysisError,
+            getLastAnalysisError: () => {
+                const error = state.lastAnalysisError;
+                return error ? error.message : null;
+            },
             clearAnalysisError,
             generateDayAnalysis
         });
@@ -731,7 +771,7 @@ app.whenReady().then(async () => {
             await initializeGeminiAPI(apiKey);
             startTracking();
             // Start day analysis scheduler
-            dayAnalysisScheduler.start(runPeriodicDayAnalysis);
+            state.dayAnalysisScheduler.start(runPeriodicDayAnalysis);
             // Schedule initial analysis to run after 1 hour instead of immediately
             scheduleInitialDayAnalysis();
         } else {
@@ -758,15 +798,15 @@ app.on('activate', () => {
 
 // Add cleanup on app quit
 app.on('will-quit', async () => {
-    if (scheduler) {
-        scheduler.stop();
+    if (state.scheduler) {
+        state.scheduler.stop();
     }
-    if (dayAnalysisScheduler) {
-        dayAnalysisScheduler.stop();
+    if (state.dayAnalysisScheduler) {
+        state.dayAnalysisScheduler.stop();
     }
-    await database.closeDatabase();
-    if (tray) {
-        tray.destroy();
+    await closeDatabase();
+    if (state.tray) {
+        state.tray.destroy();
     }
     // Unregister all global shortcuts
     globalShortcut.unregisterAll();

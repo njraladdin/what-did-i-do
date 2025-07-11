@@ -1,25 +1,40 @@
-const { screen } = require('electron');
-const screenshot = require('screenshot-desktop');
-const { windowManager } = require('node-window-manager');
-const sharp = require('sharp');
+import { screen, Screen, Display } from 'electron';
+import screenshot from 'screenshot-desktop';
+import { windowManager, Window } from 'node-window-manager';
+import sharp from 'sharp';
+import { Logger } from './logger';
+
+interface WindowBounds {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+interface DisplayInfo {
+    id: string;
+    [key: string]: any;
+}
 
 class ScreenshotCapture {
-    constructor(logger) {
+    private readonly logger: Logger;
+
+    constructor(logger: Logger) {
         this.logger = logger;
     }
 
     /**
      * Find the display that has the most overlap with the active window
-     * @param {Object} windowBounds - Bounds of the active window
-     * @param {Array} displays - Array of available displays
-     * @param {Array} availableDisplays - Available displays from screenshot-desktop
+     * @param {WindowBounds} windowBounds - Bounds of the active window
+     * @param {Display[]} displays - Array of available displays
+     * @param {DisplayInfo[]} availableDisplays - Available displays from screenshot-desktop
      * @returns {string|null} - Display ID or null if not found
      */
-    findBestDisplay(windowBounds, displays, availableDisplays) {
+    findBestDisplay(windowBounds: WindowBounds, displays: Display[], availableDisplays: DisplayInfo[]): string | null {
         let maxOverlap = 0;
-        let targetDisplayId = null;
+        let targetDisplayId: string | null = null;
 
-        displays.forEach((display, index) => {
+        displays.forEach((display: Display, index: number) => {
             const dBounds = display.bounds;
             const xOverlap = Math.max(0, 
                 Math.min(windowBounds.x + windowBounds.width, dBounds.x + dBounds.width) - 
@@ -46,17 +61,24 @@ class ScreenshotCapture {
      * Capture screenshot from the best available display
      * @returns {Promise<Buffer>} - Screenshot image buffer
      */
-    async captureScreenshot() {
+    async captureScreenshot(): Promise<Buffer> {
         try {
             this.logger.info('Starting screenshot capture...');
             
             // Get active window and display information
             const activeWindow = windowManager.getActiveWindow();
             const displays = screen.getAllDisplays();
-            let imgBuffer;
+            let imgBuffer: Buffer;
             
             if (activeWindow) {
-                const windowBounds = activeWindow.getBounds();
+                const rawBounds = activeWindow.getBounds();
+                // Ensure all properties are numbers with fallbacks
+                const windowBounds: WindowBounds = {
+                    x: rawBounds.x ?? 0,
+                    y: rawBounds.y ?? 0,
+                    width: rawBounds.width ?? 0,
+                    height: rawBounds.height ?? 0
+                };
                 
                 // Get all available displays from screenshot-desktop
                 const availableDisplays = await screenshot.listDisplays();
@@ -71,15 +93,15 @@ class ScreenshotCapture {
             }
 
             // Fallback to primary display if needed
-            if (!imgBuffer) {
+            if (!imgBuffer!) {
                 const displays = await screenshot.listDisplays();
                 imgBuffer = await screenshot({ screen: displays[0].id });
                 this.logger.info('Screenshot captured from primary display (fallback)');
             }
 
-            return imgBuffer;
+            return imgBuffer!;
         } catch (error) {
-            this.logger.error('Error capturing screenshot:', error.message);
+            this.logger.error('Error capturing screenshot:', (error as Error).message);
             throw error;
         }
     }
@@ -91,7 +113,7 @@ class ScreenshotCapture {
      * @param {number} height - Thumbnail height (default: 150)
      * @returns {Promise<Buffer>} - Thumbnail image buffer
      */
-    async createThumbnail(imgBuffer, width = 200, height = 150) {
+    async createThumbnail(imgBuffer: Buffer, width = 200, height = 150): Promise<Buffer> {
         try {
             this.logger.info('Creating thumbnail...');
             
@@ -102,7 +124,7 @@ class ScreenshotCapture {
             this.logger.info('Thumbnail created successfully');
             return thumbnailBuffer;
         } catch (error) {
-            this.logger.error('Error creating thumbnail:', error.message);
+            this.logger.error('Error creating thumbnail:', (error as Error).message);
             throw error;
         }
     }
@@ -113,7 +135,7 @@ class ScreenshotCapture {
      * @param {number} thumbnailHeight - Thumbnail height (default: 150)
      * @returns {Promise<{imgBuffer: Buffer, thumbnailBuffer: Buffer}>}
      */
-    async captureWithThumbnail(thumbnailWidth = 200, thumbnailHeight = 150) {
+    async captureWithThumbnail(thumbnailWidth = 200, thumbnailHeight = 150): Promise<{imgBuffer: Buffer, thumbnailBuffer: Buffer}> {
         try {
             const imgBuffer = await this.captureScreenshot();
             const thumbnailBuffer = await this.createThumbnail(imgBuffer, thumbnailWidth, thumbnailHeight);
@@ -123,10 +145,10 @@ class ScreenshotCapture {
                 thumbnailBuffer
             };
         } catch (error) {
-            this.logger.error('Error in captureWithThumbnail:', error.message);
+            this.logger.error('Error in captureWithThumbnail:', (error as Error).message);
             throw error;
         }
     }
 }
 
-module.exports = ScreenshotCapture; 
+export default ScreenshotCapture; 
