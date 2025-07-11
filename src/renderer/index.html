@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    <!-- Add marked library from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body>
@@ -294,15 +296,32 @@
                 <style>
                     .analysis-content {
                         margin-top: 15px;
-                        white-space: pre-wrap;
+                        white-space: normal;
                         max-height: 500px;
                         overflow-y: auto;
                         padding: 15px;
                         background: var(--color-background-secondary);
                         border-radius: 8px;
-                        font-size: 14px;
+                        font-size: 15px;
                         line-height: 1.6;
                     }
+
+             
+                    
+                    .analysis-content ul, 
+                    .analysis-content ol {
+                        padding-left: 20px;
+                        margin: 8px 0;
+                    }
+                    
+                    .analysis-content li {
+                        margin-bottom: 8px;
+                    }
+                    
+                    .analysis-content p {
+                        margin-bottom: 10px;
+                    }
+                  
 
                     #generateAnalysis {
                         display: flex;
@@ -1003,7 +1022,7 @@
                 // Update day analysis
                 const contentDiv = document.getElementById('dayAnalysisContent');
                 if (data.dayAnalysis && data.dayAnalysis.content) {
-                    contentDiv.textContent = data.dayAnalysis.content;
+                    contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
                 } else {
                     contentDiv.textContent = 'No analysis generated yet for this day.';
                 }
@@ -1034,7 +1053,7 @@
                     // Update day analysis
                     const contentDiv = document.getElementById('dayAnalysisContent');
                     if (data.dayAnalysis && data.dayAnalysis.content) {
-                        contentDiv.textContent = data.dayAnalysis.content;
+                        contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
                     } else {
                         contentDiv.textContent = 'No analysis generated yet for this day.';
                     }
@@ -1069,7 +1088,7 @@
                 // Update day analysis
                 const contentDiv = document.getElementById('dayAnalysisContent');
                 if (data.dayAnalysis && data.dayAnalysis.content) {
-                    contentDiv.textContent = data.dayAnalysis.content;
+                    contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
                 } else {
                     contentDiv.textContent = 'No analysis generated yet for this day.';
                 }
@@ -1779,7 +1798,7 @@
                 
                 if (analysis && analysis.content) {
                     console.log('Displaying existing analysis');
-                    contentDiv.textContent = analysis.content;
+                    contentDiv.innerHTML = marked.parse(analysis.content);
                 } else {
                     console.log('No existing analysis found');
                     contentDiv.textContent = 'No analysis generated yet for this day.';
@@ -1809,7 +1828,7 @@
                     throw new Error('No analysis was generated');
                 }
                 
-                contentDiv.textContent = analysis;
+                contentDiv.innerHTML = marked.parse(analysis);
             } catch (error) {
                 console.error('Error generating analysis:', error);
                 contentDiv.innerHTML = `
