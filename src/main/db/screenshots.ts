@@ -1,16 +1,50 @@
-const { getConnection } = require('./core');
+import { getConnection } from './core';
+import type { Category } from './core';
+
+interface Screenshot {
+    id: number;
+    timestamp: string;
+    category: Category;
+    activity: string;
+    description?: string;
+    image_data?: Buffer;
+    thumbnail_data?: Buffer;
+    created_at?: string;
+}
+
+interface ProcessedScreenshot {
+    id: number;
+    timestamp: string;
+    category: Category;
+    activity: string;
+    description: string;
+    thumbnail: string;
+}
+
+interface ScreenshotTiming {
+    timestamp: string;
+    category: Category;
+    next_timestamp?: string;
+}
 
 /**
  * Save a new screenshot to the database
- * @param {string} timestamp - Screenshot timestamp
- * @param {string} category - Activity category
- * @param {string} activity - Activity description
- * @param {Buffer} imageBuffer - Full image data
- * @param {Buffer} thumbnailBuffer - Thumbnail image data
- * @param {string} description - Screenshot description
- * @returns {Promise<number>} The ID of the inserted screenshot
+ * @param timestamp - Screenshot timestamp
+ * @param category - Activity category
+ * @param activity - Activity description
+ * @param imageBuffer - Full image data
+ * @param thumbnailBuffer - Thumbnail image data
+ * @param description - Screenshot description
+ * @returns The ID of the inserted screenshot
  */
-function saveScreenshot(timestamp, category, activity, imageBuffer, thumbnailBuffer, description) {
+export function saveScreenshot(
+    timestamp: string,
+    category: Category,
+    activity: string,
+    imageBuffer: Buffer,
+    thumbnailBuffer: Buffer,
+    description: string
+): Promise<number> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         db.run(`
@@ -42,10 +76,10 @@ function saveScreenshot(timestamp, category, activity, imageBuffer, thumbnailBuf
 
 /**
  * Delete a screenshot by ID
- * @param {number} id - Screenshot ID
- * @returns {Promise<boolean>} True if deleted, false otherwise
+ * @param id - Screenshot ID
+ * @returns True if deleted, false otherwise
  */
-function deleteScreenshot(id) {
+export function deleteScreenshot(id: number): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         db.run('DELETE FROM screenshots WHERE id = ?', [id], function(err) {
@@ -61,12 +95,16 @@ function deleteScreenshot(id) {
 
 /**
  * Load more screenshots with pagination
- * @param {Date} currentDate - Date to get screenshots for
- * @param {number} offset - Number of screenshots to skip
- * @param {number} limit - Maximum number of screenshots to return
- * @returns {Promise<Array>} Array of screenshot objects
+ * @param currentDate - Date to get screenshots for
+ * @param offset - Number of screenshots to skip
+ * @param limit - Maximum number of screenshots to return
+ * @returns Array of screenshot objects
  */
-function getMoreScreenshots(currentDate, offset = 0, limit = 50) {
+export function getMoreScreenshots(
+    currentDate: Date,
+    offset: number = 0,
+    limit: number = 50
+): Promise<ProcessedScreenshot[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const startOfDay = new Date(currentDate);
@@ -75,7 +113,7 @@ function getMoreScreenshots(currentDate, offset = 0, limit = 50) {
         const endOfDay = new Date(currentDate);
         endOfDay.setHours(23, 59, 59, 999);
 
-        db.all(`
+        db.all<Screenshot>(`
             SELECT 
                 id,
                 timestamp,
@@ -106,8 +144,8 @@ function getMoreScreenshots(currentDate, offset = 0, limit = 50) {
                 timestamp: screenshot.timestamp,
                 category: screenshot.category,
                 activity: screenshot.activity,
-                description: screenshot.description,
-                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data.toString('base64')}`
+                description: screenshot.description || '',
+                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data!.toString('base64')}`
             }));
 
             resolve(processedScreenshots);
@@ -117,10 +155,10 @@ function getMoreScreenshots(currentDate, offset = 0, limit = 50) {
 
 /**
  * Get screenshots for a specific date (used in activity stats)
- * @param {Date} currentDate - Date to get screenshots for
- * @returns {Promise<Array>} Array of screenshot objects with thumbnails
+ * @param currentDate - Date to get screenshots for
+ * @returns Array of screenshot objects with thumbnails
  */
-function getScreenshotsForDate(currentDate) {
+export function getScreenshotsForDate(currentDate: Date): Promise<ProcessedScreenshot[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const localDate = new Date(currentDate);
@@ -131,7 +169,7 @@ function getScreenshotsForDate(currentDate) {
         const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
         const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
 
-        db.all(`
+        db.all<Screenshot>(`
             SELECT 
                 id,
                 timestamp,
@@ -160,8 +198,8 @@ function getScreenshotsForDate(currentDate) {
                 timestamp: screenshot.timestamp,
                 category: screenshot.category,
                 activity: screenshot.activity,
-                description: screenshot.description,
-                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data.toString('base64')}`
+                description: screenshot.description || '',
+                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data!.toString('base64')}`
             }));
 
             resolve(processedScreenshots);
@@ -171,10 +209,10 @@ function getScreenshotsForDate(currentDate) {
 
 /**
  * Get time-based screenshot data for statistics calculation
- * @param {Date} currentDate - Date to get screenshots for
- * @returns {Promise<Array>} Array of screenshot timing data
+ * @param currentDate - Date to get screenshots for
+ * @returns Array of screenshot timing data
  */
-function getScreenshotTimingData(currentDate) {
+export function getScreenshotTimingData(currentDate: Date): Promise<ScreenshotTiming[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const localDate = new Date(currentDate);
@@ -185,7 +223,7 @@ function getScreenshotTimingData(currentDate) {
         const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
         const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
 
-        db.all(`
+        db.all<ScreenshotTiming>(`
             SELECT 
                 timestamp,
                 category,
@@ -210,10 +248,10 @@ function getScreenshotTimingData(currentDate) {
 
 /**
  * Get screenshot data for day analysis
- * @param {Date} date - Date to get screenshots for
- * @returns {Promise<Array>} Array of screenshot metadata
+ * @param date - Date to get screenshots for
+ * @returns Array of screenshot metadata
  */
-function getScreenshotsForAnalysis(date) {
+export function getScreenshotsForAnalysis(date: Date): Promise<Screenshot[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const localDate = new Date(date);
@@ -224,7 +262,7 @@ function getScreenshotsForAnalysis(date) {
         const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
         const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
 
-        db.all(`
+        db.all<Screenshot>(`
             SELECT timestamp, category, activity, description
             FROM screenshots 
             WHERE timestamp BETWEEN ? AND ?
@@ -242,28 +280,39 @@ function getScreenshotsForAnalysis(date) {
 
 /**
  * Get screenshots for export
- * @param {Date} startDate - Start date for export
- * @param {Date} endDate - End date for export
- * @param {boolean} includeMedia - Whether to include image data
- * @returns {Promise<Array>} Array of screenshot data
+ * @param startDate - Start date for export
+ * @param endDate - End date for export
+ * @param includeMedia - Whether to include image data
+ * @returns Array of screenshot data
  */
-function getScreenshotsForExport(startDate, endDate, includeMedia = false) {
+export function getScreenshotsForExport(
+    startDate: Date,
+    endDate: Date,
+    includeMedia: boolean = false
+): Promise<Screenshot[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
-        const query = `
-            SELECT 
-                id,
-                timestamp,
-                category,
-                activity,
-                ${includeMedia ? 'image_data, thumbnail_data,' : ''}
-                description
-            FROM screenshots 
-            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
-            ORDER BY timestamp ASC
-        `;
+        const fields = [
+            'id',
+            'timestamp',
+            'category',
+            'activity',
+            'description'
+        ];
 
-        db.all(query, [startDate.toISOString(), endDate.toISOString()], (err, screenshots) => {
+        if (includeMedia) {
+            fields.push('image_data', 'thumbnail_data');
+        }
+
+        db.all<Screenshot>(`
+            SELECT ${fields.join(', ')}
+            FROM screenshots 
+            WHERE timestamp BETWEEN ? AND ?
+            ORDER BY timestamp ASC
+        `, [
+            startDate.toISOString(),
+            endDate.toISOString()
+        ], (err, screenshots) => {
             if (err) {
                 reject(err);
                 return;
@@ -274,41 +323,24 @@ function getScreenshotsForExport(startDate, endDate, includeMedia = false) {
 }
 
 /**
- * Get the last N screenshots metadata
- * @param {number} n - Number of screenshots to retrieve
- * @returns {Promise<Array>} Array of screenshot metadata
+ * Get metadata for the last N screenshots
+ * @param n - Number of screenshots to get
+ * @returns Array of screenshot metadata
  */
-function getLastNScreenshotsMetadata(n = 10) {
+export function getLastNScreenshotsMetadata(n: number = 10): Promise<Screenshot[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
-        db.all(`
-            SELECT 
-                timestamp,
-                category,
-                activity,
-                description
+        db.all<Screenshot>(`
+            SELECT id, timestamp, category, activity, description
             FROM screenshots 
-            WHERE category != 'UNKNOWN'
             ORDER BY timestamp DESC
             LIMIT ?
         `, [n], (err, screenshots) => {
             if (err) {
-                console.error('Error getting last N screenshots:', err);
                 reject(err);
                 return;
             }
             resolve(screenshots || []);
         });
     });
-}
-
-module.exports = {
-    saveScreenshot,
-    deleteScreenshot,
-    getMoreScreenshots,
-    getScreenshotsForDate,
-    getScreenshotTimingData,
-    getScreenshotsForAnalysis,
-    getScreenshotsForExport,
-    getLastNScreenshotsMetadata
-}; 
+} 

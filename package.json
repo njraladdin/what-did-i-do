@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:watch": "tsc -w"
   },
   "build": {
     "appId": "com.whatdidido.app",
@@ -60,8 +61,11 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@types/electron": "^1.6.12",
+    "@types/node": "^24.0.13",
     "electron": "^28.0.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.8.3"
   },
   "author": "@njraladdin"
 }

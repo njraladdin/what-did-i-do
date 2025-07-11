@@ -1,12 +1,25 @@
-const { getConnection } = require('./core');
+import { getConnection } from './core';
+
+interface DayAnalysis {
+    id: number;
+    date: string;
+    timestamp: string;
+    content: string;
+    created_at?: string;
+}
+
+interface HistoricalAnalysis {
+    date: string;
+    content: string;
+}
 
 /**
  * Save a day analysis to the database
- * @param {Date} date - Date for the analysis
- * @param {string} content - Analysis content
- * @returns {Promise<number>} The ID of the inserted analysis
+ * @param date - Date for the analysis
+ * @param content - Analysis content
+ * @returns The ID of the inserted analysis
  */
-async function saveDayAnalysis(date, content) {
+export async function saveDayAnalysis(date: Date, content: string): Promise<number> {
     console.log('Saving day analysis for date:', date);
     return new Promise((resolve, reject) => {
         const db = getConnection();
@@ -33,16 +46,16 @@ async function saveDayAnalysis(date, content) {
 
 /**
  * Get the most recent day analysis for a specific date
- * @param {Date} date - Date to get analysis for
- * @returns {Promise<Object|null>} Analysis object or null if not found
+ * @param date - Date to get analysis for
+ * @returns Analysis object or null if not found
  */
-async function getDayAnalysis(date) {
+export async function getDayAnalysis(date: Date): Promise<DayAnalysis | null> {
     console.log('Getting day analysis for date:', date);
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const dateStr = new Date(date).toISOString().split('T')[0];
         
-        db.get(`
+        db.get<DayAnalysis>(`
             SELECT * FROM day_analyses 
             WHERE date = ?
             ORDER BY timestamp DESC
@@ -54,24 +67,24 @@ async function getDayAnalysis(date) {
                 return;
             }
             console.log('Retrieved day analysis:', analysis);
-            resolve(analysis);
+            resolve(analysis || null);
         });
     });
 }
 
 /**
  * Get historical day analyses for context
- * @param {Date} startDate - Start date for historical data
- * @param {Date} endDate - End date (exclusive)
- * @returns {Promise<Array>} Array of historical analysis objects
+ * @param startDate - Start date for historical data
+ * @param endDate - End date (exclusive)
+ * @returns Array of historical analysis objects
  */
-function getHistoricalAnalyses(startDate, endDate) {
+export function getHistoricalAnalyses(startDate: Date, endDate: Date): Promise<HistoricalAnalysis[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const startDateStr = new Date(startDate).toISOString().split('T')[0];
         const endDateStr = new Date(endDate).toISOString().split('T')[0];
         
-        db.all(`
+        db.all<HistoricalAnalysis>(`
             SELECT date, content
             FROM day_analyses 
             WHERE date >= ? AND date < ?
@@ -88,17 +101,17 @@ function getHistoricalAnalyses(startDate, endDate) {
 
 /**
  * Get day analyses within a date range
- * @param {Date} startDate - Start date
- * @param {Date} endDate - End date
- * @returns {Promise<Array>} Array of analysis objects
+ * @param startDate - Start date
+ * @param endDate - End date
+ * @returns Array of analysis objects
  */
-function getAnalysesInRange(startDate, endDate) {
+export function getAnalysesInRange(startDate: Date, endDate: Date): Promise<DayAnalysis[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const startDateStr = new Date(startDate).toISOString().split('T')[0];
         const endDateStr = new Date(endDate).toISOString().split('T')[0];
         
-        db.all(`
+        db.all<DayAnalysis>(`
             SELECT 
                 id,
                 date,
@@ -121,10 +134,10 @@ function getAnalysesInRange(startDate, endDate) {
 
 /**
  * Delete a day analysis by ID
- * @param {number} id - Analysis ID
- * @returns {Promise<boolean>} True if deleted, false otherwise
+ * @param id - Analysis ID
+ * @returns True if deleted, false otherwise
  */
-function deleteAnalysis(id) {
+export function deleteAnalysis(id: number): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         db.run('DELETE FROM day_analyses WHERE id = ?', [id], function(err) {
@@ -140,11 +153,11 @@ function deleteAnalysis(id) {
 
 /**
  * Update an existing day analysis
- * @param {number} id - Analysis ID
- * @param {string} content - New analysis content
- * @returns {Promise<boolean>} True if updated, false otherwise
+ * @param id - Analysis ID
+ * @param content - New analysis content
+ * @returns True if updated, false otherwise
  */
-function updateAnalysis(id, content) {
+export function updateAnalysis(id: number, content: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const timestamp = new Date().toISOString();
@@ -162,13 +175,4 @@ function updateAnalysis(id, content) {
             resolve(this.changes > 0);
         });
     });
-}
-
-module.exports = {
-    saveDayAnalysis,
-    getDayAnalysis,
-    getHistoricalAnalyses,
-    getAnalysesInRange,
-    deleteAnalysis,
-    updateAnalysis
-}; 
+} 

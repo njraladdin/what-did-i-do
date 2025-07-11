@@ -1,12 +1,32 @@
-const { getConnection } = require('./core');
+import { getConnection } from './core';
+
+interface Note {
+    id: number;
+    date: string;
+    timestamp: string;
+    content: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+interface NoteForAnalysis {
+    timestamp: string;
+    content: string;
+}
+
+interface HistoricalNote {
+    date: string;
+    timestamp: string;
+    content: string;
+}
 
 /**
  * Save a new note to the database
- * @param {Date} date - Date for the note
- * @param {string} content - Note content
- * @returns {Promise<number>} The ID of the inserted note
+ * @param date - Date for the note
+ * @param content - Note content
+ * @returns The ID of the inserted note
  */
-function saveNote(date, content) {
+export function saveNote(date: Date, content: string): Promise<number> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const timestamp = new Date().toISOString();
@@ -37,15 +57,15 @@ function saveNote(date, content) {
 
 /**
  * Get all notes for a specific date
- * @param {Date} date - Date to get notes for
- * @returns {Promise<Array>} Array of note objects
+ * @param date - Date to get notes for
+ * @returns Array of note objects
  */
-function getNotesForDate(date) {
+export function getNotesForDate(date: Date): Promise<Note[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const dateStr = new Date(date).toISOString().split('T')[0]; // Format as YYYY-MM-DD
         
-        db.all(`
+        db.all<Note>(`
             SELECT 
                 id,
                 date,
@@ -79,11 +99,11 @@ function getNotesForDate(date) {
 
 /**
  * Update an existing note
- * @param {number} id - Note ID
- * @param {string} content - New note content
- * @returns {Promise<boolean>} True if updated, false otherwise
+ * @param id - Note ID
+ * @param content - New note content
+ * @returns True if updated, false otherwise
  */
-function updateNote(id, content) {
+export function updateNote(id: number, content: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const timestamp = new Date().toISOString();
@@ -109,10 +129,10 @@ function updateNote(id, content) {
 
 /**
  * Delete a note by ID
- * @param {number} id - Note ID
- * @returns {Promise<boolean>} True if deleted, false otherwise
+ * @param id - Note ID
+ * @returns True if deleted, false otherwise
  */
-function deleteNote(id) {
+export function deleteNote(id: number): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         db.run('DELETE FROM notes WHERE id = ?', [id], function(err) {
@@ -128,17 +148,17 @@ function deleteNote(id) {
 
 /**
  * Get notes within a date range
- * @param {Date} startDate - Start date
- * @param {Date} endDate - End date
- * @returns {Promise<Array>} Array of note objects
+ * @param startDate - Start date
+ * @param endDate - End date
+ * @returns Array of note objects
  */
-function getNotesInRange(startDate, endDate) {
+export function getNotesInRange(startDate: Date, endDate: Date): Promise<Note[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const startDateStr = new Date(startDate).toISOString().split('T')[0];
         const endDateStr = new Date(endDate).toISOString().split('T')[0];
         
-        db.all(`
+        db.all<Note>(`
             SELECT 
                 id,
                 date,
@@ -172,15 +192,15 @@ function getNotesInRange(startDate, endDate) {
 
 /**
  * Get notes for day analysis
- * @param {Date} date - Date to get notes for
- * @returns {Promise<Array>} Array of note objects for analysis
+ * @param date - Date to get notes for
+ * @returns Array of note objects for analysis
  */
-function getNotesForAnalysis(date) {
+export function getNotesForAnalysis(date: Date): Promise<NoteForAnalysis[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const dateStr = new Date(date).toISOString().split('T')[0];
         
-        db.all(`
+        db.all<NoteForAnalysis>(`
             SELECT timestamp, content
             FROM notes 
             WHERE date = ?
@@ -197,17 +217,17 @@ function getNotesForAnalysis(date) {
 
 /**
  * Get historical notes for analysis context
- * @param {Date} startDate - Start date for historical data
- * @param {Date} endDate - End date (exclusive)
- * @returns {Promise<Array>} Array of historical note objects
+ * @param startDate - Start date for historical data
+ * @param endDate - End date (exclusive)
+ * @returns Array of historical note objects
  */
-function getHistoricalNotes(startDate, endDate) {
+export function getHistoricalNotes(startDate: Date, endDate: Date): Promise<HistoricalNote[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const startDateStr = new Date(startDate).toISOString().split('T')[0];
         const endDateStr = new Date(endDate).toISOString().split('T')[0];
         
-        db.all(`
+        db.all<HistoricalNote>(`
             SELECT date, timestamp, content
             FROM notes 
             WHERE date >= ? AND date < ?
@@ -220,14 +240,4 @@ function getHistoricalNotes(startDate, endDate) {
             resolve(notes || []);
         });
     });
-}
-
-module.exports = {
-    saveNote,
-    getNotesForDate,
-    updateNote,
-    deleteNote,
-    getNotesInRange,
-    getNotesForAnalysis,
-    getHistoricalNotes
-}; 
+} 
