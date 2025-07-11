@@ -1175,3 +1175,19 @@
     height: 300px;
     width: 100%;
 }
+
+.collapse-btn {
+    transition: transform 0.2s;
+}
+.collapse-btn .fa-chevron-up {
+    transition: transform 0.2s;
+}
+.collapse-btn.collapsed .fa-chevron-up {
+    transform: rotate(-180deg);
+}
+#yearlyProgressChartContainer.collapsed {
+    display: none;
+}
+#dailyProgressChartContainer.collapsed {
+    display: none;
+}

@@ -8,6 +8,7 @@ let hasShownMinimizeMessage = false;
 let currentPage = 1;
 let allScreenshots = [];
 let dailyProgressChart = null;
+let yearlyProgressChart = null;
 
 const SCREENSHOTS_PER_PAGE = 5;
 
@@ -502,7 +503,7 @@ async function updateDailyProgressChart() {
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + 'h';
+                                return context.dataset.label + ': ' + Math.round(context.parsed.y) + 'h';
                             }
                         }
                     }
@@ -533,7 +534,7 @@ async function updateDailyProgressChart() {
                         },
                         ticks: {
                             callback: function(value) {
-                                return value.toFixed(1) + 'h';
+                                return Math.round(value) + 'h';
                             },
                             font: {
                                 size: 12
@@ -550,6 +551,162 @@ async function updateDailyProgressChart() {
         });
     } catch (error) {
         console.error('Error updating daily progress chart:', error);
+    }
+}
+
+async function updateYearlyProgressChart() {
+    try {
+        const year = new Date().getFullYear();
+        const result = await ipcRenderer.invoke('get-yearly-monthly-category-stats', year);
+        if (!result.success) {
+            console.error('Error getting yearly monthly stats for chart:', result.error);
+            return;
+        }
+        const data = result.data; // { '01': { WORK: hours, ... }, ... }
+        const monthLabels = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        // For each month, get the top 3 categories by hours
+        const months = Object.keys(data).sort();
+        const categorySet = new Set();
+        const topCategoriesPerMonth = months.map(month => {
+            const hours = data[month] || {};
+            const top3 = Object.entries(hours)
+                .filter(([, h]) => h > 0)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 3)
+                .map(([cat]) => cat);
+            top3.forEach(cat => categorySet.add(cat));
+            return top3;
+        });
+        const allTopCategories = Array.from(categorySet);
+        // Color mapping (same as daily)
+        const categoryColors = {
+            WORK: 'rgba(37, 99, 235, 0.8)',           // Blue
+            LEARN: 'rgba(34, 197, 94, 0.8)',          // Green
+            SOCIAL: 'rgba(162, 28, 175, 0.8)',        // Purple
+            ENTERTAINMENT: 'rgba(239, 68, 68, 0.8)',  // Red
+            OTHER: 'rgba(100, 116, 139, 0.8)'         // Gray
+        };
+        const borderColors = {
+            WORK: 'rgba(37, 99, 235, 1)',
+            LEARN: 'rgba(34, 197, 94, 1)',
+            SOCIAL: 'rgba(162, 28, 175, 1)',
+            ENTERTAINMENT: 'rgba(239, 68, 68, 1)',
+            OTHER: 'rgba(100, 116, 139, 1)'
+        };
+        // For each category, build a dataset with values for each month (0 if not in top 3 for that month)
+        const datasets = allTopCategories.map(category => {
+            return {
+                label: formatCategoryName(category),
+                data: months.map((month, i) => {
+                    const top3 = topCategoriesPerMonth[i];
+                    if (top3.includes(category)) {
+                        return Math.round(data[month][category] || 0);
+                    } else {
+                        return null; // Use null to avoid rendering a bar and remove the gap
+                    }
+                }),
+                backgroundColor: categoryColors[category] || 'rgba(180,180,180,0.7)',
+                borderColor: borderColors[category] || 'rgba(180,180,180,1)',
+                borderWidth: 1,
+                borderRadius: 4,
+                borderSkipped: false,
+                maxBarThickness: 32
+            };
+        });
+        // Find the max hours value for scaling
+        let maxHours = 1;
+        datasets.forEach(ds => {
+            ds.data.forEach(val => {
+                if (val > maxHours) maxHours = val;
+            });
+        });
+        maxHours = Math.ceil(maxHours + 0.5);
+        // Destroy existing chart if it exists
+        if (yearlyProgressChart) {
+            yearlyProgressChart.destroy();
+        }
+        const ctx = document.getElementById('yearlyProgressChart');
+        if (!ctx) {
+            console.error('Yearly chart canvas not found');
+            return;
+        }
+        yearlyProgressChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + Math.round(context.parsed.y) + 'h';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: false,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        stacked: false,
+                        beginAtZero: true,
+                        max: maxHours,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Hours',
+                            font: { size: 13 }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return Math.round(value) + 'h';
+                            },
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error updating yearly progress chart:', error);
     }
 }
 
@@ -1313,6 +1470,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Initialize the daily progress chart
             await updateDailyProgressChart();
+            await updateYearlyProgressChart();
         }
     } catch (error) {
         console.error('Error initializing data:', error);
@@ -1415,6 +1573,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             button.innerHTML = '<i class="fas fa-brain"></i> Generate Analysis';
         }
     });
+
+    // Collapse/expand yearly chart logic
+    const yearlyChartBtn = document.getElementById('toggleYearlyChartBtn');
+    const yearlyChartChevron = document.getElementById('yearlyChartChevron');
+    const yearlyChartContainer = document.getElementById('yearlyProgressChartContainer');
+    // Restore state from localStorage
+    const collapsed = localStorage.getItem('yearlyChartCollapsed') === 'true';
+    if (collapsed) {
+        yearlyChartBtn.classList.add('collapsed');
+        yearlyChartContainer.classList.add('collapsed');
+    }
+    yearlyChartBtn.addEventListener('click', () => {
+        yearlyChartBtn.classList.toggle('collapsed');
+        yearlyChartContainer.classList.toggle('collapsed');
+        const isCollapsed = yearlyChartContainer.classList.contains('collapsed');
+        localStorage.setItem('yearlyChartCollapsed', isCollapsed ? 'true' : 'false');
+    });
+
+    // Collapse/expand daily chart logic
+    const dailyChartBtn = document.getElementById('toggleDailyChartBtn');
+    const dailyChartChevron = document.getElementById('dailyChartChevron');
+    const dailyChartContainer = document.getElementById('dailyProgressChartContainer');
+    // Restore state from localStorage
+    const dailyCollapsed = localStorage.getItem('dailyChartCollapsed') === 'true';
+    if (dailyCollapsed) {
+        dailyChartBtn.classList.add('collapsed');
+        dailyChartContainer.classList.add('collapsed');
+    }
+    dailyChartBtn.addEventListener('click', () => {
+        dailyChartBtn.classList.toggle('collapsed');
+        dailyChartContainer.classList.toggle('collapsed');
+        const isCollapsed = dailyChartContainer.classList.contains('collapsed');
+        localStorage.setItem('dailyChartCollapsed', isCollapsed ? 'true' : 'false');
+    });
 });
 
 // Initialize API key check
@@ -1500,6 +1692,7 @@ ipcRenderer.on('refresh-ui', async () => {
             
             // Update the daily progress chart
             await updateDailyProgressChart();
+            await updateYearlyProgressChart();
         }
     } catch (error) {
         console.error('Error refreshing UI:', error);
@@ -1537,6 +1730,7 @@ ipcRenderer.on('initial-data', async (event, data) => {
         
         // Update the daily progress chart
         await updateDailyProgressChart();
+        await updateYearlyProgressChart();
     }
 });
 

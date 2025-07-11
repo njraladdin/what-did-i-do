@@ -923,6 +923,77 @@ function getDailyCategoryStats(currentDate, intervalMinutes) {
     });
 }
 
+// Get total hours per category for each month in a year
+function getYearlyMonthlyCategoryStats(year, intervalMinutes) {
+    return new Promise((resolve, reject) => {
+        const startOfYear = new Date(year, 0, 1, 0, 0, 0, 0);
+        const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+
+        db.all(`
+            SELECT 
+                strftime('%m', timestamp) as month,
+                category,
+                timestamp,
+                LEAD(timestamp) OVER (PARTITION BY strftime('%m', timestamp) ORDER BY timestamp ASC) as next_timestamp
+            FROM screenshots 
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
+            ORDER BY timestamp ASC
+        `, [
+            startOfYear.toISOString(),
+            endOfYear.toISOString()
+        ], (err, rows) => {
+            if (err) {
+                console.error('Error getting yearly monthly stats:', err);
+                reject(err);
+                return;
+            }
+
+            // Structure: { '01': { WORK: hours, ... }, ... }
+            const result = {};
+            // Initialize for all months and categories
+            for (let m = 1; m <= 12; m++) {
+                const mm = m.toString().padStart(2, '0');
+                result[mm] = {};
+                categories.filter(c => c !== 'UNKNOWN').forEach(cat => {
+                    result[mm][cat] = 0;
+                });
+            }
+
+            // For each month, accumulate minutes per category
+            const categoryMinutesByMonth = {};
+            rows.forEach((row, idx) => {
+                const month = row.month;
+                if (!categoryMinutesByMonth[month]) categoryMinutesByMonth[month] = {};
+                if (!categoryMinutesByMonth[month][row.category]) categoryMinutesByMonth[month][row.category] = 0;
+
+                // Calculate time difference if there's a next screenshot in the same month
+                if (row.next_timestamp) {
+                    const currentTime = new Date(row.timestamp);
+                    const nextTime = new Date(row.next_timestamp);
+                    const diffMinutes = Math.abs((nextTime - currentTime) / (1000 * 60));
+                    // Only count if difference is 5 minutes or less
+                    if (diffMinutes <= 5) {
+                        categoryMinutesByMonth[month][row.category] += diffMinutes;
+                    }
+                } else {
+                    // For the last screenshot of a sequence, count a default duration
+                    const defaultDuration = Math.min(intervalMinutes, 5);
+                    categoryMinutesByMonth[month][row.category] += defaultDuration;
+                }
+            });
+
+            // Convert minutes to hours and fill result
+            Object.keys(categoryMinutesByMonth).forEach(month => {
+                Object.keys(categoryMinutesByMonth[month]).forEach(cat => {
+                    result[month][cat] = categoryMinutesByMonth[month][cat] / 60;
+                });
+            });
+
+            resolve(result);
+        });
+    });
+}
+
 module.exports = {
     initializeDatabase,
     getActivityStats,
@@ -941,5 +1012,6 @@ module.exports = {
     getDayDataForAnalysis,
     saveDayAnalysis,
     getDayAnalysis,
-    getDailyCategoryStats
+    getDailyCategoryStats,
+    getYearlyMonthlyCategoryStats
 }; 

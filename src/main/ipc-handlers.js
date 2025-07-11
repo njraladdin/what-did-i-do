@@ -392,6 +392,18 @@ function initializeIpcHandlers(dependencies) {
         }
     });
 
+    // Yearly monthly stats handler
+    ipcMain.handle('get-yearly-monthly-category-stats', async (event, year) => {
+        try {
+            const interval = store.get('interval') || 5;
+            const data = await database.getYearlyMonthlyCategoryStats(year, interval);
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error getting yearly monthly category stats:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
     // Logging handlers
     ipcMain.handle('open-logs', () => {
         const logPath = logger.getLogPath();

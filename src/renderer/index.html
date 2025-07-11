@@ -268,10 +268,28 @@
                     <div class="analytics-cards" id="monthlyAnalytics"></div>
                 
                 <!-- Daily Progress Chart -->
-                <div class="chart-section">
-                    <h4>Daily Progress - Top 3 Categories</h4>
-                    <div class="chart-container">
+                <div class="chart-section" id="dailyProgressChartCard">
+                    <div class="chart-header" style="display: flex; align-items: center; justify-content: space-between;">
+                        <h4 style="margin: 0;">Daily Progress - Top 3 Categories</h4>
+                        <button id="toggleDailyChartBtn" class="collapse-btn" title="Show/hide chart" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 0 8px;">
+                            <i id="dailyChartChevron" class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                    <div class="chart-container" id="dailyProgressChartContainer">
                         <canvas id="dailyProgressChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Yearly Progress Chart -->
+                <div class="chart-section" id="yearlyProgressChartCard">
+                    <div class="chart-header" style="display: flex; align-items: center; justify-content: space-between;">
+                        <h4 style="margin: 0;">Monthly Progress - Top 3 Categories (Yearly View)</h4>
+                        <button id="toggleYearlyChartBtn" class="collapse-btn" title="Show/hide chart" style="background: none; border: none; cursor: pointer; font-size: 20px; padding: 0 8px;">
+                            <i id="yearlyChartChevron" class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                    <div class="chart-container" id="yearlyProgressChartContainer">
+                        <canvas id="yearlyProgressChart"></canvas>
                     </div>
                 </div>
                 </div>

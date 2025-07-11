@@ -8,11 +8,10 @@
 
 - patterns : use ai to recognise behaviour patterns 
 - memories: everything it knows about  you so far based on what you do on the computer  (what you're working on) 
-- chat: chat using relevant logs or memories 
+- data chat: ask anything about current month data (includes screenshots, notes, analyses)  
 - mcp : expose day analysises and analytics and memories and diary logs in an MCP server 
 - ui : the ui is takign too much space than it needs, make it more compact. check Rize ui 
-- chart: add chart to see trend in activites for the past days in month, and for past months in year 
-
+- dynamic chart: tell AI to generate a any chart with chartjs and data 
 
 # TODO 
 - details: include more detailed description about current task. helpful for future analytics, done 
@@ -21,6 +20,8 @@
 - calculation: when changing the interval, it also changes the existing tracked times, done 
 - Other : add 'other' tag for tasks that are not work or entertainement or social or learn, done 
 - day analysis: use past context to generate a day analysis, to see what changed, what direction the user has taken, done
+- chart: add chart to see trend in activites for the past days in month, and for past months in year 
+
 
 
 
