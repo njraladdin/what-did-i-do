@@ -7,8 +7,7 @@
 # ideas 
 
 
-- dynamic chart: tell AI to generate a any chart with chartjs and data. it can use either sql or python to get stats from db and preview them on a chart 
-- patterns : use ai to recognise behaviour patterns (using chat / dynamic charts and statistics "what's my most productive hours")
+- dynamic chart: tell AI to generate a any chart with chartjs and data. (note: just use cursor for this to add any chart you want)
 - memories: everything it knows about  you so far based on what you do on the computer  (what you're working on) 
 - ui : the ui is takign too much space than it needs, make it more compact. check Rize ui 
 - mcp : expose day analysises and analytics and memories and diary logs in an MCP server 
@@ -22,8 +21,6 @@
 - day analysis: use past context to generate a day analysis, to see what changed, what direction the user has taken, done
 - chart: add chart to see trend in activites for the past days in month, and for past months in year, done 
 - screenshot logs with context: provide screenshot logs descirption with previous logs, done 
+- data chat: ask anything about current month data (includes descriptions, notes, analyses), done 
 
-
-- data chat: ask anything about current month data (includes descriptions, notes, analyses). 
-"best productive time period" most sustainable working durations" "patterns that make you stop working for a long period"
 

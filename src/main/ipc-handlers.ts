@@ -455,8 +455,8 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     ipcMain.handle('get-yearly-monthly-category-stats', async (event: IpcMainInvokeEvent, year: number) => {
         try {
             const interval = store.get('interval') || 5;
-            const data = await database.stats.getYearlyMonthlyCategoryStats(year, interval);
-            return { success: true, data };
+            const result = await database.stats.getYearlyMonthlyCategoryStats(year, interval);
+            return { success: true, ...result };
         } catch (error) {
             console.error('Error getting yearly monthly category stats:', error);
             return { success: false, error: getErrorMessage(error) };

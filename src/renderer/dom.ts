@@ -389,33 +389,43 @@ function displayNotes(notes: Array<{ id: number; content: string; timestamp: str
 // Chart Functions
 function renderDailyProgressChart(result: { 
     dailyStats: Record<string, { timeInHours: Record<string, number> }> 
-}): void {
-    const dailyStats = result.dailyStats;
-    if (!dailyStats || Object.keys(dailyStats).length === 0) {
-        console.log('No daily stats available for chart');
+}) {
+    console.log('Rendering daily progress chart with data:', result);
+
+    if (!result || !result.dailyStats) {
+        console.error('Invalid data for daily progress chart:', result);
         return;
     }
 
-    // Get all days in the month with data, sorted
-    const daysWithData = Object.keys(dailyStats).sort();
-    if (daysWithData.length === 0) return;
+    const dailyStats = result.dailyStats;
+    const dates = Object.keys(dailyStats).sort();
 
-    // For each day, get the top 3 categories by hours
-    const categorySet = new Set<string>();
-    const topCategoriesPerDay = daysWithData.map(day => {
-        const hours = dailyStats[day]?.timeInHours || {};
-        // Get top 3 categories for this day by hours
-        const top3 = Object.entries(hours)
-            .filter(([, h]) => typeof h === 'number' && h > 0)
-            .sort(([, a], [, b]) => (b as number) - (a as number))
-            .slice(0, 3)
-            .map(([cat]) => cat);
-        top3.forEach(cat => categorySet.add(cat));
-        return top3;
+    if (dates.length === 0) {
+        console.log('No daily stats to render for the daily chart.');
+        return;
+    }
+
+    // Determine the top 3 categories based on total time spent across the period
+    const categoryTotals: Record<string, number> = {};
+    dates.forEach(date => {
+        const stats = dailyStats[date];
+        if (stats && stats.timeInHours) {
+            Object.entries(stats.timeInHours).forEach(([category, hours]) => {
+                categoryTotals[category] = (categoryTotals[category] || 0) + hours;
+            });
+        }
     });
-    // All categories that were ever in a top 3
-    const allTopCategories = Array.from(categorySet);
 
+    const topCategories = Object.entries(categoryTotals)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([category]) => category);
+
+    if (topCategories.length === 0) {
+        console.log('No categories with activity to render for the daily chart.');
+        return;
+    }
+    
     // Color mapping for categories
     const categoryColors: Record<string, string> = {
         WORK: 'rgba(37, 99, 235, 0.8)',           // Blue
@@ -425,18 +435,17 @@ function renderDailyProgressChart(result: {
         OTHER: 'rgba(100, 116, 139, 0.8)',        // Gray
     };
 
-    // For each category, build a dataset with values for each day (0 if not in top 3 for that day)
-    const datasets = allTopCategories.map(category => {
+    const datasets = topCategories.map(category => {
+        const data = dates.map(date => {
+            const stats = dailyStats[date];
+            return stats && stats.timeInHours ? (stats.timeInHours[category] || 0) : 0;
+        });
+
+        const formattedCategory = formatCategoryName(category);
+
         return {
-            label: formatCategoryName(category),
-            data: daysWithData.map((day, i) => {
-                const top3 = topCategoriesPerDay[i];
-                if (top3.includes(category)) {
-                    return dailyStats[day].timeInHours[category] || 0;
-                } else {
-                    return 0;
-                }
-            }),
+            label: formattedCategory,
+            data: data,
             backgroundColor: categoryColors[category] || categoryColors.OTHER,
             borderColor: categoryColors[category] || categoryColors.OTHER,
             borderWidth: 1,
@@ -446,51 +455,37 @@ function renderDailyProgressChart(result: {
         };
     });
 
-    // Find the max hours value for scaling
-    let maxHours = 1;
-    datasets.forEach(ds => {
-        ds.data.forEach(val => {
-            if (val > maxHours) maxHours = val;
-        });
-    });
-    maxHours = Math.ceil(maxHours + 0.5); // round up for nice axis
-
-    // X-axis labels: days (e.g., Jul 5, Jul 6, ...)
-    const chartLabels = daysWithData.map(day => {
-        const d = new Date(day);
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-
     // Destroy existing chart if it exists
     if (typedWindow.dailyProgressChart) {
         typedWindow.dailyProgressChart.destroy();
     }
 
-    // Create new chart
+    // Get chart context
     const ctx = document.getElementById('dailyProgressChart') as HTMLCanvasElement | null;
     if (!ctx) {
-        console.error('Chart canvas not found');
+        console.error('Could not find daily progress chart canvas element');
         return;
     }
 
+    const chartData = {
+        labels: dates.map(date => new Date(date).toLocaleDateString(undefined, { day: 'numeric' })),
+        datasets: datasets
+    };
+
+    // Create new chart
     typedWindow.dailyProgressChart = new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels: chartLabels,
-            datasets: datasets
-        },
+        data: chartData,
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: true,
                     position: 'top',
                     labels: {
-                        usePointStyle: true,
-                        padding: 20,
+                        boxWidth: 12,
                         font: {
-                            size: 12
+                            size: 13
                         }
                     }
                 },
@@ -499,7 +494,14 @@ function renderDailyProgressChart(result: {
                     intersect: false,
                     callbacks: {
                         label: function(context: any) {
-                            return context.dataset.label + ': ' + Math.round(context.parsed.y) + 'h';
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += `${context.parsed.y.toFixed(1)}h`;
+                            }
+                            return label;
                         }
                     }
                 }
@@ -512,35 +514,28 @@ function renderDailyProgressChart(result: {
                     },
                     ticks: {
                         font: {
-                            size: 12
+                            size: 13
                         }
                     }
                 },
                 y: {
                     stacked: false,
                     beginAtZero: true,
-                    max: maxHours,
                     grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Hours',
-                        font: { size: 13 }
+                        color: 'rgba(200, 200, 200, 0.2)'
                     },
                     ticks: {
-                        callback: function(value: any) {
-                            return Math.round(value) + 'h';
-                        },
                         font: {
-                            size: 12
+                            size: 13
+                        },
+                        callback: function(value: any) {
+                            return `${value}h`;
                         }
                     }
                 }
             },
             interaction: {
-                mode: 'nearest',
-                axis: 'x',
+                mode: 'index',
                 intersect: false
             }
         }
@@ -548,107 +543,97 @@ function renderDailyProgressChart(result: {
 }
 
 function renderYearlyProgressChart(result: { 
-    data: Record<string, Record<string, number>> 
-}): void {
-    const data = result.data;
-    const monthLabels = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
+    data: Record<string, any>, 
+    topCategories: string[] 
+}) {
+    console.log('Rendering yearly progress chart with data:', result);
+
+    if (!result || !result.data || !result.topCategories) {
+        console.error('Invalid data for yearly progress chart:', result);
+        return;
+    }
+
+    const stats = result.data;
+    const topCategories = result.topCategories;
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    if (topCategories.length === 0) {
+        console.log('No top categories to render for the yearly chart.');
+        return;
+    }
     
-    // For each month, get the top 3 categories by hours
-    const months = Object.keys(data).sort();
-    const categorySet = new Set<string>();
-    const topCategoriesPerMonth = months.map(month => {
-        const hours = data[month] || {};
-        const top3 = Object.entries(hours)
-            .filter(([, h]) => typeof h === 'number' && h > 0)
-            .sort(([, a], [, b]) => (b as number) - (a as number))
-            .slice(0, 3)
-            .map(([cat]) => cat);
-        top3.forEach(cat => categorySet.add(cat));
-        return top3;
-    });
-    const allTopCategories = Array.from(categorySet);
-    
-    // Color mapping (same as daily)
+    // Color mapping for categories
     const categoryColors: Record<string, string> = {
         WORK: 'rgba(37, 99, 235, 0.8)',           // Blue
         LEARN: 'rgba(34, 197, 94, 0.8)',          // Green
         SOCIAL: 'rgba(162, 28, 175, 0.8)',        // Purple
         ENTERTAINMENT: 'rgba(239, 68, 68, 0.8)',  // Red
-        OTHER: 'rgba(100, 116, 139, 0.8)'         // Gray
+        OTHER: 'rgba(100, 116, 139, 0.8)',        // Gray
     };
     
-    // For each category, build a dataset with values for each month (0 if not in top 3 for that month)
-    const datasets = allTopCategories.map(category => {
+    // Create datasets for the top categories
+    const datasets = topCategories.map(category => {
+        const data = monthNames.map((month, index) => {
+            const monthKey = `${typedWindow.currentDate.getFullYear()}-${(index + 1).toString().padStart(2, '0')}`;
+            return stats[monthKey] ? (stats[monthKey].timeInHours[category] || 0) : 0;
+        });
+
+        const formattedCategory = formatCategoryName(category);
+
         return {
-            label: formatCategoryName(category),
-            data: months.map((month, i) => {
-                const top3 = topCategoriesPerMonth[i];
-                if (top3.includes(category)) {
-                    const monthData = data[month] || {};
-                    return Math.round(monthData[category] || 0);
-                } else {
-                    return null; // Use null to avoid rendering a bar and remove the gap
-                }
-            }),
-            backgroundColor: categoryColors[category] || 'rgba(180,180,180,0.7)',
-            borderColor: categoryColors[category] || 'rgba(180,180,180,1)',
+            label: formattedCategory,
+            data: data,
+            backgroundColor: categoryColors[category] || categoryColors.OTHER,
+            borderColor: categoryColors[category] || categoryColors.OTHER,
             borderWidth: 1,
             borderRadius: 4,
             borderSkipped: false,
             maxBarThickness: 32
         };
     });
-    
-    // Find the max hours value for scaling
-    let maxHours = 1;
-    datasets.forEach(ds => {
-        ds.data.forEach(val => {
-            if (val && val > maxHours) maxHours = val;
-        });
-    });
-    maxHours = Math.ceil(maxHours + 0.5);
-    
-    // Destroy existing chart if it exists
+
     if (typedWindow.yearlyProgressChart) {
         typedWindow.yearlyProgressChart.destroy();
     }
-    
+
     const ctx = document.getElementById('yearlyProgressChart') as HTMLCanvasElement | null;
     if (!ctx) {
-        console.error('Yearly chart canvas not found');
+        console.error('Could not find yearly progress chart canvas element');
         return;
     }
     
     typedWindow.yearlyProgressChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: monthLabels,
-            datasets: datasets
+            labels: monthNames,
+            datasets: datasets,
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: true,
                     position: 'top',
                     labels: {
-                        usePointStyle: true,
-                        padding: 20,
+                        boxWidth: 12,
                         font: {
-                            size: 12
-                        }
-                    }
+                            size: 13,
+                        },
+                    },
                 },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
                     callbacks: {
                         label: function(context: any) {
-                            return context.dataset.label + ': ' + Math.round(context.parsed.y) + 'h';
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += `${context.parsed.y.toFixed(1)}h`;
+                            }
+                            return label;
                         }
                     }
                 }
@@ -657,44 +642,38 @@ function renderYearlyProgressChart(result: {
                 x: {
                     stacked: false,
                     grid: {
-                        display: false
+                        display: false,
                     },
                     ticks: {
                         font: {
-                            size: 12
-                        }
-                    }
+                            size: 13,
+                        },
+                    },
                 },
                 y: {
                     stacked: false,
                     beginAtZero: true,
-                    max: maxHours,
                     grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Hours',
-                        font: { size: 13 }
+                        color: 'rgba(200, 200, 200, 0.2)',
                     },
                     ticks: {
-                        callback: function(value: any) {
-                            return Math.round(value) + 'h';
-                        },
                         font: {
-                            size: 12
-                        }
-                    }
-                }
+                            size: 13,
+                        },
+                        callback: function(value: any) {
+                            return `${value}h`;
+                        },
+                    },
+                },
             },
             interaction: {
-                mode: 'nearest',
-                axis: 'x',
+                mode: 'index',
                 intersect: false
             }
-        }
+        },
     });
 }
+
 
 // Chat Functions
 function addChatMessage(message: string, isUser: boolean = false, addToHistory: boolean = true): void {

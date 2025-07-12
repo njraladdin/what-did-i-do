@@ -335,95 +335,123 @@ export function getDailyCategoryStats(
 export function getYearlyMonthlyCategoryStats(
     year: number,
     intervalMinutes: number
-): Promise<YearlyMonthlyStats> {
+): Promise<{ data: YearlyMonthlyStats, topCategories: string[] }> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
         const startOfYear = new Date(year, 0, 1);
         const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
 
-        // Get all screenshots for the year
-        db.all<{ month: string; timestamp: string; category: Category; next_timestamp?: string; }>(`
+        // SQL query to get all screenshots for the year
+        db.all<{
+            month: string;
+            category: Category;
+            timestamp: string;
+            next_timestamp: string | null;
+        }>(`
             SELECT 
                 strftime('%Y-%m', timestamp) as month,
-                timestamp,
                 category,
-                LEAD(timestamp) OVER (ORDER BY timestamp ASC) as next_timestamp
+                timestamp,
+                LEAD(timestamp) OVER (PARTITION BY strftime('%Y-%m-%d', timestamp) ORDER BY timestamp ASC) as next_timestamp
             FROM screenshots 
             WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
             ORDER BY timestamp ASC
         `, [
             startOfYear.toISOString(),
             endOfYear.toISOString()
-        ], (err, timeResults) => {
+        ], (err, rows) => {
             if (err) {
                 console.error('Error getting yearly monthly stats:', err);
                 reject(err);
                 return;
             }
 
-            const yearlyStats: YearlyMonthlyStats = {};
+            const yearlyData: {
+                [month: string]: {
+                    categoryMinutes: Record<Category, number>;
+                    categoryCounts: Record<Category, number>;
+                    totalScreenshots: number;
+                    uniqueDays: Set<string>;
+                }
+            } = {};
 
-            // Process results
-            if (timeResults && timeResults.length > 0) {
-                // Group results by month
-                const monthlyData: { [month: string]: typeof timeResults } = {};
-                timeResults.forEach(row => {
-                    if (!monthlyData[row.month]) {
-                        monthlyData[row.month] = [];
+            const overallCategoryMinutes: Record<Category, number> = initializeCategoryRecord();
+
+            // Process all rows
+            if (rows && rows.length > 0) {
+                rows.forEach(row => {
+                    const month = row.month;
+
+                    // Initialize month data if it doesn't exist
+                    if (!yearlyData[month]) {
+                        yearlyData[month] = {
+                            categoryMinutes: initializeCategoryRecord(),
+                            categoryCounts: initializeCategoryRecord(),
+                            totalScreenshots: 0,
+                            uniqueDays: new Set()
+                        };
                     }
-                    monthlyData[row.month].push(row);
-                });
 
-                // Calculate stats for each month
-                Object.keys(monthlyData).forEach(month => {
-                    const monthResults = monthlyData[month];
-                    const uniqueDays = new Set<string>();
-                    const categoryCounts = initializeCategoryRecord();
-                    const categoryMinutes = initializeCategoryRecord();
-                    let totalScreenshots = 0;
+                    // Track unique days for each month
+                    const day = new Date(row.timestamp).toISOString().split('T')[0];
+                    yearlyData[month].uniqueDays.add(day);
 
-                    // Process each screenshot
-                    monthResults.forEach(row => {
-                        const day = new Date(row.timestamp).toISOString().split('T')[0];
-                        uniqueDays.add(day);
+                    // Count screenshots
+                    yearlyData[month].categoryCounts[row.category]++;
+                    yearlyData[month].totalScreenshots++;
 
-                        categoryCounts[row.category]++;
-                        totalScreenshots++;
+                    // Calculate time difference if there's a next screenshot within the same day
+                    if (row.next_timestamp) {
+                        const currentTime = new Date(row.timestamp);
+                        const nextTime = new Date(row.next_timestamp);
+                        const diffMinutes = Math.abs((nextTime.getTime() - currentTime.getTime()) / (1000 * 60));
 
-                        if (row.next_timestamp) {
-                            const currentTime = new Date(row.timestamp);
-                            const nextTime = new Date(row.next_timestamp);
-                            const diffMinutes = Math.abs((nextTime.getTime() - currentTime.getTime()) / (1000 * 60));
-
-                            if (diffMinutes <= 5) {
-                                categoryMinutes[row.category] = (categoryMinutes[row.category] || 0) + diffMinutes;
-                            }
+                        // Only add if the time difference is less than or equal to the interval
+                        if (diffMinutes <= intervalMinutes) {
+                            yearlyData[month].categoryMinutes[row.category] += diffMinutes;
+                            overallCategoryMinutes[row.category] += diffMinutes;
                         } else {
-                            const defaultDuration = Math.min(intervalMinutes, 5);
-                            categoryMinutes[row.category] = (categoryMinutes[row.category] || 0) + defaultDuration;
+                            // If gap is too large, add default interval duration
+                            yearlyData[month].categoryMinutes[row.category] += intervalMinutes;
+                            overallCategoryMinutes[row.category] += intervalMinutes;
                         }
-                    });
-
-                    // Calculate percentages and hours
-                    const percentages = initializeCategoryRecord();
-                    const timeInHours = initializeCategoryRecord();
-
-                    categories.forEach(category => {
-                        percentages[category] = totalScreenshots > 0
-                            ? (categoryCounts[category] / totalScreenshots) * 100
-                            : 0;
-                        timeInHours[category] = categoryMinutes[category] / 60;
-                    });
-
-                    yearlyStats[month] = {
-                        percentages,
-                        timeInHours,
-                        daysWithData: uniqueDays.size
-                    };
+                    } else {
+                        // For the last screenshot of a day, add default interval duration
+                        yearlyData[month].categoryMinutes[row.category] += intervalMinutes;
+                        overallCategoryMinutes[row.category] += intervalMinutes;
+                    }
                 });
             }
 
-            resolve(yearlyStats);
+            // Determine top 3 categories for the whole year
+            const topCategories = Object.entries(overallCategoryMinutes)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 3)
+                .map(([category]) => category);
+
+            const finalStats: YearlyMonthlyStats = {};
+            
+            // Format data for each month
+            Object.keys(yearlyData).forEach(month => {
+                const monthData = yearlyData[month];
+                const percentages = initializeCategoryRecord();
+                const timeInHours = initializeCategoryRecord();
+                
+                categories.forEach(category => {
+                    if (monthData.totalScreenshots > 0) {
+                        percentages[category] = (monthData.categoryCounts[category] / monthData.totalScreenshots) * 100;
+                    }
+                    timeInHours[category] = monthData.categoryMinutes[category] / 60;
+                });
+                
+                finalStats[month] = {
+                    percentages,
+                    timeInHours,
+                    daysWithData: monthData.uniqueDays.size
+                };
+            });
+
+            resolve({ data: finalStats, topCategories });
         });
     });
 }
