@@ -51,7 +51,7 @@ const autoLauncher = new AutoLaunch({
 
 function createWindow() {
     state.mainWindow = new BrowserWindow({
-        width: 1200,
+        width: 1600,
         height: 800,
         webPreferences: {
             nodeIntegration: true,
