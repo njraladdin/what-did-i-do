@@ -1260,6 +1260,25 @@
     color: var(--color-text-primary);
 }
 
+.chat-clear-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-right: 4px;
+}
+
+.chat-clear-btn:hover {
+    background: var(--color-bg-elevated);
+    color: var(--color-danger);
+}
+
 /* Adjust main content when chat is open */
 .layout-container.chat-open .main-content {
     /* This is no longer needed as the flexbox will handle it */
@@ -1503,11 +1522,23 @@
     background: var(--color-text-muted);
 }
 
+.chat-model-selector {
+    padding: 0;
+    border-top: none;
+    margin-left: auto; /* Push it to the right */
+}
+
+.chat-toggle-btn:hover {
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+}
+
 /* Data option pills */
 .chat-data-options {
     padding: 12px 20px;
     background: var(--color-bg-surface);
     border-top: 1px solid var(--color-border);
+    position: relative;
 }
 
 .data-options-label {
@@ -1520,25 +1551,49 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    max-width: 100%;
+    scrollbar-width: thin;
 }
 
 .data-pill {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    background: transparent;
+    color: var(--color-text-secondary);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
-    border-radius: 16px;
-    font-size: 12px;
-    font-weight: 500;
-    background: var(--color-bg-elevated);
-    color: var(--color-text-secondary);
-    border: 1px solid var(--color-border);
-    cursor: pointer;
-    transition: all 0.2s ease;
 }
 
-.data-pill i {
+.data-count {
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 1px 6px;
     font-size: 10px;
+    font-weight: 600;
+    min-width: 16px;
+    text-align: center;
+    display: inline-block;
+    line-height: 1.5;
+}
+
+.data-pill.active .data-count {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: white;
+}
+
+.data-pill:not(.active) .data-count {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: var(--color-text-muted);
 }
 
 .data-pill.active {
@@ -1547,10 +1602,70 @@
     border-color: var(--color-primary);
 }
 
-.data-pill:hover {
-    transform: translateY(-1px);
+.data-pill:not(.active):hover {
+    background: var(--color-bg-elevated);
+    border-color: var(--color-border);
 }
 
-.data-pill:not(.active):hover {
-    background: var(--color-bg-main);
+.data-pill:hover {
+    transform: translateY(0);
+}
+
+.data-option-pills::-webkit-scrollbar {
+    height: 4px;
+}
+
+.data-option-pills::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
+}
+
+.data-option-pills::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.data-preview-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%; /* Position above the pills */
+    left: 20px;
+    margin-bottom: 8px;
+    width: calc(100% - 40px);
+    max-width: 500px;
+    max-height: 250px;
+    overflow-y: auto;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    z-index: 1010;
+    font-size: 12px;
+    line-height: 1.5;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.data-preview-tooltip h4 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    opacity: 0.9;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 6px;
+}
+
+.data-preview-tooltip pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    margin: 0;
+}
+
+.data-preview-tooltip.visible {
+    display: block;
 }

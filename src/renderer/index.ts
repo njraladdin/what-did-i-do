@@ -54,6 +54,9 @@ interface WindowWithCustomProps extends Window {
     sendChatMessage: () => void;
     handleChatKeydown: (event: KeyboardEvent) => void;
     toggleDataOption: (option: string) => void;
+    updateDataCounts: () => void;
+    loadChatHistory: () => void;
+    clearChatHistory: () => void;
 }
 
 // Cast window to our extended interface
@@ -105,6 +108,7 @@ let currentPage = 1;
 let allScreenshots: Screenshot[] = [];
 let dailyProgressChart: any = null;
 let yearlyProgressChart: any = null;
+let previewCache: { [key: string]: any } = {};
 
 const SCREENSHOTS_PER_PAGE = 5;
 
@@ -117,6 +121,7 @@ win.editingNoteId = editingNoteId;
 win.dailyProgressChart = dailyProgressChart;
 win.yearlyProgressChart = yearlyProgressChart;
 win.ipcRenderer = ipcRenderer;
+win.updateDataCounts = updateDataCounts;
 
 // API Key Management functions are now in settings.ts
 
@@ -314,6 +319,77 @@ async function updateYearlyProgressChart() {
     }
 }
 
+// Chat Model Functions
+async function initializeChatModelDropdown() {
+    const modelSelect = document.getElementById('chatGeminiModel') as HTMLSelectElement;
+    if (!modelSelect) return;
+    
+    await populateChatModelsDropdown();
+    
+    modelSelect.addEventListener('change', saveChatGeminiModel);
+}
+
+async function saveChatGeminiModel() {
+    const modelSelect = document.getElementById('chatGeminiModel') as HTMLSelectElement;
+    if (modelSelect) {
+        const selectedModel = modelSelect.value;
+        await ipcRenderer.invoke('set-chat-gemini-model', selectedModel);
+    }
+}
+
+async function populateChatModelsDropdown() {
+    const modelSelect = document.getElementById('chatGeminiModel') as HTMLSelectElement;
+    if (!modelSelect) return;
+    
+    const savedModel = await ipcRenderer.invoke('get-chat-gemini-model');
+    
+    const loadingOption = modelSelect.querySelector('option[value="loading"]');
+    if (loadingOption) (loadingOption as HTMLOptionElement).disabled = false;
+
+    try {
+        const result = await ipcRenderer.invoke('fetch-available-models');
+        
+        if (result.success && result.models.length > 0) {
+            modelSelect.innerHTML = '<option value="gemini-2.0-flash">gemini-2.0-flash (Default)</option>';
+
+            const uniqueModels = new Set<string>(['gemini-2.0-flash']);
+            
+            result.models.forEach((model: { name: string }) => {
+                const modelName = model.name;
+                if (!uniqueModels.has(modelName)) {
+                    const option = document.createElement('option');
+                    option.value = modelName;
+                    option.text = modelName;
+                    modelSelect.add(option);
+                    uniqueModels.add(modelName);
+                }
+            });
+            
+            if (savedModel) {
+                const optionExists = Array.from(modelSelect.options).some(opt => opt.value === savedModel);
+                if (optionExists) {
+                    modelSelect.value = savedModel;
+                } else {
+                    const customOption = document.createElement('option');
+                    customOption.value = savedModel;
+                    customOption.text = `${savedModel} (Custom)`;
+                    modelSelect.add(customOption);
+                    modelSelect.value = savedModel;
+                }
+            }
+        } else {
+            console.error('Could not fetch models: ' + (result.error || 'Unknown reason'));
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error fetching models: ' + errorMessage);
+    } finally {
+        const finalLoadingOption = modelSelect.querySelector('option[value="loading"]');
+        if (finalLoadingOption) finalLoadingOption.remove();
+    }
+}
+
+
 async function deleteScreenshot(id: number) {
     if (confirm('Are you sure you want to delete this screenshot?')) {
         try {
@@ -331,6 +407,7 @@ async function deleteScreenshot(id: number) {
                     // Update monthly averages after deletion
                     await updateMonthlyAverages();
                 }
+                clearPreviewCache(); // Invalidate cache
             }
         } catch (error) {
             console.error('Error deleting screenshot:', error);
@@ -404,6 +481,7 @@ async function changeDate(offset: number) {
         win.allScreenshots = allScreenshots;
         win.DOM.displayScreenshots();
     }
+    clearPreviewCache(); // Invalidate cache
 }
 
 function quitApp() {
@@ -507,6 +585,7 @@ async function saveNote() {
         if (result.success) {
             win.DOM.closeNoteModal();
             await refreshNotes();
+            clearPreviewCache(); // Invalidate cache
         } else {
             alert('Failed to save note: ' + result.error);
         }
@@ -526,6 +605,7 @@ async function deleteNote(id: number) {
             const result = await ipcRenderer.invoke('delete-note', id);
             if (result.success) {
                 await refreshNotes();
+                clearPreviewCache(); // Invalidate cache
             } else {
                 alert('Failed to delete note.');
             }
@@ -622,6 +702,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Initialize the daily progress chart
             await updateDailyProgressChart();
             await updateYearlyProgressChart();
+            
+            // Initialize data counts for chat
+            updateDataCounts();
+
+            // Initialize chat model dropdown
+            await initializeChatModelDropdown();
         }
     } catch (error) {
         console.error('Error initializing data:', error);
@@ -806,6 +892,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('dailyChartCollapsed', isCollapsed ? 'true' : 'false');
         });
     }
+
+    // Add event listeners for data preview
+    const dataPills = document.querySelectorAll('.data-pill[data-preview-type]');
+    dataPills.forEach(pill => {
+        pill.addEventListener('mouseenter', (event: Event) => handlePreviewMouseEnter(event as MouseEvent));
+        pill.addEventListener('mouseleave', () => handlePreviewMouseLeave());
+    });
 });
 
 // Initialize API key check
@@ -985,9 +1078,91 @@ ipcRenderer.on('toggle-chat-sidebar', () => {
     win.DOM.toggleChatSidebar();
 });
 
+// Add function to clear chat history
+async function clearChatHistory() {
+    try {
+        await ipcRenderer.invoke('clear-chat-history');
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
+    } catch (error) {
+        console.error('Error clearing chat history:', error);
+    }
+}
+
+// Export clearChatHistory to window
+win.clearChatHistory = clearChatHistory;
+
+// Export loadChatHistory to window
+win.loadChatHistory = loadChatHistory;
+
 ipcRenderer.on('quit-app', () => {
     // Handle quit app event
 });
+
+async function handlePreviewMouseEnter(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const pill = target.closest('.data-pill[data-preview-type]') as HTMLElement;
+    if (!pill) return;
+
+    const previewType = pill.dataset.previewType;
+    if (!previewType) return;
+
+    // Check cache first
+    if (previewCache[previewType]) {
+        win.DOM.showDataPreview(previewCache[previewType].data, previewCache[previewType].title);
+        return;
+    }
+
+    // Show loading state in tooltip
+    win.DOM.showDataPreview('Loading preview...', 'Loading...');
+
+    // Fetch preview data
+    const result = await ipcRenderer.invoke('get-data-preview', previewType);
+
+    if (result.success) {
+        win.DOM.showDataPreview(result.data, result.title);
+        previewCache[previewType] = result; // Cache the result
+    } else {
+        win.DOM.showDataPreview(`Error: ${result.error}`, 'Error');
+    }
+}
+
+function handlePreviewMouseLeave() {
+    win.DOM.hideDataPreview();
+}
+
+// Function to clear the preview cache
+function clearPreviewCache() {
+    previewCache = {};
+    updateDataCounts();
+}
+
+// Function to update data counts on the buttons
+async function updateDataCounts() {
+    try {
+        const result = await ipcRenderer.invoke('get-data-counts');
+        if (result.success) {
+            const { counts } = result;
+            
+            // Update the count elements
+            const descriptionsCountEl = document.getElementById('descriptionsCount');
+            const logsCountEl = document.getElementById('logsCount');
+            const statsCountEl = document.getElementById('statsCount');
+            const notesCountEl = document.getElementById('notesCount');
+            const analysesCountEl = document.getElementById('analysesCount');
+            
+            if (descriptionsCountEl) descriptionsCountEl.textContent = counts.descriptions.toString();
+            if (logsCountEl) logsCountEl.textContent = counts.logs.toString();
+            if (statsCountEl) statsCountEl.textContent = counts.stats.toString();
+            if (notesCountEl) notesCountEl.textContent = counts.notes.toString();
+            if (analysesCountEl) analysesCountEl.textContent = counts.analyses.toString();
+        }
+    } catch (error) {
+        console.error('Error updating data counts:', error);
+    }
+}
 
 // Chat Functions
 async function sendChatMessage(): Promise<void> {
@@ -1014,20 +1189,26 @@ async function sendChatMessage(): Promise<void> {
         win.DOM.showTypingIndicator();
         
         // Get data options state
-        const includeScreenshots = document.getElementById('includeScreenshotsToggle')?.classList.contains('active') ?? true;
+        const includeDescriptions = document.getElementById('includeScreenshotsToggle')?.classList.contains('active') ?? true;
+        const includeLogs = document.getElementById('includeLogsToggle')?.classList.contains('active') ?? true;
         const includeStats = document.getElementById('includeStatsToggle')?.classList.contains('active') ?? true;
+        const includeNotes = document.getElementById('includeNotesToggle')?.classList.contains('active') ?? true;
+        const includeAnalyses = document.getElementById('includeAnalysesToggle')?.classList.contains('active') ?? true;
         
         // Send message to backend with data options
         const result = await ipcRenderer.invoke('send-chat-message', message, {
-            includeScreenshots,
-            includeStats
+            includeDescriptions,
+            includeLogs,
+            includeStats,
+            includeNotes,
+            includeAnalyses
         });
         
         // Hide typing indicator
         win.DOM.hideTypingIndicator();
         
         if (result.success) {
-            // Add AI response to chat
+            // Add AI response to chat (setting false for addToHistory since it's already stored in backend)
             win.DOM.addChatMessage(result.response, false);
         } else {
             // Add error message
@@ -1052,9 +1233,25 @@ async function sendChatMessage(): Promise<void> {
 
 // Toggle data option pills
 function toggleDataOption(option: string): void {
-    const button = option === 'screenshots' 
-        ? document.getElementById('includeScreenshotsToggle')
-        : document.getElementById('includeStatsToggle');
+    let button: HTMLElement | null = null;
+    
+    switch (option) {
+        case 'screenshots':
+            button = document.getElementById('includeScreenshotsToggle');
+            break;
+        case 'logs':
+            button = document.getElementById('includeLogsToggle');
+            break;
+        case 'stats':
+            button = document.getElementById('includeStatsToggle');
+            break;
+        case 'notes':
+            button = document.getElementById('includeNotesToggle');
+            break;
+        case 'analyses':
+            button = document.getElementById('includeAnalysesToggle');
+            break;
+    }
         
     if (button) {
         button.classList.toggle('active');
@@ -1103,3 +1300,27 @@ win.showAddNoteModal = showAddNoteModal;
 win.closeNoteModal = win.DOM.closeNoteModal;
 win.sendChatMessage = sendChatMessage;
 win.handleChatKeydown = handleChatKeydown; 
+
+// Add this function to load chat history when the chat sidebar is opened
+async function loadChatHistory() {
+    try {
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+        
+        // Clear current messages
+        chatMessages.innerHTML = '';
+        
+        // Fetch chat history from main process
+        const history = await ipcRenderer.invoke('get-chat-history');
+        
+        // Display all messages in the history
+        history.forEach((message: {content: string, role: string}) => {
+            win.DOM.addChatMessage(message.content, message.role === 'user', false);
+        });
+        
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } catch (error) {
+        console.error('Error loading chat history:', error);
+    }
+} 

@@ -34,6 +34,9 @@ interface WindowExtended extends Window {
     showEditNoteModal: (note: Note) => void;
     deleteNote: (id: number) => void;
     loadPreviousNotesInModal: (excludeId?: number | null) => void;
+    updateDataCounts: () => void; // Added updateDataCounts to the interface
+    loadChatHistory: () => void; // Added loadChatHistory to the interface
+    clearChatHistory: () => void; // Added clearChatHistory to the interface
 }
 
 // Get typed window reference
@@ -236,16 +239,6 @@ function toggleExportModal(): void {
     const modal = document.getElementById('exportModal');
     if (modal) {
         modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-    }
-}
-
-function toggleChatSidebar(): void {
-    const sidebar = document.getElementById('chatSidebar');
-    const layoutContainer = document.querySelector('.layout-container');
-    
-    if (sidebar && layoutContainer) {
-        sidebar.classList.toggle('open');
-        layoutContainer.classList.toggle('chat-open');
     }
 }
 
@@ -704,7 +697,7 @@ function renderYearlyProgressChart(result: {
 }
 
 // Chat Functions
-function addChatMessage(message: string, isUser: boolean = false): void {
+function addChatMessage(message: string, isUser: boolean = false, addToHistory: boolean = true): void {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
 
@@ -780,6 +773,64 @@ function clearChatInput(): void {
     }
 }
 
+function showDataPreview(data: any, title: string): void {
+    const tooltip = document.getElementById('dataPreviewTooltip');
+    if (!tooltip) return;
+
+    let content = '';
+    if (data === null || data === undefined) {
+        content = 'No preview data available.';
+    } else if (typeof data === 'string') {
+        content = `<pre>${data}</pre>`;
+    } else if (Array.isArray(data) && data.length === 0) {
+        content = 'No preview data available for the current selection.';
+    } else if (typeof data === 'object' && Object.keys(data).length === 0) {
+        content = 'No preview data available for the current selection.';
+    } else {
+        content = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    }
+
+    tooltip.innerHTML = `<h4>${title}</h4>${content}`;
+    tooltip.classList.add('visible');
+}
+
+function hideDataPreview(): void {
+    const tooltip = document.getElementById('dataPreviewTooltip');
+    if (tooltip) {
+        tooltip.classList.remove('visible');
+        tooltip.innerHTML = '';
+    }
+}
+
+function toggleChatSidebar(): void {
+    const sidebar = document.getElementById('chatSidebar');
+    const layoutContainer = document.querySelector('.layout-container');
+    
+    if (sidebar && layoutContainer) {
+        const isOpening = !sidebar.classList.contains('open');
+        sidebar.classList.toggle('open');
+        layoutContainer.classList.toggle('chat-open');
+        
+        if (isOpening) {
+            // Load chat history when opening sidebar
+            if (typeof typedWindow.loadChatHistory === 'function') {
+                typedWindow.loadChatHistory();
+            }
+            
+            // Call updateDataCounts from window object
+            if (typeof typedWindow.updateDataCounts === 'function') {
+                typedWindow.updateDataCounts();
+            }
+            
+            // Focus chat input
+            setTimeout(() => {
+                const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement;
+                if (chatInput) chatInput.focus();
+            }, 100);
+        }
+    }
+}
+
 // Export all functions to global scope for access from index.ts
 typedWindow.DOM = {
     formatCategoryName,
@@ -805,5 +856,7 @@ typedWindow.DOM = {
     addChatMessage,
     showTypingIndicator,
     hideTypingIndicator,
-    clearChatInput
+    clearChatInput,
+    showDataPreview,
+    hideDataPreview
 }; 

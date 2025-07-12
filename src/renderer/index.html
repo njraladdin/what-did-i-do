@@ -401,6 +401,17 @@
         <div class="chat-sidebar" id="chatSidebar">
             <div class="chat-header">
                 <h3>AI Assistant</h3>
+                <div class="chat-model-selector">
+                    <div class="model-select-wrapper">
+                        <select id="chatGeminiModel" class="model-select">
+                            <option value="gemini-2.0-flash">gemini-2.0-flash (Default)</option>
+                            <option value="loading" disabled>Loading available models...</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="chat-clear-btn" onclick="clearChatHistory()" title="Clear chat history">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
                 <button class="chat-toggle-btn" onclick="toggleChatSidebar()" title="Close chat">
                     <i class="fas fa-times"></i>
                 </button>
@@ -412,25 +423,47 @@
                         <div class="message-content">
                             <i class="fas fa-robot message-icon"></i>
                             <div class="message-text">
-                                Hello! I'm your AI productivity assistant. I have access to your activity data from the current month. 
-                                Ask me anything about your productivity patterns, work habits, or get insights about your daily activities!
+                                Hello! I'm your AI productivity assistant. I can analyze your activity data from the current month.
+                                <br><br>
+                                You can control what data I have access to using the options below:
+                                <br>
+                                • Activity Descriptions - Detailed content of your activities
+                                <br>
+                                • Activity Logs - Timeline of your activities and categories
+                                <br>
+                                • Daily Statistics - Daily breakdown of your time distribution
+                                <br><br>
+                                Ask me anything about your productivity patterns or work habits!
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="chat-data-options">
-                    <div class="data-options-label">Include data:</div>
+                    <div class="data-options-label">Include data (hover to preview):</div>
                     <div class="data-option-pills">
-                        <button id="includeScreenshotsToggle" class="data-pill active" onclick="toggleDataOption('screenshots')">
-                            <i class="fas fa-camera"></i>
-                            <span>Screenshots</span>
+                        <button id="includeScreenshotsToggle" class="data-pill active" onclick="toggleDataOption('screenshots')" data-preview-type="descriptions">
+                            <span>Activity Descriptions</span>
+                            <span class="data-count" id="descriptionsCount">0</span>
                         </button>
-                        <button id="includeStatsToggle" class="data-pill active" onclick="toggleDataOption('stats')">
-                            <i class="fas fa-chart-pie"></i>
-                            <span>Statistics</span>
+                        <button id="includeLogsToggle" class="data-pill active" onclick="toggleDataOption('logs')" data-preview-type="logs">
+                            <span>Activity Logs</span>
+                            <span class="data-count" id="logsCount">0</span>
+                        </button>
+                        <button id="includeStatsToggle" class="data-pill active" onclick="toggleDataOption('stats')" data-preview-type="stats">
+                            <span>Daily Statistics</span>
+                            <span class="data-count" id="statsCount">0</span>
+                        </button>
+                        <button id="includeNotesToggle" class="data-pill active" onclick="toggleDataOption('notes')" data-preview-type="notes">
+                            <span>Notes</span>
+                            <span class="data-count" id="notesCount">0</span>
+                        </button>
+                        <button id="includeAnalysesToggle" class="data-pill active" onclick="toggleDataOption('analyses')" data-preview-type="analyses">
+                            <span>Day Analyses</span>
+                            <span class="data-count" id="analysesCount">0</span>
                         </button>
                     </div>
+                    <div id="dataPreviewTooltip" class="data-preview-tooltip"></div>
                 </div>
                 
                 <div class="chat-input-container">

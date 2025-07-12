@@ -4,6 +4,10 @@ import axios from 'axios';
 import { categories } from './db/core';
 import { GoogleGenAI } from '@google/genai';
 
+// Add conversation history storage
+// Store conversation history using a Map with window ID as key
+const chatHistory = new Map<number, Array<{role: 'user' | 'assistant', content: string}>>();
+
 interface Dependencies {
     database: any; // TODO: Add proper database type
     store: {
@@ -576,6 +580,24 @@ function initializeIpcHandlers(dependencies: Dependencies) {
         }
     });
 
+    ipcMain.handle('get-chat-gemini-model', () => {
+        return store.get('chatGeminiModel') || 'gemini-2.0-flash';
+    });
+
+    ipcMain.handle('set-chat-gemini-model', (event: IpcMainInvokeEvent, model: string) => {
+        try {
+            const trimmedModel = model.trim();
+            if (!trimmedModel) {
+                return { success: false, error: 'Model name cannot be empty' };
+            }
+            store.set('chatGeminiModel', trimmedModel);
+            return { success: true };
+        } catch (error) {
+            console.error('Error setting Chat Gemini model:', error);
+            return { success: false, error: getErrorMessage(error) };
+        }
+    });
+
     ipcMain.handle('test-gemini-model', async (event: IpcMainInvokeEvent, model: string) => {
         try {
             const apiKey = store.get('apiKey');
@@ -665,14 +687,53 @@ function initializeIpcHandlers(dependencies: Dependencies) {
         }
     });
 
-    // Chat handlers
-    ipcMain.handle('send-chat-message', async (event: IpcMainInvokeEvent, message: string, dataOptions: { includeScreenshots: boolean, includeStats: boolean } = { includeScreenshots: true, includeStats: true }) => {
+    // Add these new handlers for chat history
+    ipcMain.handle('clear-chat-history', (event: IpcMainInvokeEvent) => {
+        const windowId = event.sender.id;
+        chatHistory.delete(windowId);
+        return true;
+    });
+
+    // Get chat history for UI display
+    ipcMain.handle('get-chat-history', (event: IpcMainInvokeEvent) => {
+        const windowId = event.sender.id;
+        return chatHistory.get(windowId) || [];
+    });
+
+    // Modify the send-chat-message handler to include conversation history
+    ipcMain.handle('send-chat-message', async (event: IpcMainInvokeEvent, message: string, dataOptions: { 
+        includeDescriptions: boolean, 
+        includeLogs: boolean, 
+        includeStats: boolean,
+        includeNotes: boolean,
+        includeAnalyses: boolean
+    } = { 
+        includeDescriptions: true, 
+        includeLogs: true, 
+        includeStats: true,
+        includeNotes: true,
+        includeAnalyses: true
+    }) => {
         try {
             const apiKey = store.get('apiKey');
             if (!apiKey) {
                 throw new Error('API key not configured');
             }
 
+            // Get window ID to track conversation per window
+            const windowId = event.sender.id;
+            
+            // Initialize history for this window if it doesn't exist
+            if (!chatHistory.has(windowId)) {
+                chatHistory.set(windowId, []);
+            }
+            
+            // Get current history
+            const history = chatHistory.get(windowId) || [];
+
+            // Add user message to history
+            history.push({ role: 'user', content: message });
+            
             // Initialize Gemini if not already done
             const genAI = new GoogleGenAI({apiKey});
             
@@ -695,16 +756,35 @@ The categories used in the app are:
 
 `;
 
-            // Add screenshots data if requested
-            if (dataOptions.includeScreenshots) {
-                const screenshots = await database.screenshots.getScreenshotsForExport(
+            // Fetch screenshots data once if needed for any option
+            let screenshots = [];
+            if (dataOptions.includeDescriptions || dataOptions.includeLogs) {
+                screenshots = await database.screenshots.getScreenshotsForExport(
                     startOfMonth,
                     endOfMonth,
                     false // Don't include image data
                 );
+            }
 
-                systemPrompt += `\nHere's the user's activity data from the current month:
+            // Add activity logs if requested (just timestamps and categories)
+            if (dataOptions.includeLogs) {
+                systemPrompt += `\nHere's the user's activity logs from the current month:
 ${JSON.stringify(screenshots.map((s: any) => ({
+    timestamp: s.timestamp,
+    category: s.category,
+    activity: s.activity
+})), null, 2)}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include activity logs in this conversation.\n";
+            }
+
+            // Add activity descriptions if requested (detailed descriptions of activities)
+            if (dataOptions.includeDescriptions) {
+                const screenshotsWithDescriptions = screenshots.filter((s: any) => s.description && s.description.trim());
+                
+                systemPrompt += `\nHere are detailed descriptions of the user's activities from the current month:
+${JSON.stringify(screenshotsWithDescriptions.map((s: any) => ({
     timestamp: s.timestamp,
     category: s.category,
     activity: s.activity,
@@ -712,22 +792,44 @@ ${JSON.stringify(screenshots.map((s: any) => ({
 })), null, 2)}
 `;
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include detailed screenshot data in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include detailed activity descriptions in this conversation.\n";
             }
 
             // Add stats data if requested
             if (dataOptions.includeStats) {
-                const statsData = await database.stats.getMonthlyAverages(now, store.get('interval'));
+                const dailyStats = await database.stats.getDailyCategoryStats(now, store.get('interval'));
                 
-                systemPrompt += `\nHere are the user's productivity statistics for the current month:
-- Days with tracked data: ${statsData.daysWithData}
-- Time spent per category (in hours):
-${Object.entries(statsData.monthlyTimeInHours)
-    .map(([category, hours]) => `  * ${category}: ${(hours as number).toFixed(1)} hours (${(statsData.monthlyAverages[category] as number).toFixed(1)}%)`)
-    .join('\n')}
+                systemPrompt += `\nHere is the user's daily productivity breakdown for the current month:
+${JSON.stringify(dailyStats, null, 2)}
 `;
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include productivity statistics in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include daily statistics in this conversation.\n";
+            }
+
+            // Add notes data if requested
+            if (dataOptions.includeNotes) {
+                const notes = await database.notes.getNotesInRange(startOfMonth, endOfMonth);
+                systemPrompt += `\nHere are the user's notes from the current month:
+${JSON.stringify(notes.map((n: any) => ({
+    timestamp: n.timestamp,
+    content: n.content
+})), null, 2)}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include notes in this conversation.\n";
+            }
+
+            // Add day analyses data if requested
+            if (dataOptions.includeAnalyses) {
+                const analyses = await database.dayAnalyses.getAnalysesInRange(startOfMonth, endOfMonth);
+                systemPrompt += `\nHere are the user's day analyses from the current month:
+${JSON.stringify(analyses.map((a: any) => ({
+    date: a.date,
+    analysis: a.content
+})), null, 2)}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include day analyses in this conversation.\n";
             }
 
             systemPrompt += `\nWhen responding:
@@ -737,10 +839,24 @@ ${Object.entries(statsData.monthlyTimeInHours)
 4. Keep responses conversational and friendly
 5. If asked about specific time periods or activities, use the timestamp data if available
 
-User's message: ${message}`;
+Chat history:
+`;
+
+            // Add chat history to the prompt
+            if (history.length > 1) {
+                // Only include previous messages if there's history
+                // Skip the current user message (last in array) as we'll add it separately
+                for (let i = 0; i < history.length - 1; i++) {
+                    const entry = history[i];
+                    systemPrompt += `\n${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`;
+                }
+            }
+            
+            // Add current user message
+            systemPrompt += `\n\nUser: ${message}`;
 
             const result = await genAI.models.generateContent({
-                model: store.get('geminiModel') || 'gemini-2.0-flash',
+                model: store.get('chatGeminiModel') || 'gemini-2.0-flash',
                 contents: systemPrompt,
                 config: {
                     temperature: 0.7,
@@ -752,6 +868,15 @@ User's message: ${message}`;
                 throw new Error('No response from AI');
             }
 
+            // Add assistant response to history
+            history.push({ role: 'assistant', content: result.text });
+            
+            // Update history in map (limited to last 20 messages to prevent token overflow)
+            if (history.length > 20) {
+                history.splice(0, history.length - 20);
+            }
+            chatHistory.set(windowId, history);
+
             return {
                 success: true,
                 response: result.text
@@ -762,6 +887,137 @@ User's message: ${message}`;
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Unknown error occurred'
+            };
+        }
+    });
+
+    // Data Preview handler
+    ipcMain.handle('get-data-preview', async (event: IpcMainInvokeEvent, previewType: string) => {
+        try {
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            
+            let data: any = null;
+            let title: string = '';
+
+            switch (previewType) {
+                case 'descriptions':
+                    const screenshotsWithDesc = await database.screenshots.getScreenshotsForExport(
+                        startOfMonth, endOfMonth, false
+                    );
+                    const filteredDescriptions = screenshotsWithDesc
+                        .filter((s: any) => s.description && s.description.trim());
+                    title = `Preview: Last 3 of ${filteredDescriptions.length} Activity Descriptions`;
+                    data = filteredDescriptions
+                        .reverse()
+                        .slice(0, 3)
+                        .map((s: any) => ({
+                            activity: s.activity,
+                            description: s.description.substring(0, 150) + '...'
+                        }));
+                    break;
+                
+                case 'logs':
+                    const screenshotsLogs = await database.screenshots.getScreenshotsForExport(
+                        startOfMonth, endOfMonth, false
+                    );
+                    title = `Preview: Last 5 of ${screenshotsLogs.length} Activity Logs`;
+                    data = screenshotsLogs
+                        .slice(-5)
+                        .map((s: any) => ({
+                            timestamp: new Date(s.timestamp).toLocaleString(),
+                            category: s.category,
+                            activity: s.activity
+                        }));
+                    break;
+
+                case 'stats':
+                    const dailyStats = await database.stats.getDailyCategoryStats(now, store.get('interval'));
+                    const daysWithData = Object.keys(dailyStats).length;
+                    title = `Preview: Daily Statistics for ${daysWithData} Days`;
+                    data = dailyStats;
+                    break;
+
+                case 'notes':
+                    const notes = await database.notes.getNotesInRange(startOfMonth, endOfMonth);
+                    title = `Preview: Last 3 of ${notes.length} Notes`;
+                    data = notes.slice(0, 3).map((n: any) => ({
+                        timestamp: new Date(n.timestamp).toLocaleString(),
+                        content: n.content.substring(0, 150) + '...'
+                    }));
+                    break;
+
+                case 'analyses':
+                    const analyses = await database.dayAnalyses.getAnalysesInRange(startOfMonth, endOfMonth);
+                    title = `Preview: Last 2 of ${analyses.length} Day Analyses`;
+                    data = analyses.slice(0, 2).map((a: any) => ({
+                        date: a.date,
+                        analysis: a.content.substring(0, 200) + '...'
+                    }));
+                    break;
+
+                default:
+                    return { success: false, error: 'Unknown preview type' };
+            }
+
+            return { success: true, data, title };
+
+        } catch (error) {
+            console.error('Error getting data preview:', error);
+            return { success: false, error: getErrorMessage(error) };
+        }
+    });
+
+    // Data Counts handler
+    ipcMain.handle('get-data-counts', async () => {
+        try {
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            
+            // Run all queries in parallel for efficiency
+            const [
+                screenshots,
+                dailyStats,
+                notes,
+                analyses
+            ] = await Promise.all([
+                database.screenshots.getScreenshotsForExport(startOfMonth, endOfMonth, false),
+                database.stats.getDailyCategoryStats(now, store.get('interval')),
+                database.notes.getNotesInRange(startOfMonth, endOfMonth),
+                database.dayAnalyses.getAnalysesInRange(startOfMonth, endOfMonth)
+            ]);
+            
+            // Calculate counts
+            const descriptionsCount = screenshots.filter((s: any) => s.description && s.description.trim()).length;
+            const logsCount = screenshots.length;
+            const statsCount = Object.keys(dailyStats).length;
+            const notesCount = notes.length;
+            const analysesCount = analyses.length;
+            
+            return {
+                success: true,
+                counts: {
+                    descriptions: descriptionsCount,
+                    logs: logsCount,
+                    stats: statsCount,
+                    notes: notesCount,
+                    analyses: analysesCount
+                }
+            };
+        } catch (error) {
+            console.error('Error getting data counts:', error);
+            return { 
+                success: false, 
+                error: getErrorMessage(error),
+                counts: {
+                    descriptions: 0,
+                    logs: 0,
+                    stats: 0,
+                    notes: 0,
+                    analyses: 0
+                }
             };
         }
     });

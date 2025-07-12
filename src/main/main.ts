@@ -16,11 +16,13 @@ import { Category, categories, initializeDatabase, closeDatabase } from './db/co
 const store = new Store<{
     interval: number;
     geminiModel: string;
+    chatGeminiModel: string;
     apiKey?: string;
 }>({
     defaults: {
         interval: 1, // Default to 1 minute
-        geminiModel: 'gemini-2.0-flash' // Default Gemini model
+        geminiModel: 'gemini-2.0-flash', // Default Gemini model
+        chatGeminiModel: 'gemini-2.0-flash'
     }
 });
 
