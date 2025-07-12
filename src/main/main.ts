@@ -441,7 +441,7 @@ async function generateDayAnalysis(date: string): Promise<string> {
             throw new Error('AI is not initialized. Please check your API key.');
         }
 
-        const prompt = `You are a behavioral analyst. Your task is to analyze my activity logs and notes entries to create a report about my day, while considering my recent history and patterns from this month.
+        const prompt = `You are a behavioral analyst. Your task is to analyze my activity logs and notes to create a report about my day, while considering my recent history and patterns from this month.
 
 Here is today's data for analysis:
 
