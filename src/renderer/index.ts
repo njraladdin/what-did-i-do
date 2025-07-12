@@ -6,8 +6,51 @@ declare const marked: {
     parse: (markdown: string) => string;
 };
 
-// Type declarations for Chart.js
-declare const Chart: any;
+// Chart.js is already declared in dom.ts
+
+// Extend Window interface for global variables
+interface WindowWithCustomProps extends Window {
+    currentDate: Date;
+    currentPage: number;
+    allScreenshots: Screenshot[];
+    SCREENSHOTS_PER_PAGE: number;
+    editingNoteId: number | null;
+    dailyProgressChart: any;
+    yearlyProgressChart: any;
+    ipcRenderer: any;
+    DOM: any;
+    deleteScreenshot: (id: number) => void;
+    showEditNoteModal: (note: Note) => void;
+    deleteNote: (id: number) => void;
+    loadPreviousNotesInModal: (excludeId?: number | null) => void;
+    toggleTracking: () => void;
+    testScreenshot: () => void;
+    updateInterval: () => void;
+    initializeAPI: () => void;
+    deleteAPIKey: () => void;
+    toggleAutoLaunch: (event: Event) => void;
+    saveGeminiModel: () => void;
+    fetchAvailableModels: () => void;
+    openLogsFile: () => void;
+    showRecentLogs: () => void;
+    exportData: () => void;
+    changeDate: (offset: number) => void;
+    changeMonth: (offset: number) => void;
+    dismissError: () => void;
+    saveNote: () => void;
+    loadMoreScreenshots: () => void;
+    quitApp: () => void;
+    openExternalLink: (url: string) => void;
+    toggleSettings: () => void;
+    toggleExportModal: () => void;
+    showMinimizeModal: () => void;
+    closeMinimizeModal: (shouldClose?: boolean) => void;
+    showAddNoteModal: () => void;
+    closeNoteModal: () => void;
+}
+
+// Cast window to our extended interface
+const win = window as unknown as WindowWithCustomProps;
 
 // Type declarations
 interface Screenshot {
@@ -46,47 +89,32 @@ interface DailyStatsResult {
     error?: string;
 }
 
-interface ChartContext {
-    dataset: {
-        label: string;
-    };
-    parsed: {
-        y: number;
-    };
-}
-
-interface CategoryColorMap {
-    WORK: string;
-    LEARN: string;
-    SOCIAL: string;
-    ENTERTAINMENT: string;
-    OTHER: string;
-    [key: string]: string; // Allow string indexing for unknown categories
-}
-
+// Global variables
 let isTracking = true;
 let currentDate = new Date();
 let editingNoteId: number | null = null;
 let hasShownMinimizeMessage = false;
 let currentPage = 1;
 let allScreenshots: Screenshot[] = [];
-let dailyProgressChart: any = null; // Will be properly typed when Chart.js is imported
-let yearlyProgressChart: any = null; // Will be properly typed when Chart.js is imported
+let dailyProgressChart: any = null;
+let yearlyProgressChart: any = null;
 
 const SCREENSHOTS_PER_PAGE = 5;
 
-// Helper function to format category names
-function formatCategoryName(category: string): string {
-    return category
-        .toLowerCase()
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (c: string) => c.toUpperCase());
-}
+// Make global variables accessible to DOM module
+win.currentDate = currentDate;
+win.currentPage = currentPage;
+win.allScreenshots = allScreenshots;
+win.SCREENSHOTS_PER_PAGE = SCREENSHOTS_PER_PAGE;
+win.editingNoteId = editingNoteId;
+win.dailyProgressChart = dailyProgressChart;
+win.yearlyProgressChart = yearlyProgressChart;
+win.ipcRenderer = ipcRenderer;
 
 // API Key Management
 async function checkExistingApiKey(): Promise<void> {
     const hasKey = await ipcRenderer.invoke('check-api-key');
-    updateApiKeyUI(hasKey);
+    win.DOM.updateApiKeyUI(hasKey);
     if (hasKey) {
         const storedKey = await ipcRenderer.invoke('get-api-key');
         const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
@@ -106,38 +134,12 @@ async function checkExistingApiKey(): Promise<void> {
     }
 }
 
-function updateApiKeyUI(hasKey: boolean): void {
-    const settingsNotification = document.getElementById('settingsNotification');
-    const mainScreenWarning = document.getElementById('mainScreenWarning');
-    const apiKeyWarning = document.getElementById('apiKeyWarning');
-
-    if (settingsNotification) {
-        settingsNotification.style.display = hasKey ? 'none' : 'block';
-    }
-    if (mainScreenWarning) {
-        mainScreenWarning.style.display = hasKey ? 'none' : 'block';
-    }
-    if (apiKeyWarning) {
-        apiKeyWarning.style.display = hasKey ? 'none' : 'block';
-    }
-
-    // Disable tracking controls if no API key
-    const toggleTracking = document.getElementById('toggleTracking') as HTMLButtonElement | null;
-    const testScreenshotBtn = document.getElementById('testScreenshotBtn') as HTMLButtonElement | null;
-    if (toggleTracking) {
-        toggleTracking.disabled = !hasKey;
-    }
-    if (testScreenshotBtn) {
-        testScreenshotBtn.disabled = !hasKey;
-    }
-}
-
 async function initializeAPI(): Promise<void> {
     const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
     const apiKey = apiKeyInput?.value.trim() || '';
     
     if (!apiKey) {
-        showValidationMessage('Please enter an API key', 'error');
+        win.DOM.showValidationMessage('Please enter an API key', 'error');
         return;
     }
 
@@ -155,15 +157,15 @@ async function initializeAPI(): Promise<void> {
         const result = await ipcRenderer.invoke('initialize-api', apiKey);
 
         if (result.success) {
-            showValidationMessage('API key validated successfully!', 'success');
-            updateApiKeyUI(true);
+            win.DOM.showValidationMessage('API key validated successfully!', 'success');
+            win.DOM.updateApiKeyUI(true);
             updateStats();
-            setTimeout(() => toggleSettings(), 1500);
+            setTimeout(() => win.DOM.toggleSettings(), 1500);
         } else {
-            showValidationMessage(result.error || 'Invalid API key', 'error');
+            win.DOM.showValidationMessage(result.error || 'Invalid API key', 'error');
         }
     } catch (error) {
-        showValidationMessage('Failed to validate API key', 'error');
+        win.DOM.showValidationMessage('Failed to validate API key', 'error');
     } finally {
         if (spinner) {
             spinner.style.display = 'none';
@@ -174,17 +176,6 @@ async function initializeAPI(): Promise<void> {
     }
 }
 
-function showValidationMessage(message: string, type: string): void {
-    const messageElement = document.getElementById('validationMessage');
-    if (messageElement) {
-        messageElement.textContent = message;
-        messageElement.className = `validation-message ${type}`;
-
-        // Ensure the message is visible
-        messageElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-}
-
 async function deleteAPIKey() {
     const success = await ipcRenderer.invoke('delete-api-key');
     if (success) {
@@ -192,8 +183,8 @@ async function deleteAPIKey() {
         if (apiKeyInput) {
             apiKeyInput.value = '';
         }
-        updateApiKeyUI(false);
-        toggleSettings();
+        win.DOM.updateApiKeyUI(false);
+        win.DOM.toggleSettings();
 
         // Reset tracking button state
         const button = document.getElementById('toggleTracking') as HTMLButtonElement | null;
@@ -283,15 +274,17 @@ async function updateStats() {
         const timeInHours = data.stats.timeInHours || {};
 
         // Update category stats with both pieces of data
-        updateCategoryStats(stats, timeInHours);
+        win.DOM.updateCategoryStats(stats, timeInHours);
 
         // Update monthly averages
         await updateMonthlyAverages();
 
         // Store all screenshots and display initial page
         allScreenshots = data.screenshots || [];
+        win.allScreenshots = allScreenshots;
         currentPage = 1;
-        displayScreenshots();
+        win.currentPage = currentPage;
+        win.DOM.displayScreenshots();
 
         // Update day analysis if available
         const contentDiv = document.getElementById('dayAnalysisContent');
@@ -309,98 +302,17 @@ async function updateStats() {
     }
 }
 
-function updateCategoryStats(stats: { [key: string]: number }, timeInHours: { [key: string]: number }): void {
-    const statsContainer = document.getElementById('categoryStats');
-    if (!statsContainer) return;
-
-    statsContainer.innerHTML = '';
-
-    const sortedCategories = Object.entries(stats)
-        .sort(([, a], [, b]) => b - a);
-
-    sortedCategories.forEach(([category, percentage]) => {
-        const hours = timeInHours[category] || 0;
-        const formattedHours = hours.toFixed(1);
-
-        const categoryDiv = document.createElement('div');
-        categoryDiv.className = 'category';
-        categoryDiv.innerHTML = `
-            <div class="category-header">
-                <span class="category-title">${formatCategoryName(category)}</span>
-                <div class="category-metrics">
-                    <span class="category-hours">${formattedHours}h</span>
-                    <span class="category-percentage">${percentage.toFixed(1)}%</span>
-                </div>
-            </div>
-            <div class="progress">
-                <div class="progress-bar ${category}" style="width: ${percentage}%"></div>
-            </div>
-        `;
-        statsContainer.appendChild(categoryDiv);
-    });
-}
-
 // Monthly Analytics
 async function updateMonthlyAverages(): Promise<void> {
     try {
         const data = await ipcRenderer.invoke('get-monthly-averages') as MonthlyData;
         console.log('Received monthly averages:', data);
 
-        // Update the month indicator
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                          'July', 'August', 'September', 'October', 'November', 'December'];
-        const monthName = monthNames[currentDate.getMonth()];
-        const year = currentDate.getFullYear();
-        const currentMonthElement = document.getElementById('currentMonth');
-        if (currentMonthElement) {
-            currentMonthElement.textContent = `${monthName} ${year} • ${data.daysWithData} days`;
-        }
-
-        // Update the analytics cards
-        const analyticsContainer = document.getElementById('monthlyAnalytics');
-        if (!analyticsContainer) return;
-
-        analyticsContainer.innerHTML = '';
-
-        // Sort categories by total hours (descending)
-        const categoryEntries = Object.entries(data.monthlyTimeInHours)
-            .filter(([, hours]) => typeof hours === 'number' && hours > 0)
-            .sort(([, a], [, b]) => (b as number) - (a as number));
-
-        categoryEntries.forEach(([category, totalHours]) => {
-            const avgPerDay = data.daysWithData > 0 ? (totalHours as number) / data.daysWithData : 0;
-            
-            const categoryCard = document.createElement('div');
-            categoryCard.className = 'analytics-card';
-            categoryCard.innerHTML = `
-                <div class="card-header">
-                    <span class="card-title">${formatCategoryName(category)}</span>
-                    <span class="card-percentage">${data.monthlyAverages[category].toFixed(1)}%</span>
-                </div>
-                <div class="card-progress">
-                    <div class="progress-bar ${category}" style="width: ${data.monthlyAverages[category]}%"></div>
-                </div>
-                <div class="card-metrics">
-                    <div class="metric">
-                        <span class="metric-value">${(totalHours as number).toFixed(1)}h</span>
-                        <span class="metric-label">total</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-value">${avgPerDay.toFixed(1)}h</span>
-                        <span class="metric-label">per day</span>
-                    </div>
-                </div>
-            `;
-            analyticsContainer.appendChild(categoryCard);
-        });
-
-        // If no data, show a message
-        if (categoryEntries.length === 0) {
-            analyticsContainer.innerHTML = '<div class="no-data">No activity data for this month</div>';
-        }
+        // Update UI using DOM module
+        win.DOM.updateMonthlyAnalyticsDisplay(data);
         
         // Update the next month button state
-        updateNextMonthButtonState();
+        win.DOM.updateNextMonthButtonState();
         
         // Update the daily progress chart
         await updateDailyProgressChart();
@@ -416,6 +328,7 @@ async function changeMonth(offset: number) {
     
     // Update the current date with the new month
     currentDate = newDate;
+    win.currentDate = currentDate;
     
     try {
         // Update the monthly averages with the new month
@@ -424,61 +337,11 @@ async function changeMonth(offset: number) {
             currentDate.getMonth()
         );
         
-        // Update the month indicator
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                            'July', 'August', 'September', 'October', 'November', 'December'];
-        const monthName = monthNames[currentDate.getMonth()];
-        const year = currentDate.getFullYear();
-        const currentMonthElement = document.getElementById('currentMonth');
-        if (currentMonthElement) {
-            currentMonthElement.textContent = `${monthName} ${year} • ${data.daysWithData} days`;
-        }
-        
-        // Update the analytics cards
-        const analyticsContainer = document.getElementById('monthlyAnalytics');
-        if (!analyticsContainer) return;
-
-        analyticsContainer.innerHTML = '';
-        
-        // Sort categories by total hours (descending)
-        const categoryEntries = Object.entries(data.monthlyTimeInHours)
-            .filter(([category, hours]) => typeof hours === 'number' && hours > 0) // Only show categories with data
-            .sort(([, a], [, b]) => (b as number) - (a as number));
-        
-        categoryEntries.forEach(([category, totalHours]) => {
-            const avgPerDay = data.daysWithData > 0 ? (totalHours as number) / data.daysWithData : 0;
-            
-            const categoryCard = document.createElement('div');
-            categoryCard.className = 'analytics-card';
-            categoryCard.innerHTML = `
-                <div class="card-header">
-                    <span class="card-title">${formatCategoryName(category)}</span>
-                    <span class="card-percentage">${data.monthlyAverages[category].toFixed(1)}%</span>
-                </div>
-                <div class="card-progress">
-                    <div class="progress-bar ${category}" style="width: ${data.monthlyAverages[category]}%"></div>
-                </div>
-                <div class="card-metrics">
-                    <div class="metric">
-                        <span class="metric-value">${(totalHours as number).toFixed(1)}h</span>
-                        <span class="metric-label">total</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-value">${avgPerDay.toFixed(1)}h</span>
-                        <span class="metric-label">per day</span>
-                    </div>
-                </div>
-            `;
-            analyticsContainer.appendChild(categoryCard);
-        });
-        
-        // If no data, show a message
-        if (categoryEntries.length === 0) {
-            analyticsContainer.innerHTML = '<div class="no-data">No activity data for this month</div>';
-        }
+        // Update UI using DOM module
+        win.DOM.updateMonthlyAnalyticsDisplay(data);
         
         // Update the next month button state
-        updateNextMonthButtonState();
+        win.DOM.updateNextMonthButtonState();
         
         // Update the daily progress chart
         await updateDailyProgressChart();
@@ -486,43 +349,33 @@ async function changeMonth(offset: number) {
         // Also update the daily view to match the month
         const currentDateElement = document.getElementById('currentDate');
         if (currentDateElement) {
-            currentDateElement.textContent = formatDate(currentDate);
+            currentDateElement.textContent = win.DOM.formatDate(currentDate);
         }
         const nextDateBtn = document.getElementById('nextDateBtn');
         if (nextDateBtn) {
-            (nextDateBtn as HTMLButtonElement).disabled = isToday(currentDate);
+            (nextDateBtn as HTMLButtonElement).disabled = win.DOM.isToday(currentDate);
         }
         
         // Fetch updated data for the day view
         const dayData = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
-        updateCategoryStats(dayData.stats, dayData.timeInHours);
+        win.DOM.updateCategoryStats(dayData.stats, dayData.timeInHours);
         
         // Update screenshots
         if (Array.isArray(dayData.screenshots)) {
             allScreenshots = dayData.screenshots;
+            win.allScreenshots = allScreenshots;
             currentPage = 1;
-            displayScreenshots();
+            win.currentPage = currentPage;
+            win.DOM.displayScreenshots();
         } else {
             allScreenshots = [];
-            displayScreenshots();
+            win.allScreenshots = allScreenshots;
+            win.DOM.displayScreenshots();
         }
     } catch (error) {
         console.error('Error changing month:', error);
     }
 }
-
-function isCurrentMonth(date: Date): boolean {
-    const today = new Date();
-    return date.getMonth() === today.getMonth() && 
-           date.getFullYear() === today.getFullYear();
-}
-
-function updateNextMonthButtonState() {
-    const nextMonthBtn = document.getElementById('nextMonthBtn') as HTMLButtonElement;
-    if (nextMonthBtn) {
-        nextMonthBtn.disabled = isCurrentMonth(currentDate);
-    }
-} 
 
 // Chart Functions
 async function updateDailyProgressChart(): Promise<void> {
@@ -533,168 +386,7 @@ async function updateDailyProgressChart(): Promise<void> {
             return;
         }
 
-        const dailyStats = result.dailyStats;
-        if (!dailyStats || Object.keys(dailyStats).length === 0) {
-            console.log('No daily stats available for chart');
-            return;
-        }
-
-        // Get all days in the month with data, sorted
-        const daysWithData = Object.keys(dailyStats).sort();
-        if (daysWithData.length === 0) return;
-
-        // For each day, get the top 3 categories by hours
-        const categorySet = new Set<string>();
-        const topCategoriesPerDay = daysWithData.map(day => {
-            const hours = dailyStats[day]?.timeInHours || {};
-            // Get top 3 categories for this day by hours
-            const top3 = Object.entries(hours)
-                .filter(([, h]) => typeof h === 'number' && h > 0)
-                .sort(([, a], [, b]) => (b as number) - (a as number))
-                .slice(0, 3)
-                .map(([cat]) => cat);
-            top3.forEach(cat => categorySet.add(cat));
-            return top3;
-        });
-        // All categories that were ever in a top 3
-        const allTopCategories = Array.from(categorySet);
-
-        // Color mapping for categories
-        const categoryColors: CategoryColorMap = {
-            WORK: 'rgba(37, 99, 235, 0.8)',           // Blue
-            LEARN: 'rgba(34, 197, 94, 0.8)',          // Green
-            SOCIAL: 'rgba(162, 28, 175, 0.8)',        // Purple
-            ENTERTAINMENT: 'rgba(239, 68, 68, 0.8)',  // Red
-            OTHER: 'rgba(100, 116, 139, 0.8)',        // Gray
-        };
-        const borderColors = {
-            WORK: 'rgba(37, 99, 235, 1)',
-            LEARN: 'rgba(34, 197, 94, 1)',
-            SOCIAL: 'rgba(162, 28, 175, 1)',
-            ENTERTAINMENT: 'rgba(239, 68, 68, 1)',
-            OTHER: 'rgba(100, 116, 139, 1)'
-        };
-
-        // For each category, build a dataset with values for each day (0 if not in top 3 for that day)
-        const datasets = allTopCategories.map(category => {
-            return {
-                label: formatCategoryName(category),
-                data: daysWithData.map((day, i) => {
-                    const top3 = topCategoriesPerDay[i];
-                    if (top3.includes(category)) {
-                        return dailyStats[day].timeInHours[category] || 0;
-                    } else {
-                        return 0;
-                    }
-                }),
-                backgroundColor: categoryColors[category] || categoryColors.OTHER,
-                borderColor: categoryColors[category] || categoryColors.OTHER,
-                borderWidth: 1,
-                borderRadius: 4,
-                borderSkipped: false,
-                maxBarThickness: 32
-            };
-        });
-
-        // Find the max hours value for scaling
-        let maxHours = 1;
-        datasets.forEach(ds => {
-            ds.data.forEach(val => {
-                if (val > maxHours) maxHours = val;
-            });
-        });
-        maxHours = Math.ceil(maxHours + 0.5); // round up for nice axis
-
-        // X-axis labels: days (e.g., Jul 5, Jul 6, ...)
-        const chartLabels = daysWithData.map(day => {
-            const d = new Date(day);
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        });
-
-        // Destroy existing chart if it exists
-        if (dailyProgressChart) {
-            dailyProgressChart.destroy();
-        }
-
-        // Create new chart
-        const ctx = document.getElementById('dailyProgressChart');
-        if (!ctx) {
-            console.error('Chart canvas not found');
-            return;
-        }
-
-        dailyProgressChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: chartLabels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 20,
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function(context: ChartContext) {
-                                return context.dataset.label + ': ' + Math.round(context.parsed.y) + 'h';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        stacked: false,
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    y: {
-                        stacked: false,
-                        beginAtZero: true,
-                        max: maxHours,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Hours',
-                            font: { size: 13 }
-                        },
-                        ticks: {
-                            callback: function(value: number) {
-                                return Math.round(value) + 'h';
-                            },
-                            font: {
-                                size: 12
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
-            }
-        });
+        win.DOM.updateDailyProgressChart(result);
     } catch (error) {
         console.error('Error updating daily progress chart:', error);
     }
@@ -708,238 +400,11 @@ async function updateYearlyProgressChart() {
             console.error('Error getting yearly monthly stats for chart:', result.error);
             return;
         }
-        const data = result.data as { [key: string]: { [category: string]: number } }; 
-        const monthLabels = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-        ];
-        // For each month, get the top 3 categories by hours
-        const months = Object.keys(data).sort();
-        const categorySet = new Set<string>();
-        const topCategoriesPerMonth = months.map(month => {
-            const hours = data[month] || {};
-            const top3 = Object.entries(hours)
-                .filter(([, h]) => typeof h === 'number' && h > 0)
-                .sort(([, a], [, b]) => (b as number) - (a as number))
-                .slice(0, 3)
-                .map(([cat]) => cat);
-            top3.forEach(cat => categorySet.add(cat));
-            return top3;
-        });
-        const allTopCategories = Array.from(categorySet);
-        // Color mapping (same as daily)
-        const categoryColors = {
-            WORK: 'rgba(37, 99, 235, 0.8)',           // Blue
-            LEARN: 'rgba(34, 197, 94, 0.8)',          // Green
-            SOCIAL: 'rgba(162, 28, 175, 0.8)',        // Purple
-            ENTERTAINMENT: 'rgba(239, 68, 68, 0.8)',  // Red
-            OTHER: 'rgba(100, 116, 139, 0.8)'         // Gray
-        };
-        const borderColors = {
-            WORK: 'rgba(37, 99, 235, 1)',
-            LEARN: 'rgba(34, 197, 94, 1)',
-            SOCIAL: 'rgba(162, 28, 175, 1)',
-            ENTERTAINMENT: 'rgba(239, 68, 68, 1)',
-            OTHER: 'rgba(100, 116, 139, 1)'
-        };
-        // For each category, build a dataset with values for each month (0 if not in top 3 for that month)
-        const datasets = allTopCategories.map(category => {
-            return {
-                label: formatCategoryName(category),
-                data: months.map((month, i) => {
-                    const top3 = topCategoriesPerMonth[i];
-                    if (top3.includes(category)) {
-                        const monthData = data[month] || {};
-                        return Math.round(monthData[category] || 0);
-                    } else {
-                        return null; // Use null to avoid rendering a bar and remove the gap
-                    }
-                }),
-                backgroundColor: categoryColors[category as keyof typeof categoryColors] || 'rgba(180,180,180,0.7)',
-                borderColor: borderColors[category as keyof typeof borderColors] || 'rgba(180,180,180,1)',
-                borderWidth: 1,
-                borderRadius: 4,
-                borderSkipped: false,
-                maxBarThickness: 32
-            };
-        });
-        // Find the max hours value for scaling
-        let maxHours = 1;
-        datasets.forEach(ds => {
-            ds.data.forEach(val => {
-                if (val && val > maxHours) maxHours = val;
-            });
-        });
-        maxHours = Math.ceil(maxHours + 0.5);
-        // Destroy existing chart if it exists
-        if (yearlyProgressChart) {
-            yearlyProgressChart.destroy();
-        }
-        const ctx = document.getElementById('yearlyProgressChart');
-        if (!ctx) {
-            console.error('Yearly chart canvas not found');
-            return;
-        }
-        yearlyProgressChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: monthLabels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 20,
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: function(context: any) {
-                                return context.dataset.label + ': ' + Math.round(context.parsed.y) + 'h';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        stacked: false,
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    y: {
-                        stacked: false,
-                        beginAtZero: true,
-                        max: maxHours,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Hours',
-                            font: { size: 13 }
-                        },
-                        ticks: {
-                            callback: function(value: any) {
-                                return Math.round(value) + 'h';
-                            },
-                            font: {
-                                size: 12
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
-            }
-        });
+
+        win.DOM.updateYearlyProgressChart(result);
     } catch (error) {
         console.error('Error updating yearly progress chart:', error);
     }
-}
-
-// Screenshot Display Functions
-function displayScreenshots() {
-    const historyContainer = document.getElementById('screenshotHistory');
-    const showMoreBtn = document.getElementById('showMoreBtn') as HTMLButtonElement;
-
-    // Clear existing screenshots
-    if (historyContainer) {
-        historyContainer.innerHTML = '';
-    }
-
-    if (allScreenshots.length === 0) {
-        if (historyContainer) {
-            historyContainer.innerHTML = '<div class="no-screenshots">No screenshots available for this date.</div>';
-        }
-        if (showMoreBtn) {
-            showMoreBtn.style.display = 'none';
-        }
-        return;
-    }
-
-    // Calculate range for current page
-    const endIndex = currentPage * SCREENSHOTS_PER_PAGE;
-    const screenshotsToShow = allScreenshots.slice(0, endIndex);
-
-    screenshotsToShow.forEach(screenshot => {
-        try {
-            const date = new Date(screenshot.timestamp);
-
-            const screenshotDiv = document.createElement('div');
-            screenshotDiv.className = 'screenshot-item';
-            
-            // Only add tooltip and icon if description exists
-            const hasDescription = screenshot.description && screenshot.description.trim();
-            const tooltipHTML = hasDescription
-                ? `<div class="screenshot-description-tooltip">
-                    <div class="description-title">Detailed Description</div>
-                    <div class="description-content">${screenshot.description}</div>
-                </div>`
-                : '';
-            
-            const iconHTML = hasDescription
-                ? `<div class="screenshot-info-icon"><i class="fas fa-info-circle"></i></div>`
-                : '';
-            
-            if (screenshotDiv) {
-                screenshotDiv.innerHTML = `
-                    <div class="screenshot-thumbnail-container">
-                        <img src="${screenshot.thumbnail}" class="screenshot-thumbnail" />
-                        ${iconHTML}
-                        ${tooltipHTML}
-                    </div>
-                    <div class="screenshot-info">
-                        <div class="screenshot-activity">Activity: ${screenshot.activity || 'Unknown'}</div>
-                        <div class="screenshot-category category-label ${screenshot.category}">Category: ${formatCategoryName(screenshot.category || 'UNKNOWN')}</div>
-                        <div class="screenshot-time">Time: ${date.toLocaleString()}</div>
-                    </div>
-                    <button class="delete-screenshot" onclick="deleteScreenshot(${screenshot.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                if (historyContainer) {
-                    historyContainer.appendChild(screenshotDiv);
-                }
-            }
-        } catch (error) {
-            console.error('Error displaying screenshot:', error, screenshot);
-        }
-    });
-
-    // Show/hide "Show More" button
-    if (showMoreBtn) {
-        if (endIndex < allScreenshots.length) {
-            showMoreBtn.style.display = 'inline-block';
-            showMoreBtn.disabled = false;
-        } else {
-            showMoreBtn.style.display = 'none';
-        }
-    }
-}
-
-function loadMoreScreenshots() {
-    currentPage++;
-    displayScreenshots();
 }
 
 async function deleteScreenshot(id: number) {
@@ -949,12 +414,13 @@ async function deleteScreenshot(id: number) {
             if (success) {
                 // Remove from local array
                 allScreenshots = allScreenshots.filter(s => s.id !== id);
+                win.allScreenshots = allScreenshots;
                 // Refresh display
-                displayScreenshots();
+                win.DOM.displayScreenshots();
                 // Update stats
                 const data = await ipcRenderer.invoke('get-stats');
                 if (data) {
-                    updateCategoryStats(data.stats.stats, data.stats.timeInHours);
+                    win.DOM.updateCategoryStats(data.stats.stats, data.stats.timeInHours);
                     // Update monthly averages after deletion
                     await updateMonthlyAverages();
                 }
@@ -965,34 +431,21 @@ async function deleteScreenshot(id: number) {
     }
 }
 
+// Make deleteScreenshot available globally
+win.deleteScreenshot = deleteScreenshot;
+
 // Date Management Functions
-function formatDate(date: Date): string {
-    const options: Intl.DateTimeFormatOptions = { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    };
-    return date.toLocaleDateString('en-US', options);
-}
-
-function isToday(date: Date): boolean {
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-        date.getMonth() === today.getMonth() &&
-        date.getFullYear() === today.getFullYear();
-}
-
 async function changeDate(offset: number) {
     currentDate.setDate(currentDate.getDate() + offset);
+    win.currentDate = currentDate;
 
     const nextDateBtn = document.getElementById('nextDateBtn') as HTMLButtonElement;
     if (nextDateBtn) {
-        (nextDateBtn as HTMLButtonElement).disabled = isToday(currentDate);
+        (nextDateBtn as HTMLButtonElement).disabled = win.DOM.isToday(currentDate);
     }
     const currentDateElement = document.getElementById('currentDate');
     if (currentDateElement) {
-        currentDateElement.textContent = formatDate(currentDate);
+        currentDateElement.textContent = win.DOM.formatDate(currentDate);
     }
 
     try {
@@ -1000,28 +453,31 @@ async function changeDate(offset: number) {
         console.log('Received data for date change:', data);
 
         // Pass both stats and timeInHours to the update function
-        updateCategoryStats(data.stats, data.timeInHours);
+        win.DOM.updateCategoryStats(data.stats, data.timeInHours);
 
         // Update monthly averages when date changes
         await updateMonthlyAverages();
         
         // Update next month button state in case the month changed
-        updateNextMonthButtonState();
+        win.DOM.updateNextMonthButtonState();
 
         // Update screenshots
         if (Array.isArray(data.screenshots)) {
             allScreenshots = data.screenshots;
+            win.allScreenshots = allScreenshots;
             currentPage = 1;
-            displayScreenshots();
+            win.currentPage = currentPage;
+            win.DOM.displayScreenshots();
         } else {
             console.error('Invalid screenshots data:', data.screenshots);
             allScreenshots = [];
-            displayScreenshots();
+            win.allScreenshots = allScreenshots;
+            win.DOM.displayScreenshots();
         }
 
-        // Update notes  for the new date
+        // Update notes for the new date
         if (data.notes) {
-            displayNotes(data.notes);
+            win.DOM.displayNotes(data.notes);
         } else {
             await refreshNotes();
         }
@@ -1038,54 +494,8 @@ async function changeDate(offset: number) {
     } catch (error) {
         console.error('Error changing date:', error);
         allScreenshots = [];
-        displayScreenshots();
-    }
-}
-
-// Modal Functions
-function toggleSettings() {
-    const modal = document.getElementById('settingsModal');
-    if (modal) {
-        modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-    }
-}
-
-function toggleExportModal() {
-    const modal = document.getElementById('exportModal');
-    if (modal) {
-        modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-    }
-}
-
-function showMinimizeModal() {
-    const minimizeModal = document.getElementById('minimizeModal');
-    if (minimizeModal) {
-        minimizeModal.style.display = 'flex';
-    }
-}
-
-function closeMinimizeModal(shouldClose = true) {
-    const dontShowAgain = document.getElementById('dontShowAgain') as HTMLInputElement | null;
-    if (dontShowAgain && dontShowAgain.checked) {
-        if (dontShowAgain.checked) {
-            localStorage.setItem('dontShowMinimizeMessage', 'true');
-        }
-    }
-    const minimizeModal = document.getElementById('minimizeModal');
-    if (minimizeModal) {
-        minimizeModal.style.display = 'none';
-    }
-    
-    // Only close the window if explicitly requested
-    if (shouldClose) {
-        ipcRenderer.send('window-close');
-    }
-}
-
-function handleModalClick(event: MouseEvent) {
-    const minimizeModal = document.getElementById('minimizeModal');
-    if (minimizeModal && minimizeModal === event.target) {
-        closeMinimizeModal(false); // Close modal without closing window
+        win.allScreenshots = allScreenshots;
+        win.DOM.displayScreenshots();
     }
 }
 
@@ -1427,7 +837,7 @@ async function exportData() {
 
         if (result.success) {
             // Close modal and show success message
-            toggleExportModal();
+            win.DOM.toggleExportModal();
             // You could add a toast notification here
             console.log('Export successful:', result.filePath);
         } else {
@@ -1497,140 +907,15 @@ async function checkExistingError() {
 
 // Notes Management Functions
 async function showAddNoteModal() {
-    editingNoteId = null;
-    const noteModalTitle = document.getElementById('noteModalTitle');
-    if (noteModalTitle) {
-        noteModalTitle.textContent = 'Add Note';
-    }
-    const noteContent = document.getElementById('noteContent') as HTMLTextAreaElement;
-    if (noteContent) {
-        noteContent.value = '';
-    }
-    const saveNoteBtn = document.getElementById('saveNoteBtn');
-    if (saveNoteBtn) {
-        saveNoteBtn.innerHTML = '<i class="fas fa-save"></i> Save Note';
-    }
-    
-    // Load and display previous notes
-    await loadPreviousNotesInModal();
-    
-    const noteModal = document.getElementById('noteModal');
-    if (noteModal) {
-        noteModal.style.display = 'flex';
-    }
-    
-    // Focus with a small delay to ensure modal is fully rendered
-    setTimeout(() => {
-        const noteContent = document.getElementById('noteContent') as HTMLTextAreaElement;
-        if (noteContent) {
-            noteContent.focus();
-        }
-    }, 100);
+    win.DOM.showAddNoteModal();
 }
 
 async function showEditNoteModal(note: Note) {
-    editingNoteId = note.id;
-    const noteModalTitle = document.getElementById('noteModalTitle');
-    if (noteModalTitle) {
-        noteModalTitle.textContent = 'Edit Note';
-    }
-    const noteContent = document.getElementById('noteContent') as HTMLTextAreaElement;
-    if (noteContent) {
-        noteContent.value = note.content || '';
-    }
-    const saveNoteBtn = document.getElementById('saveNoteBtn');
-    if (saveNoteBtn) {
-        saveNoteBtn.innerHTML = '<i class="fas fa-save"></i> Update Note';
-    }
-    
-    // Load and display previous notes (excluding the one being edited)
-    await loadPreviousNotesInModal(note.id);
-    
-    const noteModal = document.getElementById('noteModal');
-    if (noteModal) {
-        noteModal.style.display = 'flex';
-    }
-    
-    // Focus with a small delay to ensure modal is fully rendered
-    setTimeout(() => {
-        const textarea = document.getElementById('noteContent') as HTMLTextAreaElement;
-        if (textarea) {
-            textarea.focus();
-            // Place cursor at the end of the text
-            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-        }
-    }, 100);
-}
-
-function closeNoteModal() {
-    const noteModal = document.getElementById('noteModal');
-    if (noteModal) {
-        noteModal.style.display = 'none';
-    }
-    editingNoteId = null;
+    win.DOM.showEditNoteModal(note);
 }
 
 async function loadPreviousNotesInModal(excludeId: number | null = null) {
-    try {
-        const result = await ipcRenderer.invoke('get-notes-for-date', currentDate.toISOString());
-        if (result.success && result.notes && result.notes.length > 0) {
-            // Filter out the note being edited and reverse order (oldest first, newest last)
-            const filteredNotes = result.notes
-                .filter((note: { id: number }) => note.id !== excludeId)
-                .reverse();
-            
-            if (filteredNotes.length > 0) {
-                const modalNotesList = document.getElementById('modalNotesList');
-                if (modalNotesList) {
-                    modalNotesList.innerHTML = filteredNotes.map((note: { timestamp: string; content: string }) => {
-                        const timestamp = new Date(note.timestamp);
-                        const timeString = timestamp.toLocaleTimeString(undefined, {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true
-                        });
-                        
-                        return `
-                            <div class="modal-note-item">
-                                <div class="modal-note-header">
-                                    <span class="modal-note-time">${timeString}</span>
-                                    <div class="modal-note-content-wrapper">
-                                        <div class="modal-note-content">${note.content.replace(/\n/g, '<br>')}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                    
-                    const modalPreviousNotes = document.getElementById('modalPreviousNotes');
-                    if (modalPreviousNotes) {
-                        modalPreviousNotes.style.display = 'block';
-                        
-                        // Scroll to bottom to show latest notes
-                        setTimeout(() => {
-                            modalPreviousNotes.scrollTop = modalPreviousNotes.scrollHeight;
-                        }, 0);
-                    }
-                }
-            } else {
-                const modalPreviousNotes = document.getElementById('modalPreviousNotes');
-                if (modalPreviousNotes) {
-                    modalPreviousNotes.style.display = 'none';
-                }
-            }
-        } else {
-            const modalPreviousNotes = document.getElementById('modalPreviousNotes');
-            if (modalPreviousNotes) {
-                modalPreviousNotes.style.display = 'none';
-            }
-        }
-    } catch (error: any) {
-        console.error('Error loading previous notes in modal:', error);
-        const modalPreviousNotes = document.getElementById('modalPreviousNotes');
-        if (modalPreviousNotes) {
-            modalPreviousNotes.style.display = 'none';
-        }
-    }
+    win.DOM.loadPreviousNotesInModal(excludeId);
 }
 
 async function saveNote() {
@@ -1638,7 +923,7 @@ async function saveNote() {
 
     if (!content) {
         // Just close the modal if no content, don't show alert
-        closeNoteModal();
+        win.DOM.closeNoteModal();
         return;
     }
 
@@ -1658,7 +943,7 @@ async function saveNote() {
         }
 
         if (result.success) {
-            closeNoteModal();
+            win.DOM.closeNoteModal();
             await refreshNotes();
         } else {
             alert('Failed to save note: ' + result.error);
@@ -1694,54 +979,17 @@ async function refreshNotes() {
     try {
         const result = await ipcRenderer.invoke('get-notes-for-date', currentDate.toISOString());
         if (result.success) {
-            displayNotes(result.notes);
+            win.DOM.displayNotes(result.notes);
         }
     } catch (error) {
         console.error('Error refreshing notes:', error);
     }
 }
 
-function displayNotes(notes: Note[]) {
-    const container = document.getElementById('notes');
-    
-    if (!container) return;
-
-    if (!notes || notes.length === 0) {
-        container.innerHTML = '<div class="no-notes">No notes for this date. Click "Add Note" to create one.</div>';
-        return;
-    }
-
-    // Reverse the notes to show oldest first, newest last
-    const reversedNotes = [...notes].reverse();
-    
-    container.innerHTML = reversedNotes.map(note => {
-        const timestamp = new Date(note.timestamp);
-        const timeString = timestamp.toLocaleTimeString(undefined, {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-
-        return `
-            <div class="note-item">
-                <div class="note-header">
-                    <span class="note-time">${timeString}</span>
-                    <div class="note-content-wrapper">
-                        <div class="note-content">${note.content.replace(/\n/g, '<br>')}</div>
-                    </div>
-                    <div class="note-actions">
-                        <button onclick="showEditNoteModal(${JSON.stringify(note).replace(/"/g, '&quot;')})" class="edit-btn" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteNote(${note.id})" class="delete-btn" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+// Make functions available globally
+win.showEditNoteModal = showEditNoteModal;
+win.deleteNote = deleteNote;
+win.loadPreviousNotesInModal = loadPreviousNotesInModal;
 
 // Day Analysis Functions
 async function loadDayAnalysis() {
@@ -1774,15 +1022,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize date display
         const currentDateElement = document.getElementById('currentDate');
         if (currentDateElement) {
-            currentDateElement.textContent = formatDate(currentDate);
+            currentDateElement.textContent = win.DOM.formatDate(currentDate);
         }
         const nextDateBtn = document.getElementById('nextDateBtn') as HTMLButtonElement;
         if (nextDateBtn) {
-            (nextDateBtn as HTMLButtonElement).disabled = isToday(currentDate);
+            (nextDateBtn as HTMLButtonElement).disabled = win.DOM.isToday(currentDate);
         }
         
         // Initialize next month button state
-        updateNextMonthButtonState();
+        win.DOM.updateNextMonthButtonState();
 
         // Check for existing analysis error
         await checkExistingError();
@@ -1797,15 +1045,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const timeInHours = data.stats.timeInHours || {};
 
             // Update category stats with both pieces of data
-            updateCategoryStats(stats, timeInHours);
+            win.DOM.updateCategoryStats(stats, timeInHours);
             
             // Initialize monthly averages
             await updateMonthlyAverages();
 
             // Initialize screenshots
             allScreenshots = data.screenshots || [];
+            win.allScreenshots = allScreenshots;
             currentPage = 1;
-            displayScreenshots();
+            win.currentPage = currentPage;
+            win.DOM.displayScreenshots();
             
             // Initialize the daily progress chart
             await updateDailyProgressChart();
@@ -1828,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeBtn.addEventListener('click', () => {
             const dontShowAgain = localStorage.getItem('dontShowMinimizeMessage');
             if (!dontShowAgain) {
-                showMinimizeModal();
+                win.DOM.showMinimizeModal();
             } else {
                 ipcRenderer.send('window-close');
             }
@@ -1850,15 +1100,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize date navigation on page load
     const currentDateElement = document.getElementById('currentDate');
     if (currentDateElement) {
-        currentDateElement.textContent = formatDate(currentDate);
+        currentDateElement.textContent = win.DOM.formatDate(currentDate);
     }
     const nextDateBtn = document.getElementById('nextDateBtn');
     if (nextDateBtn) {
-        (nextDateBtn as HTMLButtonElement).disabled = isToday(currentDate);
+        (nextDateBtn as HTMLButtonElement).disabled = win.DOM.isToday(currentDate);
     }
     
     // Initialize month navigation
-    updateNextMonthButtonState();
+    win.DOM.updateNextMonthButtonState();
 
     // Add event listeners for export modal
     const rangeRadios = document.querySelectorAll('input[name="dateRange"]');
@@ -1896,7 +1146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (exportModal) {
         exportModal.addEventListener('click', (e) => {
             if (e.target === exportModal) {
-                toggleExportModal();
+                win.DOM.toggleExportModal();
             }
         });
     }
@@ -2002,14 +1252,14 @@ const settingsModal = document.getElementById('settingsModal');
 if (settingsModal) {
     settingsModal.addEventListener('click', (e) => {
         if (e.target === settingsModal) {
-            toggleSettings();
+            win.DOM.toggleSettings();
         }
     });
 }
 
 const minimizeModal = document.getElementById('minimizeModal');
 if (minimizeModal) {
-    minimizeModal.addEventListener('click', handleModalClick);
+    minimizeModal.addEventListener('click', win.DOM.handleModalClick);
 }
 
 // Escape key handler for closing modals
@@ -2017,7 +1267,7 @@ document.addEventListener('keydown', (e) => {
     const settingsModal = document.getElementById('settingsModal');
     if (settingsModal && settingsModal.style.display === 'flex') {
         if (e.key === 'Escape') {
-            toggleSettings();
+            win.DOM.toggleSettings();
         }
     }
 });
@@ -2027,7 +1277,7 @@ document.addEventListener('keydown', (e) => {
     const noteModal = document.getElementById('noteModal');
     if (noteModal && noteModal.style.display === 'flex') {
         if (e.key === 'Escape') {
-            closeNoteModal();
+            win.DOM.closeNoteModal();
         } else if (e.key === 'Enter' && e.ctrlKey) {
             // Ctrl+Enter to save
             saveNote();
@@ -2068,14 +1318,16 @@ ipcRenderer.on('refresh-ui', async () => {
             const stats = data.stats.stats || data.stats;
             const timeInHours = data.stats.timeInHours || {};
 
-            updateCategoryStats(stats, timeInHours);
+            win.DOM.updateCategoryStats(stats, timeInHours);
             
             // Update monthly averages on refresh
             await updateMonthlyAverages();
 
             allScreenshots = data.screenshots || [];
+            win.allScreenshots = allScreenshots;
             currentPage = 1;
-            displayScreenshots();
+            win.currentPage = currentPage;
+            win.DOM.displayScreenshots();
             
             // Update day analysis
             const contentDiv = document.getElementById('dayAnalysisContent');
@@ -2101,18 +1353,20 @@ ipcRenderer.on('initial-data', async (event: Electron.IpcRendererEvent, data: an
         const stats = data.stats.stats || data.stats;
         const timeInHours = data.stats.timeInHours || {};
 
-        updateCategoryStats(stats, timeInHours);
+        win.DOM.updateCategoryStats(stats, timeInHours);
         
         // Update monthly averages on initial load
         await updateMonthlyAverages();
 
         allScreenshots = data.screenshots || [];
+        win.allScreenshots = allScreenshots;
         currentPage = 1;
-        displayScreenshots();
+        win.currentPage = currentPage;
+        win.DOM.displayScreenshots();
         
         // Display notes
         if (data.notes) {
-            displayNotes(data.notes);
+            win.DOM.displayNotes(data.notes);
         } else {
             await refreshNotes();
         }
@@ -2135,11 +1389,11 @@ ipcRenderer.on('initial-data', async (event: Electron.IpcRendererEvent, data: an
 
 // Error handling listeners
 ipcRenderer.on('analysis-error', (event: Electron.IpcRendererEvent, error: any) => {
-    showAnalysisError(error);
+    win.DOM.showAnalysisError(error);
 });
 
 ipcRenderer.on('analysis-error-cleared', () => {
-    hideAnalysisError();
+    win.DOM.hideAnalysisError();
 });
 
 // Listen for global shortcut to open note modal
@@ -2148,6 +1402,37 @@ ipcRenderer.on('open-note-modal', () => {
 });
 
 ipcRenderer.on('quit-app', () => {
-    // isQuitting = true; // This line was removed from the original file, so it's removed here.
-    // app.quit(); // This line was removed from the original file, so it's removed here.
+    // Handle quit app event
 }); 
+
+// Global function exports for HTML onclick handlers
+win.toggleTracking = toggleTracking;
+win.testScreenshot = testScreenshot;
+win.updateInterval = updateInterval;
+win.initializeAPI = initializeAPI;
+win.deleteAPIKey = deleteAPIKey;
+win.toggleAutoLaunch = toggleAutoLaunch;
+win.saveGeminiModel = saveGeminiModel;
+win.fetchAvailableModels = fetchAvailableModels;
+win.openLogsFile = openLogsFile;
+win.showRecentLogs = showRecentLogs;
+win.exportData = exportData;
+win.changeDate = changeDate;
+win.changeMonth = changeMonth;
+win.dismissError = dismissError;
+win.saveNote = saveNote;
+win.loadMoreScreenshots = () => {
+    currentPage++;
+    win.currentPage = currentPage;
+    win.DOM.displayScreenshots();
+};
+win.quitApp = quitApp;
+win.openExternalLink = openExternalLink;
+
+// Export DOM functions to global scope for HTML onclick handlers
+win.toggleSettings = win.DOM.toggleSettings;
+win.toggleExportModal = win.DOM.toggleExportModal;
+win.showMinimizeModal = win.DOM.showMinimizeModal;
+win.closeMinimizeModal = win.DOM.closeMinimizeModal;
+win.showAddNoteModal = showAddNoteModal;
+win.closeNoteModal = win.DOM.closeNoteModal; 
