@@ -53,6 +53,7 @@ interface WindowWithCustomProps extends Window {
     closeNoteModal: () => void;
     sendChatMessage: () => void;
     handleChatKeydown: (event: KeyboardEvent) => void;
+    toggleDataOption: (option: string) => void;
 }
 
 // Cast window to our extended interface
@@ -1012,8 +1013,15 @@ async function sendChatMessage(): Promise<void> {
         // Show typing indicator
         win.DOM.showTypingIndicator();
         
-        // Send message to backend
-        const result = await ipcRenderer.invoke('send-chat-message', message);
+        // Get data options state
+        const includeScreenshots = document.getElementById('includeScreenshotsToggle')?.classList.contains('active') ?? true;
+        const includeStats = document.getElementById('includeStatsToggle')?.classList.contains('active') ?? true;
+        
+        // Send message to backend with data options
+        const result = await ipcRenderer.invoke('send-chat-message', message, {
+            includeScreenshots,
+            includeStats
+        });
         
         // Hide typing indicator
         win.DOM.hideTypingIndicator();
@@ -1039,6 +1047,17 @@ async function sendChatMessage(): Promise<void> {
         // Re-enable send button
         sendBtn.disabled = false;
         sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+    }
+}
+
+// Toggle data option pills
+function toggleDataOption(option: string): void {
+    const button = option === 'screenshots' 
+        ? document.getElementById('includeScreenshotsToggle')
+        : document.getElementById('includeStatsToggle');
+        
+    if (button) {
+        button.classList.toggle('active');
     }
 }
 
@@ -1072,6 +1091,7 @@ win.loadMoreScreenshots = () => {
 };
 win.quitApp = quitApp;
 win.openExternalLink = openExternalLink;
+win.toggleDataOption = toggleDataOption;
 
 // Export DOM functions to global scope for HTML onclick handlers
 win.toggleSettings = win.DOM.toggleSettings;

@@ -666,7 +666,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     });
 
     // Chat handlers
-    ipcMain.handle('send-chat-message', async (event: IpcMainInvokeEvent, message: string) => {
+    ipcMain.handle('send-chat-message', async (event: IpcMainInvokeEvent, message: string, dataOptions: { includeScreenshots: boolean, includeStats: boolean } = { includeScreenshots: true, includeStats: true }) => {
         try {
             const apiKey = store.get('apiKey');
             if (!apiKey) {
@@ -676,42 +676,66 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             // Initialize Gemini if not already done
             const genAI = new GoogleGenAI({apiKey});
             
-            // Get past month's screenshot metadata for context
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            // Get current month's date range
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
             
-            const screenshots = await database.screenshots.getScreenshotsForExport(
-                thirtyDaysAgo,
-                new Date(),
-                false // Don't include image data
-            );
+            // Build system prompt with optional data sections
+            let systemPrompt = `You are an AI analyst assistant for a productivity tracking application called "What Did I Do". 
 
-            // Create system prompt with screenshot metadata
-            const systemPrompt = `You are an AI analyst assistant for a productivity tracking application called "What Did I Do". 
+You help users understand their productivity patterns, habits, and behaviors based on the data you have access to.
 
-You have access to the user's activity data from the past 30 days, including screenshots that have been automatically categorized and analyzed. Use this data to provide insights about their productivity patterns, habits, and behaviors.
-
-Here's the user's activity data from the past 30 days:
-${JSON.stringify(screenshots.map((s: any) => ({
-    timestamp: s.timestamp,
-    category: s.category,
-    activity: s.activity,
-    description: s.description
-})), null, 2)}
-
-The categories are:
+The categories used in the app are:
 - WORK: Professional tasks, coding, documents, etc.
 - LEARN: Educational content, tutorials, courses, etc.
 - SOCIAL: Communication, meetings, emails, messaging
 - ENTERTAINMENT: Games, videos, casual browsing, social media
 - OTHER: Everything else (shopping, personal tasks, etc.)
 
-When responding:
-1. Be helpful and insightful about their productivity patterns
+`;
+
+            // Add screenshots data if requested
+            if (dataOptions.includeScreenshots) {
+                const screenshots = await database.screenshots.getScreenshotsForExport(
+                    startOfMonth,
+                    endOfMonth,
+                    false // Don't include image data
+                );
+
+                systemPrompt += `\nHere's the user's activity data from the current month:
+${JSON.stringify(screenshots.map((s: any) => ({
+    timestamp: s.timestamp,
+    category: s.category,
+    activity: s.activity,
+    description: s.description
+})), null, 2)}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include detailed screenshot data in this conversation.\n";
+            }
+
+            // Add stats data if requested
+            if (dataOptions.includeStats) {
+                const statsData = await database.stats.getMonthlyAverages(now, store.get('interval'));
+                
+                systemPrompt += `\nHere are the user's productivity statistics for the current month:
+- Days with tracked data: ${statsData.daysWithData}
+- Time spent per category (in hours):
+${Object.entries(statsData.monthlyTimeInHours)
+    .map(([category, hours]) => `  * ${category}: ${(hours as number).toFixed(1)} hours (${(statsData.monthlyAverages[category] as number).toFixed(1)}%)`)
+    .join('\n')}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include productivity statistics in this conversation.\n";
+            }
+
+            systemPrompt += `\nWhen responding:
+1. Be helpful and insightful about productivity patterns
 2. Provide actionable advice when appropriate
-3. Reference specific data points from their activity history when relevant
+3. Reference specific data points when relevant (if data is available)
 4. Keep responses conversational and friendly
-5. If asked about specific time periods or activities, use the timestamp data to provide accurate information
+5. If asked about specific time periods or activities, use the timestamp data if available
 
 User's message: ${message}`;
 

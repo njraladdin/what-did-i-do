@@ -1502,3 +1502,55 @@
 .chat-messages::-webkit-scrollbar-thumb:hover {
     background: var(--color-text-muted);
 }
+
+/* Data option pills */
+.chat-data-options {
+    padding: 12px 20px;
+    background: var(--color-bg-surface);
+    border-top: 1px solid var(--color-border);
+}
+
+.data-options-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+}
+
+.data-option-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.data-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--color-bg-elevated);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.data-pill i {
+    font-size: 10px;
+}
+
+.data-pill.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.data-pill:hover {
+    transform: translateY(-1px);
+}
+
+.data-pill:not(.active):hover {
+    background: var(--color-bg-main);
+}

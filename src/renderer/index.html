@@ -412,10 +412,24 @@
                         <div class="message-content">
                             <i class="fas fa-robot message-icon"></i>
                             <div class="message-text">
-                                Hello! I'm your AI productivity assistant. I have access to your activity data from the past 30 days. 
+                                Hello! I'm your AI productivity assistant. I have access to your activity data from the current month. 
                                 Ask me anything about your productivity patterns, work habits, or get insights about your daily activities!
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <div class="chat-data-options">
+                    <div class="data-options-label">Include data:</div>
+                    <div class="data-option-pills">
+                        <button id="includeScreenshotsToggle" class="data-pill active" onclick="toggleDataOption('screenshots')">
+                            <i class="fas fa-camera"></i>
+                            <span>Screenshots</span>
+                        </button>
+                        <button id="includeStatsToggle" class="data-pill active" onclick="toggleDataOption('stats')">
+                            <i class="fas fa-chart-pie"></i>
+                            <span>Statistics</span>
+                        </button>
                     </div>
                 </div>
                 
