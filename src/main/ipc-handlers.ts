@@ -1,6 +1,7 @@
 import { ipcMain, IpcMainInvokeEvent, dialog, app, shell } from 'electron';
 import * as fs from 'fs';
 import axios from 'axios';
+import { categories } from './db/core';
 const { GoogleGenerativeAI } = require('@google/genai');
 
 interface Dependencies {
@@ -127,14 +128,14 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     // Stats and data handlers
     ipcMain.handle('get-stats', async () => {
         try {
-            const data = await database.getActivityStats(getCurrentDate(), store.get('interval'));
+            const data = await database.stats.getActivityStats(getCurrentDate(), store.get('interval'));
             return {
                 stats: {
                     stats: data.stats,
                     timeInHours: data.timeInHours
                 },
                 screenshots: data.screenshots,
-                notes: data.diaryLogs,
+                notes: data.notes,
                 dayAnalysis: data.dayAnalysis
             };
         } catch (error) {
@@ -153,14 +154,14 @@ function initializeIpcHandlers(dependencies: Dependencies) {
 
     ipcMain.handle('request-refresh', async () => {
         try {
-            const data = await database.getActivityStats(getCurrentDate(), store.get('interval'));
+            const data = await database.stats.getActivityStats(getCurrentDate(), store.get('interval'));
             return {
                 stats: {
                     stats: data.stats,
                     timeInHours: data.timeInHours
                 },
                 screenshots: data.screenshots,
-                notes: data.diaryLogs,
+                notes: data.notes,
                 dayAnalysis: data.dayAnalysis
             };
         } catch (error) {
@@ -179,12 +180,12 @@ function initializeIpcHandlers(dependencies: Dependencies) {
 
     ipcMain.handle('update-current-date', async (event: IpcMainInvokeEvent, newDateString: string) => {
         setCurrentDate(new Date(newDateString));
-        const data = await database.getActivityStats(getCurrentDate(), store.get('interval'));
+        const data = await database.stats.getActivityStats(getCurrentDate(), store.get('interval'));
         return {
             stats: data.stats,
             timeInHours: data.timeInHours,
             screenshots: data.screenshots,
-            notes: data.diaryLogs,
+            notes: data.notes,
             dayAnalysis: data.dayAnalysis
         };
     });
@@ -281,7 +282,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     // Screenshot management handlers
     ipcMain.handle('delete-screenshot', async (event: IpcMainInvokeEvent, id: string) => {
         try {
-            const success = await database.deleteScreenshot(id);
+            const success = await database.screenshots.deleteScreenshot(parseInt(id));
             return success;
         } catch (error) {
             console.error('Error deleting screenshot:', error);
@@ -292,7 +293,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     // Get activity data for a specific date
     ipcMain.handle('get-activity-data', async (event: IpcMainInvokeEvent, date: string) => {
         try {
-            const data = await database.getActivityStats(date, SCREENSHOT_INTERVAL_MINUTES);
+            const data = await database.stats.getActivityStats(new Date(date), SCREENSHOT_INTERVAL_MINUTES);
             return {
                 success: true,
                 stats: data.stats,
@@ -317,7 +318,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     // Load more screenshots for a date
     ipcMain.handle('load-more-screenshots', async (event: IpcMainInvokeEvent, date: string, offset: number) => {
         try {
-            const data = await database.getMoreScreenshots(date, offset);
+            const data = await database.screenshots.getMoreScreenshots(new Date(date), offset);
             return {
                 success: true,
                 screenshots: data,
@@ -336,7 +337,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     // Note handlers
     ipcMain.handle('save-note', async (event: IpcMainInvokeEvent, date: string, content: string) => {
         try {
-            const noteId = await database.saveNote(date, content);
+            const noteId = await database.notes.saveNote(new Date(date), content);
             return { success: true, id: noteId };
         } catch (error) {
             console.error('Error saving note:', error);
@@ -346,7 +347,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
 
     ipcMain.handle('get-notes-for-date', async (event: IpcMainInvokeEvent, date: string) => {
         try {
-            const notes = await database.getNotesForDate(date);
+            const notes = await database.notes.getNotesForDate(new Date(date));
             return { success: true, notes: notes };
         } catch (error) {
             console.error('Error getting notes:', error);
@@ -356,7 +357,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
 
     ipcMain.handle('update-note', async (event: IpcMainInvokeEvent, id: string, content: string) => {
         try {
-            const success = await database.updateNote(id, content);
+            const success = await database.notes.updateNote(parseInt(id), content);
             return { success };
         } catch (error) {
             console.error('Error updating note:', error);
@@ -366,7 +367,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
 
     ipcMain.handle('delete-note', async (event: IpcMainInvokeEvent, id: string) => {
         try {
-            const success = await database.deleteNote(id);
+            const success = await database.notes.deleteNote(parseInt(id));
             return { success };
         } catch (error) {
             console.error('Error deleting note:', error);
@@ -376,7 +377,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
 
     ipcMain.handle('get-notes-range', async (event: IpcMainInvokeEvent, startDate: string, endDate: string) => {
         try {
-            const notes = await database.getNotesInRange(startDate, endDate);
+            const notes = await database.notes.getNotesInRange(new Date(startDate), new Date(endDate));
             return { success: true, notes: notes };
         } catch (error: unknown) {
             console.error('Error getting notes in range:', error);
@@ -387,7 +388,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     // Monthly data handlers
     ipcMain.handle('get-monthly-averages', async () => {
         try {
-            const data = await database.getMonthlyAverages(getCurrentDate(), store.get('interval'));
+            const data = await database.stats.getMonthlyAverages(getCurrentDate(), store.get('interval'));
             return {
                 monthlyAverages: data.monthlyAverages,
                 monthlyTimeInHours: data.monthlyTimeInHours,
@@ -412,7 +413,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             
             setCurrentDate(newDate);
             
-            const data = await database.getMonthlyAverages(getCurrentDate(), store.get('interval'));
+            const data = await database.stats.getMonthlyAverages(getCurrentDate(), store.get('interval'));
             return {
                 monthlyAverages: data.monthlyAverages,
                 monthlyTimeInHours: data.monthlyTimeInHours,
@@ -431,7 +432,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     // Get daily category stats for chart
     ipcMain.handle('get-daily-category-stats', async () => {
         try {
-            const data = await database.getDailyCategoryStats(getCurrentDate(), store.get('interval'));
+            const data = await database.stats.getDailyCategoryStats(getCurrentDate(), store.get('interval'));
             return {
                 success: true,
                 dailyStats: data
@@ -450,7 +451,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     ipcMain.handle('get-yearly-monthly-category-stats', async (event: IpcMainInvokeEvent, year: number) => {
         try {
             const interval = store.get('interval') || 5;
-            const data = await database.getYearlyMonthlyCategoryStats(year, interval);
+            const data = await database.stats.getYearlyMonthlyCategoryStats(year, interval);
             return { success: true, data };
         } catch (error) {
             console.error('Error getting yearly monthly category stats:', error);
@@ -500,8 +501,8 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             const exportPath = result.filePath;
             
             const exportData = await database.exportData(
-                startDate, 
-                endDate, 
+                new Date(startDate), 
+                new Date(endDate), 
                 false,
                 true
             );
@@ -517,7 +518,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
                     },
                     rangeType,
                     screenshotCount: exportData.screenshots.length,
-                    categories: database.categories,
+                    categories: categories,
                     version: "1.0"
                 },
                 screenshots: exportData.screenshots.map((screenshot: Screenshot) => ({
@@ -639,59 +640,6 @@ function initializeIpcHandlers(dependencies: Dependencies) {
         }
     });
 
-    // Diary log handlers
-    ipcMain.handle('save-diary-log', async (event: IpcMainInvokeEvent, date: string, title: string, content: string, mood: string, tags: string[]) => {
-        try {
-            const tagsString = Array.isArray(tags) ? tags.join(',') : tags || '';
-            const logId = await database.saveDiaryLog(date, title, content, mood, tagsString);
-            return { success: true, id: logId };
-        } catch (error) {
-            console.error('Error saving diary log:', error);
-            return { success: false, error: getErrorMessage(error) };
-        }
-    });
-
-    ipcMain.handle('get-diary-logs-for-date', async (event: IpcMainInvokeEvent, date: string) => {
-        try {
-            const logs = await database.getDiaryLogsForDate(date);
-            return { success: true, logs };
-        } catch (error) {
-            console.error('Error getting diary logs for date:', error);
-            return { success: false, logs: [] };
-        }
-    });
-
-    ipcMain.handle('update-diary-log', async (event: IpcMainInvokeEvent, id: string, title: string, content: string, mood: string, tags: string[]) => {
-        try {
-            const tagsString = Array.isArray(tags) ? tags.join(',') : tags || '';
-            const success = await database.updateDiaryLog(id, title, content, mood, tagsString);
-            return { success };
-        } catch (error) {
-            console.error('Error updating diary log:', error);
-            return { success: false, error: getErrorMessage(error) };
-        }
-    });
-
-    ipcMain.handle('delete-diary-log', async (event: IpcMainInvokeEvent, id: string) => {
-        try {
-            const success = await database.deleteDiaryLog(id);
-            return { success };
-        } catch (error) {
-            console.error('Error deleting diary log:', error);
-            return { success: false, error: getErrorMessage(error) };
-        }
-    });
-
-    ipcMain.handle('get-diary-logs-in-range', async (event: IpcMainInvokeEvent, startDate: string, endDate: string) => {
-        try {
-            const logs = await database.getDiaryLogsInRange(startDate, endDate);
-            return { success: true, logs };
-        } catch (error) {
-            console.error('Error getting diary logs in range:', error);
-            return { success: false, logs: [] };
-        }
-    });
-
     // Update day analysis handlers
     ipcMain.handle('generate-day-analysis', async (event: IpcMainInvokeEvent, date: string) => {
         logger.info('Received generate-day-analysis request for date:', date);
@@ -708,7 +656,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
     ipcMain.handle('get-day-analysis', async (event: IpcMainInvokeEvent, date: string) => {
         logger.info('Received get-day-analysis request for date:', date);
         try {
-            const analysis = await database.getDayAnalysis(date);
+            const analysis = await database.dayAnalyses.getDayAnalysis(new Date(date));
             logger.info('Retrieved day analysis:', analysis ? 'found' : 'not found');
             return analysis;
         } catch (error) {

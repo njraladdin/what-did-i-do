@@ -2,12 +2,12 @@ import { BrowserWindow, Tray } from 'electron';
 import { Logger } from 'winston';
 import SimpleRobustScheduler from '../scheduler';
 import ScreenshotCapture from '../screenshot';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 export interface AppState {
   mainWindow: BrowserWindow | null;
   isTracking: boolean;
-  ai: GoogleGenerativeAI | null;
+  ai: GoogleGenAI | null;
   scheduler: SimpleRobustScheduler | null;
   dayAnalysisScheduler: SimpleRobustScheduler | null;
   currentDate: Date;

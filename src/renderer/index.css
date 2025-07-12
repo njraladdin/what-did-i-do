@@ -897,7 +897,7 @@
         color: var(--color-text-primary);
     }
 
-/* Diary Logs Styles */
+/* Notes Styles */
 .add-note-btn {
     background: var(--color-primary);
     color: white;
@@ -1137,7 +1137,7 @@
     white-space: pre-wrap;
 }
 
-/* Mobile responsiveness for diary logs */
+/* Mobile responsiveness for notes */
 @media (max-width: 768px) {
     .note-actions {
         flex-direction: column;

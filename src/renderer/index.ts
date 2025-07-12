@@ -1019,7 +1019,7 @@ async function changeDate(offset: number) {
             displayScreenshots();
         }
 
-        // Update diary logs for the new date
+        // Update notes  for the new date
         if (data.notes) {
             displayNotes(data.notes);
         } else {

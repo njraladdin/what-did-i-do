@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, powerMonitor, Tray, Menu, globalShortcut } from 'electron';
 import * as path from 'path';
 import Store from 'electron-store';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import * as fs from 'fs';
 import AutoLaunch from 'auto-launch';
 import * as database from './db';
@@ -103,7 +103,7 @@ function createWindow() {
 async function initializeGeminiAPI(apiKey: string): Promise<GeminiApiResponse> {
     try {
         state.appLogger.info('Initializing Gemini API...');
-        state.ai = new GoogleGenerativeAI(apiKey);
+        state.ai = new GoogleGenAI({apiKey});
         
         // Test the API key with a simple request
         const result = await state.ai.models.generateContent({
@@ -186,8 +186,10 @@ async function captureAndAnalyze() {
             // At this point TypeScript knows state.ai is not null
             const uploadResult = await state.ai.files.upload({
                 file: tempFilePath,
-                mimeType: 'image/png',
-                displayName: `screenshot-${safeTimestamp}.png`
+                config: {
+                    mimeType: 'image/png',
+                    displayName: `screenshot-${safeTimestamp}.png`
+                }
             });
 
             state.appLogger.info('Gemini file upload successful', { 
@@ -282,7 +284,7 @@ async function captureAndAnalyze() {
                 // Update error handling
                 try {
                     state.appLogger.info('Raw Gemini response:', { responseText: result.text });
-                    const parsedResponse = JSON.parse(result.text);
+                    const parsedResponse = JSON.parse(result.text || '{}');
                     
                     // Simple normalization to ensure consistent category casing
                     if (parsedResponse.category && parsedResponse.activity) {
@@ -439,7 +441,7 @@ async function generateDayAnalysis(date: string): Promise<string> {
             throw new Error('AI is not initialized. Please check your API key.');
         }
 
-        const prompt = `You are a behavioral analyst. Your task is to analyze my activity logs and diary entries to create a report about my day, while considering my recent history and patterns from this month.
+        const prompt = `You are a behavioral analyst. Your task is to analyze my activity logs and notes entries to create a report about my day, while considering my recent history and patterns from this month.
 
 Here is today's data for analysis:
 

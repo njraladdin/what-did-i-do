@@ -2,21 +2,24 @@
   "name": "what-did-i-do",
   "version": "1.2.0",
   "description": "Time tracking app using screenshots and AI analysis",
-  "main": "src/main/main.js",
+  "main": "dist/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder --win",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start:watch": "tsc -w"
+    "start": "npm run build:dev && electron .",
+    "build": "npm run build:prod && electron-builder --win",
+    "build:dev": "tsc && npm run copy-static",
+    "build:prod": "tsc && npm run copy-static",
+    "copy-static": "xcopy /E /I /Y src\\renderer\\*.html dist\\renderer\\ && xcopy /E /I /Y src\\renderer\\*.css dist\\renderer\\",
+    "dev": "tsc -w",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "build": {
     "appId": "com.whatdidido.app",
     "productName": "What Did I Do",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "files": [
-      "src/**/*",
+      "dist/**/*",
       "assets/**/*"
     ],
     "extraResources": [
@@ -49,7 +52,7 @@
     "asar": true
   },
   "dependencies": {
-    "@google/genai": "^1.6.0",
+    "@google/genai": "^1.9.0",
     "auto-launch": "^5.0.6",
     "axios": "^1.10.0",
     "electron-store": "^8.1.0",
