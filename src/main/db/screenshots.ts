@@ -343,4 +343,53 @@ export function getLastNScreenshotsMetadata(n: number = 10): Promise<Screenshot[
             resolve(screenshots || []);
         });
     });
-} 
+}
+
+/**
+ * Count screenshots in a date range.
+ * @param startDate - The start of the date range.
+ * @param endDate - The end of the date range.
+ * @returns A promise that resolves to the number of screenshots.
+ */
+export function countScreenshotsInRange(startDate: Date, endDate: Date): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        db.get<{ count: number }>(`
+            SELECT COUNT(*) as count
+            FROM screenshots
+            WHERE timestamp BETWEEN ? AND ?
+        `, [startDate.toISOString(), endDate.toISOString()], (err, row) => {
+            if (err) {
+                console.error('Error counting screenshots in range:', err);
+                reject(err);
+                return;
+            }
+            resolve(row ? row.count : 0);
+        });
+    });
+}
+
+/**
+ * Count screenshots with a description in a date range.
+ * @param startDate - The start of the date range.
+ * @param endDate - The end of the date range.
+ * @returns A promise that resolves to the number of screenshots with descriptions.
+ */
+export function countScreenshotsWithDescriptionInRange(startDate: Date, endDate: Date): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        db.get<{ count: number }>(`
+            SELECT COUNT(*) as count
+            FROM screenshots
+            WHERE timestamp BETWEEN ? AND ?
+            AND description IS NOT NULL AND description != ''
+        `, [startDate.toISOString(), endDate.toISOString()], (err, row) => {
+            if (err) {
+                console.error('Error counting screenshots with description in range:', err);
+                reject(err);
+                return;
+            }
+            resolve(row ? row.count : 0);
+        });
+    });
+}

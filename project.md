@@ -23,4 +23,6 @@
 - screenshot logs with context: provide screenshot logs descirption with previous logs, done 
 - data chat: ask anything about current month data (includes descriptions, notes, analyses), done 
 
+- detailed tags: additional more detailed tags to help differnetiate activity in same cateogry 
+- more charts : create 10 most interesting charts using historical data 
 

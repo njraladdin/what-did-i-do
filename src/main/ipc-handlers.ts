@@ -1022,71 +1022,33 @@ Chat history:
             const startOfYear = new Date(now.getFullYear(), 0, 1);
             const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
             
-            // Run all monthly queries in parallel for efficiency
+            // Run all count queries in parallel for maximum efficiency
             const [
-                screenshots,
-                dailyStats,
-                notes,
-                analyses
+                descriptionsCount,
+                logsCount,
+                statsCount,
+                notesCount,
+                analysesCount,
+                yearDescriptionsCount,
+                yearLogsCount,
+                yearStatsCount,
+                yearNotesCount,
+                yearAnalysesCount
             ] = await Promise.all([
-                database.screenshots.getScreenshotsForExport(startOfMonth, endOfMonth, false),
-                database.stats.getDailyCategoryStats(now, store.get('interval')),
-                database.notes.getNotesInRange(startOfMonth, endOfMonth),
-                database.dayAnalyses.getAnalysesInRange(startOfMonth, endOfMonth)
+                // Monthly counts
+                database.screenshots.countScreenshotsWithDescriptionInRange(startOfMonth, endOfMonth),
+                database.screenshots.countScreenshotsInRange(startOfMonth, endOfMonth),
+                database.stats.countDaysWithStatsInMonth(now),
+                database.notes.countNotesInRange(startOfMonth, endOfMonth),
+                database.dayAnalyses.countAnalysesInRange(startOfMonth, endOfMonth),
+                
+                // Yearly counts
+                database.screenshots.countScreenshotsWithDescriptionInRange(startOfYear, endOfYear),
+                database.screenshots.countScreenshotsInRange(startOfYear, endOfYear),
+                database.stats.countMonthsWithStatsInYear(now.getFullYear()),
+                database.notes.countNotesInRange(startOfYear, endOfYear),
+                database.dayAnalyses.countAnalysesInRange(startOfYear, endOfYear)
             ]);
-            
-            // Get yearly data with proper error handling
-            let yearScreenshots = [];
-            let yearNotes = [];
-            let yearAnalyses = [];
-            let yearStatsCount = 0;
-            
-            try {
-                yearScreenshots = await database.screenshots.getScreenshotsForExport(
-                    startOfYear, endOfYear, false, 1000 // Limit to 1000 for performance
-                ) || [];
-            } catch (error) {
-                logger.error('Error fetching year screenshots:', error);
-                yearScreenshots = [];
-            }
-            
-            try {
-                yearNotes = await database.notes.getNotesInRange(startOfYear, endOfYear) || [];
-            } catch (error) {
-                logger.error('Error fetching year notes:', error);
-                yearNotes = [];
-            }
-            
-            try {
-                yearAnalyses = await database.dayAnalyses.getAnalysesInRange(startOfYear, endOfYear) || [];
-            } catch (error) {
-                logger.error('Error fetching year analyses:', error);
-                yearAnalyses = [];
-            }
-            
-            // Get yearly stats with proper error handling
-            try {
-                const yearStats = await database.stats.getYearlyMonthlyCategoryStats(now.getFullYear(), store.get('interval'));
-                if (yearStats && yearStats.data) {
-                    yearStatsCount = Object.keys(yearStats.data).length;
-                }
-            } catch (error) {
-                logger.error('Error fetching yearly stats:', error);
-                yearStatsCount = 0;
-            }
-            
-            // Calculate monthly counts (add null/undefined checks)
-            const descriptionsCount = (screenshots || []).filter((s: any) => s && s.description && s.description.trim()).length;
-            const logsCount = (screenshots || []).length;
-            const statsCount = dailyStats ? Object.keys(dailyStats).length : 0;
-            const notesCount = (notes || []).length;
-            const analysesCount = (analyses || []).length;
-            
-            // Calculate yearly counts with null/undefined checks
-            const yearDescriptionsCount = (yearScreenshots || []).filter((s: any) => s && s.description && s.description.trim()).length;
-            const yearLogsCount = (yearScreenshots || []).length;
-            const yearNotesCount = (yearNotes || []).length;
-            const yearAnalysesCount = (yearAnalyses || []).length;
             
             return {
                 success: true,

@@ -175,4 +175,31 @@ export function updateAnalysis(id: number, content: string): Promise<boolean> {
             resolve(this.changes > 0);
         });
     });
-} 
+}
+
+/**
+ * Count day analyses within a date range.
+ * @param startDate - Start date
+ * @param endDate - End date
+ * @returns A promise that resolves to the number of analyses.
+ */
+export function countAnalysesInRange(startDate: Date, endDate: Date): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        const startDateStr = new Date(startDate).toISOString().split('T')[0];
+        const endDateStr = new Date(endDate).toISOString().split('T')[0];
+
+        db.get<{ count: number }>(`
+            SELECT COUNT(*) as count
+            FROM day_analyses
+            WHERE date BETWEEN ? AND ?
+        `, [startDateStr, endDateStr], (err, row) => {
+            if (err) {
+                console.error('Error counting analyses in range:', err);
+                reject(err);
+                return;
+            }
+            resolve(row ? row.count : 0);
+        });
+    });
+}

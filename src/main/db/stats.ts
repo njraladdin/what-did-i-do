@@ -487,4 +487,56 @@ export async function getExportStats(startDate: Date, endDate: Date): Promise<Ex
         console.error('Error getting export stats:', error);
         throw error;
     }
-} 
+}
+
+/**
+ * Count the number of days with screenshot data in a given month.
+ * @param currentDate - A date within the month to count.
+ * @returns A promise that resolves to the number of days with data.
+ */
+export function countDaysWithStatsInMonth(currentDate: Date): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        db.get<{ count: number }>(`
+            SELECT COUNT(DISTINCT date(timestamp)) as count
+            FROM screenshots
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
+        `, [startOfMonth.toISOString(), endOfMonth.toISOString()], (err, row) => {
+            if (err) {
+                console.error('Error counting days with stats in month:', err);
+                reject(err);
+                return;
+            }
+            resolve(row ? row.count : 0);
+        });
+    });
+}
+
+/**
+ * Count the number of months with screenshot data in a given year.
+ * @param year - The year to count.
+ * @returns A promise that resolves to the number of months with data.
+ */
+export function countMonthsWithStatsInYear(year: number): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        const startOfYear = new Date(year, 0, 1);
+        const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+
+        db.get<{ count: number }>(`
+            SELECT COUNT(DISTINCT strftime('%Y-%m', timestamp)) as count
+            FROM screenshots
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
+        `, [startOfYear.toISOString(), endOfYear.toISOString()], (err, row) => {
+            if (err) {
+                console.error('Error counting months with stats in year:', err);
+                reject(err);
+                return;
+            }
+            resolve(row ? row.count : 0);
+        });
+    });
+}

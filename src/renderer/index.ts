@@ -704,9 +704,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             await updateDailyProgressChart();
             await updateYearlyProgressChart();
             
-            // Initialize data counts for chat
-            updateDataCounts();
-
             // Initialize chat model dropdown
             await initializeChatModelDropdown();
         }

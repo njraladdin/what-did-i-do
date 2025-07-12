@@ -240,4 +240,31 @@ export function getHistoricalNotes(startDate: Date, endDate: Date): Promise<Hist
             resolve(notes || []);
         });
     });
-} 
+}
+
+/**
+ * Count notes within a date range.
+ * @param startDate - Start date
+ * @param endDate - End date
+ * @returns A promise that resolves to the number of notes.
+ */
+export function countNotesInRange(startDate: Date, endDate: Date): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        const startDateStr = new Date(startDate).toISOString().split('T')[0];
+        const endDateStr = new Date(endDate).toISOString().split('T')[0];
+        
+        db.get<{ count: number }>(`
+            SELECT COUNT(*) as count
+            FROM notes 
+            WHERE date BETWEEN ? AND ?
+        `, [startDateStr, endDateStr], (err, row) => {
+            if (err) {
+                console.error('Error counting notes in range:', err);
+                reject(err);
+                return;
+            }
+            resolve(row ? row.count : 0);
+        });
+    });
+}
