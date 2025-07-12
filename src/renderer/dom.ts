@@ -773,35 +773,6 @@ function clearChatInput(): void {
     }
 }
 
-function showDataPreview(data: any, title: string): void {
-    const tooltip = document.getElementById('dataPreviewTooltip');
-    if (!tooltip) return;
-
-    let content = '';
-    if (data === null || data === undefined) {
-        content = 'No preview data available.';
-    } else if (typeof data === 'string') {
-        content = `<pre>${data}</pre>`;
-    } else if (Array.isArray(data) && data.length === 0) {
-        content = 'No preview data available for the current selection.';
-    } else if (typeof data === 'object' && Object.keys(data).length === 0) {
-        content = 'No preview data available for the current selection.';
-    } else {
-        content = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-    }
-
-    tooltip.innerHTML = `<h4>${title}</h4>${content}`;
-    tooltip.classList.add('visible');
-}
-
-function hideDataPreview(): void {
-    const tooltip = document.getElementById('dataPreviewTooltip');
-    if (tooltip) {
-        tooltip.classList.remove('visible');
-        tooltip.innerHTML = '';
-    }
-}
-
 function toggleChatSidebar(): void {
     const sidebar = document.getElementById('chatSidebar');
     const layoutContainer = document.querySelector('.layout-container');
@@ -856,7 +827,5 @@ typedWindow.DOM = {
     addChatMessage,
     showTypingIndicator,
     hideTypingIndicator,
-    clearChatInput,
-    showDataPreview,
-    hideDataPreview
+    clearChatInput
 }; 

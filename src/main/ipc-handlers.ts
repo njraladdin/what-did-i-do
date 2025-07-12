@@ -706,13 +706,25 @@ function initializeIpcHandlers(dependencies: Dependencies) {
         includeLogs: boolean, 
         includeStats: boolean,
         includeNotes: boolean,
-        includeAnalyses: boolean
+        includeAnalyses: boolean,
+        // Year data options
+        includeYearScreenshots: boolean,
+        includeYearLogs: boolean,
+        includeYearStats: boolean,
+        includeYearNotes: boolean,
+        includeYearAnalyses: boolean
     } = { 
         includeDescriptions: true, 
         includeLogs: true, 
         includeStats: true,
         includeNotes: true,
-        includeAnalyses: true
+        includeAnalyses: true,
+        // Year data options default to false
+        includeYearScreenshots: false,
+        includeYearLogs: false,
+        includeYearStats: false,
+        includeYearNotes: false,
+        includeYearAnalyses: false
     }) => {
         try {
             const apiKey = store.get('apiKey');
@@ -742,6 +754,10 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
             const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
             
+            // Get current year's date range
+            const startOfYear = new Date(now.getFullYear(), 0, 1);
+            const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+            
             // Build system prompt with optional data sections
             let systemPrompt = `You are an AI analyst assistant for a productivity tracking application called "What Did I Do". 
 
@@ -755,6 +771,9 @@ The categories used in the app are:
 - OTHER: Everything else (shopping, personal tasks, etc.)
 
 `;
+
+            // CURRENT MONTH DATA SECTIONS
+            systemPrompt += "\n## CURRENT MONTH DATA ##\n";
 
             // Fetch screenshots data once if needed for any option
             let screenshots = [];
@@ -776,7 +795,7 @@ ${JSON.stringify(screenshots.map((s: any) => ({
 })), null, 2)}
 `;
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include activity logs in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include current month activity logs in this conversation.\n";
             }
 
             // Add activity descriptions if requested (detailed descriptions of activities)
@@ -792,7 +811,7 @@ ${JSON.stringify(screenshotsWithDescriptions.map((s: any) => ({
 })), null, 2)}
 `;
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include detailed activity descriptions in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include current month activity descriptions in this conversation.\n";
             }
 
             // Add stats data if requested
@@ -803,7 +822,7 @@ ${JSON.stringify(screenshotsWithDescriptions.map((s: any) => ({
 ${JSON.stringify(dailyStats, null, 2)}
 `;
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include daily statistics in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include current month daily statistics in this conversation.\n";
             }
 
             // Add notes data if requested
@@ -816,7 +835,7 @@ ${JSON.stringify(notes.map((n: any) => ({
 })), null, 2)}
 `;
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include notes in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include current month notes in this conversation.\n";
             }
 
             // Add day analyses data if requested
@@ -829,15 +848,118 @@ ${JSON.stringify(analyses.map((a: any) => ({
 })), null, 2)}
 `;
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include day analyses in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include current month day analyses in this conversation.\n";
             }
 
-            systemPrompt += `\nWhen responding:
+            // CURRENT YEAR DATA SECTIONS
+            systemPrompt += "\n\n## CURRENT YEAR DATA ##\n";
+            
+            // Fetch year data if needed
+            let yearScreenshots = [];
+            if (dataOptions.includeYearScreenshots || dataOptions.includeYearLogs) {
+                // Fetch year data (limit to most recent 1000 entries to avoid token limits)
+                yearScreenshots = await database.screenshots.getScreenshotsForExport(
+                    startOfYear,
+                    endOfYear,
+                    false, // Don't include image data
+                    1000   // Limit to 1000 entries
+                );
+            }
+            
+            // Add yearly activity logs if requested
+            if (dataOptions.includeYearLogs) {
+                // For yearly logs, just include timestamps and categories without full descriptions to save tokens
+                systemPrompt += `\nHere's the user's activity logs for the current year (limited to most recent 1000 entries):
+${JSON.stringify(yearScreenshots.map((s: any) => ({
+    timestamp: s.timestamp,
+    category: s.category,
+    activity: s.activity
+})), null, 2)}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include current year activity logs in this conversation.\n";
+            }
+
+            // Add yearly activity descriptions if requested
+            if (dataOptions.includeYearScreenshots) {
+                // Only include entries that have meaningful descriptions
+                const yearScreenshotsWithDescriptions = yearScreenshots
+                    .filter((s: any) => s.description && s.description.trim())
+                    // Limit to the 100 most recent to save tokens
+                    .slice(0, 100);
+                
+                systemPrompt += `\nHere are detailed descriptions of the user's activities from the current year (limited to most recent 100 entries with descriptions):
+${JSON.stringify(yearScreenshotsWithDescriptions.map((s: any) => ({
+    timestamp: s.timestamp,
+    category: s.category,
+    activity: s.activity,
+    description: s.description
+})), null, 2)}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include current year activity descriptions in this conversation.\n";
+            }
+
+            // Add yearly stats data if requested
+            if (dataOptions.includeYearStats) {
+                try {
+                    // Get monthly stats for the year instead of daily stats
+                    const yearlyStats = await database.stats.getYearlyMonthlyCategoryStats(now.getFullYear(), store.get('interval'));
+                    
+                    systemPrompt += `\nHere is the user's monthly productivity breakdown for the current year:
+${JSON.stringify(yearlyStats.data, null, 2)}
+`;
+                } catch (error) {
+                    logger.error('Error fetching yearly stats:', error);
+                    systemPrompt += "\nNote: There was an error fetching yearly statistics data.\n";
+                }
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include current year monthly statistics in this conversation.\n";
+            }
+
+            // Add yearly notes if requested
+            if (dataOptions.includeYearNotes) {
+                try {
+                    const yearNotes = await database.notes.getNotesInRange(startOfYear, endOfYear);
+                    systemPrompt += `\nHere are the user's notes from the current year:
+${JSON.stringify(yearNotes.map((n: any) => ({
+    timestamp: n.timestamp,
+    content: n.content
+})), null, 2)}
+`;
+                } catch (error) {
+                    logger.error('Error fetching yearly notes:', error);
+                    systemPrompt += "\nNote: There was an error fetching yearly notes data.\n";
+                }
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include current year notes in this conversation.\n";
+            }
+
+            // Add yearly analyses data if requested
+            if (dataOptions.includeYearAnalyses) {
+                try {
+                    const yearAnalyses = await database.dayAnalyses.getAnalysesInRange(startOfYear, endOfYear);
+                    systemPrompt += `\nHere are the user's day analyses from the current year:
+${JSON.stringify(yearAnalyses.map((a: any) => ({
+    date: a.date,
+    analysis: a.content
+})), null, 2)}
+`;
+                } catch (error) {
+                    logger.error('Error fetching yearly analyses:', error);
+                    systemPrompt += "\nNote: There was an error fetching yearly analyses data.\n";
+                }
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include current year day analyses in this conversation.\n";
+            }
+
+            systemPrompt += `\n\nWhen responding:
 1. Be helpful and insightful about productivity patterns
 2. Provide actionable advice when appropriate
 3. Reference specific data points when relevant (if data is available)
 4. Keep responses conversational and friendly
 5. If asked about specific time periods or activities, use the timestamp data if available
+6. Use year data for long-term trends and month data for recent patterns
 
 Chat history:
 `;
@@ -891,92 +1013,16 @@ Chat history:
         }
     });
 
-    // Data Preview handler
-    ipcMain.handle('get-data-preview', async (event: IpcMainInvokeEvent, previewType: string) => {
-        try {
-            const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-            
-            let data: any = null;
-            let title: string = '';
-
-            switch (previewType) {
-                case 'descriptions':
-                    const screenshotsWithDesc = await database.screenshots.getScreenshotsForExport(
-                        startOfMonth, endOfMonth, false
-                    );
-                    const filteredDescriptions = screenshotsWithDesc
-                        .filter((s: any) => s.description && s.description.trim());
-                    title = `Preview: Last 3 of ${filteredDescriptions.length} Activity Descriptions`;
-                    data = filteredDescriptions
-                        .reverse()
-                        .slice(0, 3)
-                        .map((s: any) => ({
-                            activity: s.activity,
-                            description: s.description.substring(0, 150) + '...'
-                        }));
-                    break;
-                
-                case 'logs':
-                    const screenshotsLogs = await database.screenshots.getScreenshotsForExport(
-                        startOfMonth, endOfMonth, false
-                    );
-                    title = `Preview: Last 5 of ${screenshotsLogs.length} Activity Logs`;
-                    data = screenshotsLogs
-                        .slice(-5)
-                        .map((s: any) => ({
-                            timestamp: new Date(s.timestamp).toLocaleString(),
-                            category: s.category,
-                            activity: s.activity
-                        }));
-                    break;
-
-                case 'stats':
-                    const dailyStats = await database.stats.getDailyCategoryStats(now, store.get('interval'));
-                    const daysWithData = Object.keys(dailyStats).length;
-                    title = `Preview: Daily Statistics for ${daysWithData} Days`;
-                    data = dailyStats;
-                    break;
-
-                case 'notes':
-                    const notes = await database.notes.getNotesInRange(startOfMonth, endOfMonth);
-                    title = `Preview: Last 3 of ${notes.length} Notes`;
-                    data = notes.slice(0, 3).map((n: any) => ({
-                        timestamp: new Date(n.timestamp).toLocaleString(),
-                        content: n.content.substring(0, 150) + '...'
-                    }));
-                    break;
-
-                case 'analyses':
-                    const analyses = await database.dayAnalyses.getAnalysesInRange(startOfMonth, endOfMonth);
-                    title = `Preview: Last 2 of ${analyses.length} Day Analyses`;
-                    data = analyses.slice(0, 2).map((a: any) => ({
-                        date: a.date,
-                        analysis: a.content.substring(0, 200) + '...'
-                    }));
-                    break;
-
-                default:
-                    return { success: false, error: 'Unknown preview type' };
-            }
-
-            return { success: true, data, title };
-
-        } catch (error) {
-            console.error('Error getting data preview:', error);
-            return { success: false, error: getErrorMessage(error) };
-        }
-    });
-
     // Data Counts handler
     ipcMain.handle('get-data-counts', async () => {
         try {
             const now = new Date();
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
             const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            const startOfYear = new Date(now.getFullYear(), 0, 1);
+            const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
             
-            // Run all queries in parallel for efficiency
+            // Run all monthly queries in parallel for efficiency
             const [
                 screenshots,
                 dailyStats,
@@ -989,21 +1035,75 @@ Chat history:
                 database.dayAnalyses.getAnalysesInRange(startOfMonth, endOfMonth)
             ]);
             
-            // Calculate counts
-            const descriptionsCount = screenshots.filter((s: any) => s.description && s.description.trim()).length;
-            const logsCount = screenshots.length;
-            const statsCount = Object.keys(dailyStats).length;
-            const notesCount = notes.length;
-            const analysesCount = analyses.length;
+            // Get yearly data with proper error handling
+            let yearScreenshots = [];
+            let yearNotes = [];
+            let yearAnalyses = [];
+            let yearStatsCount = 0;
+            
+            try {
+                yearScreenshots = await database.screenshots.getScreenshotsForExport(
+                    startOfYear, endOfYear, false, 1000 // Limit to 1000 for performance
+                ) || [];
+            } catch (error) {
+                logger.error('Error fetching year screenshots:', error);
+                yearScreenshots = [];
+            }
+            
+            try {
+                yearNotes = await database.notes.getNotesInRange(startOfYear, endOfYear) || [];
+            } catch (error) {
+                logger.error('Error fetching year notes:', error);
+                yearNotes = [];
+            }
+            
+            try {
+                yearAnalyses = await database.dayAnalyses.getAnalysesInRange(startOfYear, endOfYear) || [];
+            } catch (error) {
+                logger.error('Error fetching year analyses:', error);
+                yearAnalyses = [];
+            }
+            
+            // Get yearly stats with proper error handling
+            try {
+                const yearStats = await database.stats.getYearlyMonthlyCategoryStats(now.getFullYear(), store.get('interval'));
+                if (yearStats && yearStats.data) {
+                    yearStatsCount = Object.keys(yearStats.data).length;
+                }
+            } catch (error) {
+                logger.error('Error fetching yearly stats:', error);
+                yearStatsCount = 0;
+            }
+            
+            // Calculate monthly counts (add null/undefined checks)
+            const descriptionsCount = (screenshots || []).filter((s: any) => s && s.description && s.description.trim()).length;
+            const logsCount = (screenshots || []).length;
+            const statsCount = dailyStats ? Object.keys(dailyStats).length : 0;
+            const notesCount = (notes || []).length;
+            const analysesCount = (analyses || []).length;
+            
+            // Calculate yearly counts with null/undefined checks
+            const yearDescriptionsCount = (yearScreenshots || []).filter((s: any) => s && s.description && s.description.trim()).length;
+            const yearLogsCount = (yearScreenshots || []).length;
+            const yearNotesCount = (yearNotes || []).length;
+            const yearAnalysesCount = (yearAnalyses || []).length;
             
             return {
                 success: true,
                 counts: {
+                    // Monthly counts
                     descriptions: descriptionsCount,
                     logs: logsCount,
                     stats: statsCount,
                     notes: notesCount,
-                    analyses: analysesCount
+                    analyses: analysesCount,
+                    
+                    // Yearly counts
+                    yearDescriptions: yearDescriptionsCount,
+                    yearLogs: yearLogsCount,
+                    yearStats: yearStatsCount,
+                    yearNotes: yearNotesCount,
+                    yearAnalyses: yearAnalysesCount
                 }
             };
         } catch (error) {
@@ -1012,11 +1112,19 @@ Chat history:
                 success: false, 
                 error: getErrorMessage(error),
                 counts: {
+                    // Monthly counts
                     descriptions: 0,
                     logs: 0,
                     stats: 0,
                     notes: 0,
-                    analyses: 0
+                    analyses: 0,
+                    
+                    // Yearly counts
+                    yearDescriptions: 0,
+                    yearLogs: 0,
+                    yearStats: 0,
+                    yearNotes: 0,
+                    yearAnalyses: 0
                 }
             };
         }

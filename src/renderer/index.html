@@ -440,30 +440,67 @@
                 </div>
                 
                 <div class="chat-data-options">
-                    <div class="data-options-label">Include data (hover to preview):</div>
-                    <div class="data-option-pills">
-                        <button id="includeScreenshotsToggle" class="data-pill active" onclick="toggleDataOption('screenshots')" data-preview-type="descriptions">
-                            <span>Activity Descriptions</span>
-                            <span class="data-count" id="descriptionsCount">0</span>
-                        </button>
-                        <button id="includeLogsToggle" class="data-pill active" onclick="toggleDataOption('logs')" data-preview-type="logs">
-                            <span>Activity Logs</span>
-                            <span class="data-count" id="logsCount">0</span>
-                        </button>
-                        <button id="includeStatsToggle" class="data-pill active" onclick="toggleDataOption('stats')" data-preview-type="stats">
-                            <span>Daily Statistics</span>
-                            <span class="data-count" id="statsCount">0</span>
-                        </button>
-                        <button id="includeNotesToggle" class="data-pill active" onclick="toggleDataOption('notes')" data-preview-type="notes">
-                            <span>Notes</span>
-                            <span class="data-count" id="notesCount">0</span>
-                        </button>
-                        <button id="includeAnalysesToggle" class="data-pill active" onclick="toggleDataOption('analyses')" data-preview-type="analyses">
-                            <span>Day Analyses</span>
-                            <span class="data-count" id="analysesCount">0</span>
-                        </button>
+                    <div class="data-options-header">
+                        <div class="data-options-label">Data Period:</div>
+                        <div class="period-toggle">
+                            <label class="toggle-label" id="month-label">Month</label>
+                            <label class="switch">
+                                <input type="checkbox" id="periodToggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <label class="toggle-label" id="year-label">Year</label>
+                        </div>
                     </div>
-                    <div id="dataPreviewTooltip" class="data-preview-tooltip"></div>
+
+                    <div id="monthDataOptions">
+                        <div class="data-option-pills">
+                            <button id="includeScreenshotsToggle" class="data-pill active" onclick="toggleDataOption('screenshots')">
+                                <span>Activity Descriptions</span>
+                                <span class="data-count" id="descriptionsCount">0</span>
+                            </button>
+                            <button id="includeLogsToggle" class="data-pill active" onclick="toggleDataOption('logs')">
+                                <span>Activity Logs</span>
+                                <span class="data-count" id="logsCount">0</span>
+                            </button>
+                            <button id="includeStatsToggle" class="data-pill active" onclick="toggleDataOption('stats')">
+                                <span>Daily Statistics</span>
+                                <span class="data-count" id="statsCount">0</span>
+                            </button>
+                            <button id="includeNotesToggle" class="data-pill active" onclick="toggleDataOption('notes')">
+                                <span>Notes</span>
+                                <span class="data-count" id="notesCount">0</span>
+                            </button>
+                            <button id="includeAnalysesToggle" class="data-pill active" onclick="toggleDataOption('analyses')">
+                                <span>Day Analyses</span>
+                                <span class="data-count" id="analysesCount">0</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="yearDataOptions" style="display: none;">
+                        <div class="data-option-pills">
+                            <button id="includeYearScreenshotsToggle" class="data-pill active" onclick="toggleDataOption('yearScreenshots')">
+                                <span>Activity Descriptions</span>
+                                <span class="data-count" id="yearDescriptionsCount">0</span>
+                            </button>
+                            <button id="includeYearLogsToggle" class="data-pill active" onclick="toggleDataOption('yearLogs')">
+                                <span>Activity Logs</span>
+                                <span class="data-count" id="yearLogsCount">0</span>
+                            </button>
+                            <button id="includeYearStatsToggle" class="data-pill active" onclick="toggleDataOption('yearStats')">
+                                <span>Monthly Statistics</span>
+                                <span class="data-count" id="yearStatsCount">0</span>
+                            </button>
+                            <button id="includeYearNotesToggle" class="data-pill active" onclick="toggleDataOption('yearNotes')">
+                                <span>Notes</span>
+                                <span class="data-count" id="yearNotesCount">0</span>
+                            </button>
+                            <button id="includeYearAnalysesToggle" class="data-pill active" onclick="toggleDataOption('yearAnalyses')">
+                                <span>Day Analyses</span>
+                                <span class="data-count" id="yearAnalysesCount">0</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="chat-input-container">

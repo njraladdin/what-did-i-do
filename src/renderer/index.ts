@@ -57,6 +57,7 @@ interface WindowWithCustomProps extends Window {
     updateDataCounts: () => void;
     loadChatHistory: () => void;
     clearChatHistory: () => void;
+    toggleDataPeriodView: () => void;
 }
 
 // Cast window to our extended interface
@@ -709,6 +710,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Initialize chat model dropdown
             await initializeChatModelDropdown();
         }
+
+        // Initialize period toggle
+        const periodToggle = document.getElementById('periodToggle') as HTMLInputElement;
+        if (periodToggle) {
+            periodToggle.addEventListener('change', toggleDataPeriodView);
+        }
     } catch (error) {
         console.error('Error initializing data:', error);
     }
@@ -894,11 +901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Add event listeners for data preview
-    const dataPills = document.querySelectorAll('.data-pill[data-preview-type]');
-    dataPills.forEach(pill => {
-        pill.addEventListener('mouseenter', (event: Event) => handlePreviewMouseEnter(event as MouseEvent));
-        pill.addEventListener('mouseleave', () => handlePreviewMouseLeave());
-    });
+    // Removed dataPills.forEach(pill => { ... });
 });
 
 // Initialize API key check
@@ -1101,38 +1104,6 @@ ipcRenderer.on('quit-app', () => {
     // Handle quit app event
 });
 
-async function handlePreviewMouseEnter(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    const pill = target.closest('.data-pill[data-preview-type]') as HTMLElement;
-    if (!pill) return;
-
-    const previewType = pill.dataset.previewType;
-    if (!previewType) return;
-
-    // Check cache first
-    if (previewCache[previewType]) {
-        win.DOM.showDataPreview(previewCache[previewType].data, previewCache[previewType].title);
-        return;
-    }
-
-    // Show loading state in tooltip
-    win.DOM.showDataPreview('Loading preview...', 'Loading...');
-
-    // Fetch preview data
-    const result = await ipcRenderer.invoke('get-data-preview', previewType);
-
-    if (result.success) {
-        win.DOM.showDataPreview(result.data, result.title);
-        previewCache[previewType] = result; // Cache the result
-    } else {
-        win.DOM.showDataPreview(`Error: ${result.error}`, 'Error');
-    }
-}
-
-function handlePreviewMouseLeave() {
-    win.DOM.hideDataPreview();
-}
-
 // Function to clear the preview cache
 function clearPreviewCache() {
     previewCache = {};
@@ -1146,7 +1117,7 @@ async function updateDataCounts() {
         if (result.success) {
             const { counts } = result;
             
-            // Update the count elements
+            // Update the monthly count elements
             const descriptionsCountEl = document.getElementById('descriptionsCount');
             const logsCountEl = document.getElementById('logsCount');
             const statsCountEl = document.getElementById('statsCount');
@@ -1158,6 +1129,19 @@ async function updateDataCounts() {
             if (statsCountEl) statsCountEl.textContent = counts.stats.toString();
             if (notesCountEl) notesCountEl.textContent = counts.notes.toString();
             if (analysesCountEl) analysesCountEl.textContent = counts.analyses.toString();
+            
+            // Update the yearly count elements
+            const yearDescriptionsCountEl = document.getElementById('yearDescriptionsCount');
+            const yearLogsCountEl = document.getElementById('yearLogsCount');
+            const yearStatsCountEl = document.getElementById('yearStatsCount');
+            const yearNotesCountEl = document.getElementById('yearNotesCount');
+            const yearAnalysesCountEl = document.getElementById('yearAnalysesCount');
+            
+            if (yearDescriptionsCountEl) yearDescriptionsCountEl.textContent = counts.yearDescriptions.toString();
+            if (yearLogsCountEl) yearLogsCountEl.textContent = counts.yearLogs.toString();
+            if (yearStatsCountEl) yearStatsCountEl.textContent = counts.yearStats.toString();
+            if (yearNotesCountEl) yearNotesCountEl.textContent = counts.yearNotes.toString();
+            if (yearAnalysesCountEl) yearAnalysesCountEl.textContent = counts.yearAnalyses.toString();
         }
     } catch (error) {
         console.error('Error updating data counts:', error);
@@ -1188,20 +1172,39 @@ async function sendChatMessage(): Promise<void> {
         // Show typing indicator
         win.DOM.showTypingIndicator();
         
-        // Get data options state
-        const includeDescriptions = document.getElementById('includeScreenshotsToggle')?.classList.contains('active') ?? true;
-        const includeLogs = document.getElementById('includeLogsToggle')?.classList.contains('active') ?? true;
-        const includeStats = document.getElementById('includeStatsToggle')?.classList.contains('active') ?? true;
-        const includeNotes = document.getElementById('includeNotesToggle')?.classList.contains('active') ?? true;
-        const includeAnalyses = document.getElementById('includeAnalysesToggle')?.classList.contains('active') ?? true;
+        // Determine selected data period
+        const periodToggle = document.getElementById('periodToggle') as HTMLInputElement;
+        const isYearView = periodToggle ? periodToggle.checked : false;
+
+        // Get monthly data options state if month view is active
+        const includeDescriptions = !isYearView && (document.getElementById('includeScreenshotsToggle')?.classList.contains('active') ?? false);
+        const includeLogs = !isYearView && (document.getElementById('includeLogsToggle')?.classList.contains('active') ?? false);
+        const includeStats = !isYearView && (document.getElementById('includeStatsToggle')?.classList.contains('active') ?? false);
+        const includeNotes = !isYearView && (document.getElementById('includeNotesToggle')?.classList.contains('active') ?? false);
+        const includeAnalyses = !isYearView && (document.getElementById('includeAnalysesToggle')?.classList.contains('active') ?? false);
+        
+        // Get yearly data options state if year view is active
+        const includeYearScreenshots = isYearView && (document.getElementById('includeYearScreenshotsToggle')?.classList.contains('active') ?? false);
+        const includeYearLogs = isYearView && (document.getElementById('includeYearLogsToggle')?.classList.contains('active') ?? false);
+        const includeYearStats = isYearView && (document.getElementById('includeYearStatsToggle')?.classList.contains('active') ?? false);
+        const includeYearNotes = isYearView && (document.getElementById('includeYearNotesToggle')?.classList.contains('active') ?? false);
+        const includeYearAnalyses = isYearView && (document.getElementById('includeYearAnalysesToggle')?.classList.contains('active') ?? false);
         
         // Send message to backend with data options
         const result = await ipcRenderer.invoke('send-chat-message', message, {
+            // Monthly options
             includeDescriptions,
             includeLogs,
             includeStats,
             includeNotes,
-            includeAnalyses
+            includeAnalyses,
+            
+            // Yearly options
+            includeYearScreenshots,
+            includeYearLogs,
+            includeYearStats,
+            includeYearNotes,
+            includeYearAnalyses
         });
         
         // Hide typing indicator
@@ -1250,6 +1253,22 @@ function toggleDataOption(option: string): void {
             break;
         case 'analyses':
             button = document.getElementById('includeAnalysesToggle');
+            break;
+        // Year toggles
+        case 'yearScreenshots':
+            button = document.getElementById('includeYearScreenshotsToggle');
+            break;
+        case 'yearLogs':
+            button = document.getElementById('includeYearLogsToggle');
+            break;
+        case 'yearStats':
+            button = document.getElementById('includeYearStatsToggle');
+            break;
+        case 'yearNotes':
+            button = document.getElementById('includeYearNotesToggle');
+            break;
+        case 'yearAnalyses':
+            button = document.getElementById('includeYearAnalysesToggle');
             break;
     }
         
@@ -1322,5 +1341,32 @@ async function loadChatHistory() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     } catch (error) {
         console.error('Error loading chat history:', error);
+    }
+} 
+
+// Function to toggle between month and year data views
+function toggleDataPeriodView() {
+    const periodToggle = document.getElementById('periodToggle') as HTMLInputElement;
+    const monthOptions = document.getElementById('monthDataOptions');
+    const yearOptions = document.getElementById('yearDataOptions');
+    const monthLabel = document.getElementById('month-label');
+    const yearLabel = document.getElementById('year-label');
+
+    if (periodToggle && monthOptions && yearOptions && monthLabel && yearLabel) {
+        if (periodToggle.checked) { // Year is selected
+            monthOptions.style.display = 'none';
+            yearOptions.style.display = 'block';
+            monthLabel.style.color = 'var(--color-text-muted)';
+            monthLabel.style.fontWeight = 'normal';
+            yearLabel.style.color = 'var(--color-primary)';
+            yearLabel.style.fontWeight = '500';
+        } else { // Month is selected
+            monthOptions.style.display = 'block';
+            yearOptions.style.display = 'none';
+            monthLabel.style.color = 'var(--color-primary)';
+            monthLabel.style.fontWeight = '500';
+            yearLabel.style.color = 'var(--color-text-muted)';
+            yearLabel.style.fontWeight = 'normal';
+        }
     }
 } 
