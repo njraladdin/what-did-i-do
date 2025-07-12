@@ -143,6 +143,7 @@ function updateCategoryStats(stats: Record<string, number>, timeInHours: Record<
     statsContainer.innerHTML = '';
 
     const sortedCategories = Object.entries(stats)
+        .filter(([category]) => category.toUpperCase() !== 'UNKNOWN')
         .sort(([, a], [, b]) => (b as number) - (a as number));
 
     sortedCategories.forEach(([category, percentage]) => {
@@ -191,6 +192,7 @@ function updateMonthlyAnalyticsDisplay(data: {
 
     // Sort categories by total hours (descending)
     const categoryEntries = Object.entries(data.monthlyTimeInHours)
+        .filter(([category]) => category.toUpperCase() !== 'UNKNOWN')
         .filter(([, hours]) => typeof hours === 'number' && hours > 0)
         .sort(([, a], [, b]) => (b as number) - (a as number));
 
@@ -417,6 +419,7 @@ function renderDailyProgressChart(result: {
     });
 
     const topCategories = Object.entries(categoryTotals)
+        .filter(([category]) => category.toUpperCase() !== 'UNKNOWN')
         .sort(([, a], [, b]) => b - a)
         .slice(0, 3)
         .map(([category]) => category);
