@@ -200,6 +200,11 @@
                     <span class="button-text">Export Data</span>
                 </button>
 
+                <button id="chatBtn" onclick="toggleChatSidebar()" title="AI Chat (Ctrl+Shift+C)">
+                    <i class="fas fa-comments"></i>
+                    <span class="button-text">AI Chat</span>
+                </button>
+
                 <span id="countdown"></span>
 
                 <!-- Move contact section here, right after the buttons -->
@@ -392,6 +397,46 @@
                 </div>
             </div>
         </div>
+
+        <div class="chat-sidebar" id="chatSidebar">
+            <div class="chat-header">
+                <h3>AI Assistant</h3>
+                <button class="chat-toggle-btn" onclick="toggleChatSidebar()" title="Close chat">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message assistant-message">
+                        <div class="message-content">
+                            <i class="fas fa-robot message-icon"></i>
+                            <div class="message-text">
+                                Hello! I'm your AI productivity assistant. I have access to your activity data from the past 30 days. 
+                                Ask me anything about your productivity patterns, work habits, or get insights about your daily activities!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <textarea 
+                            id="chatInput" 
+                            placeholder="Ask me about your productivity patterns..."
+                            rows="3"
+                            onkeydown="handleChatKeydown(event)"
+                        ></textarea>
+                        <button id="sendChatBtn" onclick="sendChatMessage()" class="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="chat-input-hint">
+                        Press Enter to send, Shift+Enter for new line
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="noteModal" class="modal">
@@ -440,6 +485,8 @@
             </div>
         </div>
     </div>
+
+
 
     <script src="dom.js"></script>
     <script src="index.js"></script>

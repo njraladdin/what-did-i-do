@@ -2,7 +2,7 @@ import { ipcMain, IpcMainInvokeEvent, dialog, app, shell } from 'electron';
 import * as fs from 'fs';
 import axios from 'axios';
 import { categories } from './db/core';
-const { GoogleGenerativeAI } = require('@google/genai');
+import { GoogleGenAI } from '@google/genai';
 
 interface Dependencies {
     database: any; // TODO: Add proper database type
@@ -584,7 +584,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             }
 
             // Test the model with a simple request
-            const ai = new GoogleGenerativeAI({apiKey: apiKey});
+            const ai = new GoogleGenAI({apiKey: apiKey});
             
             const result = await ai.models.generateContent({
                 model: model.trim(),
@@ -662,6 +662,83 @@ function initializeIpcHandlers(dependencies: Dependencies) {
         } catch (error) {
             logger.error('Error getting day analysis:', error);
             throw error;
+        }
+    });
+
+    // Chat handlers
+    ipcMain.handle('send-chat-message', async (event: IpcMainInvokeEvent, message: string) => {
+        try {
+            const apiKey = store.get('apiKey');
+            if (!apiKey) {
+                throw new Error('API key not configured');
+            }
+
+            // Initialize Gemini if not already done
+            const genAI = new GoogleGenAI({apiKey});
+            
+            // Get past month's screenshot metadata for context
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const screenshots = await database.screenshots.getScreenshotsForExport(
+                thirtyDaysAgo,
+                new Date(),
+                false // Don't include image data
+            );
+
+            // Create system prompt with screenshot metadata
+            const systemPrompt = `You are an AI analyst assistant for a productivity tracking application called "What Did I Do". 
+
+You have access to the user's activity data from the past 30 days, including screenshots that have been automatically categorized and analyzed. Use this data to provide insights about their productivity patterns, habits, and behaviors.
+
+Here's the user's activity data from the past 30 days:
+${JSON.stringify(screenshots.map((s: any) => ({
+    timestamp: s.timestamp,
+    category: s.category,
+    activity: s.activity,
+    description: s.description
+})), null, 2)}
+
+The categories are:
+- WORK: Professional tasks, coding, documents, etc.
+- LEARN: Educational content, tutorials, courses, etc.
+- SOCIAL: Communication, meetings, emails, messaging
+- ENTERTAINMENT: Games, videos, casual browsing, social media
+- OTHER: Everything else (shopping, personal tasks, etc.)
+
+When responding:
+1. Be helpful and insightful about their productivity patterns
+2. Provide actionable advice when appropriate
+3. Reference specific data points from their activity history when relevant
+4. Keep responses conversational and friendly
+5. If asked about specific time periods or activities, use the timestamp data to provide accurate information
+
+User's message: ${message}`;
+
+            const result = await genAI.models.generateContent({
+                model: store.get('geminiModel') || 'gemini-2.0-flash',
+                contents: systemPrompt,
+                config: {
+                    temperature: 0.7,
+                    maxOutputTokens: 2048,
+                }
+            });
+
+            if (!result || !result.text) {
+                throw new Error('No response from AI');
+            }
+
+            return {
+                success: true,
+                response: result.text
+            };
+
+        } catch (error) {
+            console.error('Error in chat:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            };
         }
     });
 }

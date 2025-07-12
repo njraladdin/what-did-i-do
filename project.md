@@ -24,6 +24,6 @@
 - screenshot logs with context: provide screenshot logs descirption with previous logs, done 
 
 
-- data chat: ask anything about current month data (includes screenshots descriptions, notes, analyses). 
-"best productive time perio "most sustainable working durations" "patterns that make you stop working for a long period"
+- data chat: ask anything about current month data (includes descriptions, notes, analyses). 
+"best productive time period" most sustainable working durations" "patterns that make you stop working for a long period"
 

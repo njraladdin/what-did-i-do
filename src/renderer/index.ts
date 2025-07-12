@@ -46,10 +46,13 @@ interface WindowWithCustomProps extends Window {
     openExternalLink: (url: string) => void;
     toggleSettings: () => void;
     toggleExportModal: () => void;
+    toggleChatSidebar: () => void;
     showMinimizeModal: () => void;
     closeMinimizeModal: (shouldClose?: boolean) => void;
     showAddNoteModal: () => void;
     closeNoteModal: () => void;
+    sendChatMessage: () => void;
+    handleChatKeydown: (event: KeyboardEvent) => void;
 }
 
 // Cast window to our extended interface
@@ -709,6 +712,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+
+
     // Day analysis button handler
     const generateAnalysis = document.getElementById('generateAnalysis') as HTMLButtonElement;
     if (generateAnalysis) {
@@ -832,9 +837,15 @@ if (minimizeModal) {
 // Escape key handler for closing modals
 document.addEventListener('keydown', (e) => {
     const settingsModal = document.getElementById('settingsModal');
+    const chatSidebar = document.getElementById('chatSidebar');
+    
     if (settingsModal && settingsModal.style.display === 'flex') {
         if (e.key === 'Escape') {
             win.DOM.toggleSettings();
+        }
+    } else if (chatSidebar && chatSidebar.classList.contains('open')) {
+        if (e.key === 'Escape') {
+            win.DOM.toggleChatSidebar();
         }
     }
 });
@@ -968,9 +979,75 @@ ipcRenderer.on('open-note-modal', () => {
     showAddNoteModal();
 });
 
+// Listen for global shortcut to toggle chat sidebar
+ipcRenderer.on('toggle-chat-sidebar', () => {
+    win.DOM.toggleChatSidebar();
+});
+
 ipcRenderer.on('quit-app', () => {
     // Handle quit app event
-}); 
+});
+
+// Chat Functions
+async function sendChatMessage(): Promise<void> {
+    const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement;
+    const sendBtn = document.getElementById('sendChatBtn') as HTMLButtonElement;
+    
+    if (!chatInput || !sendBtn) return;
+    
+    const message = chatInput.value.trim();
+    if (!message) return;
+    
+    // Disable send button and show loading state
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    try {
+        // Add user message to chat
+        win.DOM.addChatMessage(message, true);
+        
+        // Clear input
+        win.DOM.clearChatInput();
+        
+        // Show typing indicator
+        win.DOM.showTypingIndicator();
+        
+        // Send message to backend
+        const result = await ipcRenderer.invoke('send-chat-message', message);
+        
+        // Hide typing indicator
+        win.DOM.hideTypingIndicator();
+        
+        if (result.success) {
+            // Add AI response to chat
+            win.DOM.addChatMessage(result.response, false);
+        } else {
+            // Add error message
+            win.DOM.addChatMessage(`Sorry, I encountered an error: ${result.error}`, false);
+        }
+        
+    } catch (error) {
+        // Hide typing indicator on error
+        win.DOM.hideTypingIndicator();
+        
+        // Add error message
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        win.DOM.addChatMessage(`Sorry, I encountered an error: ${errorMessage}`, false);
+        
+        console.error('Error sending chat message:', error);
+    } finally {
+        // Re-enable send button
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+    }
+}
+
+function handleChatKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendChatMessage();
+    }
+} 
 
 // Global function exports for HTML onclick handlers
 win.toggleTracking = toggleTracking;
@@ -999,7 +1076,10 @@ win.openExternalLink = openExternalLink;
 // Export DOM functions to global scope for HTML onclick handlers
 win.toggleSettings = win.DOM.toggleSettings;
 win.toggleExportModal = win.DOM.toggleExportModal;
+win.toggleChatSidebar = win.DOM.toggleChatSidebar;
 win.showMinimizeModal = win.DOM.showMinimizeModal;
 win.closeMinimizeModal = win.DOM.closeMinimizeModal;
 win.showAddNoteModal = showAddNoteModal;
-win.closeNoteModal = win.DOM.closeNoteModal; 
+win.closeNoteModal = win.DOM.closeNoteModal;
+win.sendChatMessage = sendChatMessage;
+win.handleChatKeydown = handleChatKeydown; 

@@ -239,6 +239,16 @@ function toggleExportModal(): void {
     }
 }
 
+function toggleChatSidebar(): void {
+    const sidebar = document.getElementById('chatSidebar');
+    const layoutContainer = document.querySelector('.layout-container');
+    
+    if (sidebar && layoutContainer) {
+        sidebar.classList.toggle('open');
+        layoutContainer.classList.toggle('chat-open');
+    }
+}
+
 function showMinimizeModal(): void {
     const minimizeModal = document.getElementById('minimizeModal');
     if (minimizeModal) {
@@ -693,6 +703,83 @@ function renderYearlyProgressChart(result: {
     });
 }
 
+// Chat Functions
+function addChatMessage(message: string, isUser: boolean = false): void {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${isUser ? 'user-message' : 'assistant-message'}`;
+    
+    const icon = isUser ? 'fas fa-user' : 'fas fa-robot';
+    
+    // Format the message with basic markdown-like styling for AI responses
+    let formattedMessage = message;
+    if (!isUser) {
+        formattedMessage = message
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+            .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+            .replace(/\n/g, '<br>') // Line breaks
+            .replace(/^\d+\.\s/gm, '<br>$&') // Add line breaks before numbered lists
+            .replace(/^-\s/gm, '<br>• '); // Convert dashes to bullets
+    } else {
+        formattedMessage = message.replace(/\n/g, '<br>');
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="message-content">
+            <i class="${icon} message-icon"></i>
+            <div class="message-text">${formattedMessage}</div>
+        </div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function showTypingIndicator(): void {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'chat-message assistant-message';
+    typingDiv.id = 'typingIndicator';
+    
+    typingDiv.innerHTML = `
+        <div class="message-content">
+            <i class="fas fa-robot message-icon"></i>
+            <div class="typing-indicator">
+                <span>AI is thinking</span>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    chatMessages.appendChild(typingDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function hideTypingIndicator(): void {
+    const typingIndicator = document.getElementById('typingIndicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
+function clearChatInput(): void {
+    const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement;
+    if (chatInput) {
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+    }
+}
+
 // Export all functions to global scope for access from index.ts
 typedWindow.DOM = {
     formatCategoryName,
@@ -702,6 +789,7 @@ typedWindow.DOM = {
     updateMonthlyAnalyticsDisplay,
     toggleSettings,
     toggleExportModal,
+    toggleChatSidebar,
     showMinimizeModal,
     closeMinimizeModal,
     handleModalClick,
@@ -713,5 +801,9 @@ typedWindow.DOM = {
     updateNextMonthButtonState,
     displayNotes,
     updateDailyProgressChart: renderDailyProgressChart,
-    updateYearlyProgressChart: renderYearlyProgressChart
+    updateYearlyProgressChart: renderYearlyProgressChart,
+    addChatMessage,
+    showTypingIndicator,
+    hideTypingIndicator,
+    clearChatInput
 }; 

@@ -730,6 +730,15 @@ app.whenReady().then(async () => {
             showWindowAndOpenNoteModal();
         });
         
+        // Register global shortcut for chat sidebar
+        globalShortcut.register('CommandOrControl+Shift+C', () => {
+            if (state.mainWindow) {
+                state.mainWindow.show();
+                state.mainWindow.focus();
+                state.mainWindow.webContents.send('toggle-chat-sidebar');
+            }
+        });
+        
         // Initialize IPC handlers with type-safe dependencies
         initializeIpcHandlers({
             database,
