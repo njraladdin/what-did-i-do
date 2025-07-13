@@ -781,93 +781,131 @@ The categories used in the app are:
             // CURRENT MONTH DATA SECTIONS
             systemPrompt += "\n## CURRENT MONTH DATA ##\n";
 
-            // Fetch and process activity data for the current month
-            if (dataOptions.includeLogs || dataOptions.includeDescriptions || dataOptions.includeTags) {
-                try {
-                    // Use a more efficient query with sorting and limiting at the database level
-                    const screenshots = await database.screenshots.getScreenshotsForExport(
-                        startOfMonth,
-                        endOfMonth,
-                        false // Don't include image data
-                    );
+            // New logic: Fetch all data for the month and group by day
+            if (dataOptions.includeLogs || dataOptions.includeDescriptions || dataOptions.includeTags || dataOptions.includeNotes || dataOptions.includeAnalyses) {
+                systemPrompt += `\nHere is the user's detailed data from the current month:\n`;
+ 
+                // A map to hold all data grouped by date string (YYYY-MM-DD)
+                const dailyData = new Map<string, { activities: any[], notes: any[], analysis: any }>();
 
-                    if (screenshots.length > 0) {
-                        systemPrompt += `\nHere is the user's activity data from the current month:\n`;
-                        
-                        // Pre-allocate a Map for better performance with date grouping
-                        const groupedByDate = new Map<string, Array<{
-                            time: string;
-                            category: string;
-                            activity: string;
-                            description?: string;
-                            tags?: string[];
-                        }>>();
-                        
-                        // Process screenshots in a single pass
-                        for (const s of screenshots) {
-                            // Only include entries that match the selected options
-                            const hasDescription = dataOptions.includeDescriptions && s.description && s.description.trim();
-                            const hasTags = dataOptions.includeTags && s.tags;
-                            
-                            if (!dataOptions.includeLogs && !hasDescription && !hasTags) {
-                                continue;
-                            }
-                            
-                            const timestamp = new Date(s.timestamp);
-                            const date = timestamp.toISOString().split('T')[0];
-                            const time = timestamp.toLocaleTimeString('en-US', { hour12: false });
-                            
-                            if (!groupedByDate.has(date)) {
-                                groupedByDate.set(date, []);
-                            }
-                            
-                            const entry = {
-                                time,
-                                category: s.category,
-                                activity: s.activity
-                            } as any;
-                            
-                            if (hasDescription) {
-                                entry.description = s.description;
-                            }
-                            
-                            if (hasTags) {
-                                try {
-                                    entry.tags = JSON.parse(s.tags);
-                                } catch {}
-                            }
-                            
-                            groupedByDate.get(date)!.push(entry);
+                // Fetch all data types in parallel
+                const promises = [
+                    (dataOptions.includeLogs || dataOptions.includeDescriptions || dataOptions.includeTags)
+                        ? database.screenshots.getScreenshotsForExport(startOfMonth, endOfMonth, false)
+                        : Promise.resolve([]),
+                    dataOptions.includeNotes
+                        ? database.notes.getNotesInRange(startOfMonth, endOfMonth)
+                        : Promise.resolve([]),
+                    dataOptions.includeAnalyses
+                        ? database.dayAnalyses.getAnalysesInRange(startOfMonth, endOfMonth)
+                        : Promise.resolve([])
+                ];
+
+                try {
+                    const [screenshots, notes, analyses] = await Promise.all(promises);
+
+                    // Helper to ensure a date entry exists in the map
+                    const ensureDateEntry = (date: string) => {
+                        if (!dailyData.has(date)) {
+                            dailyData.set(date, { activities: [], notes: [], analysis: null });
                         }
-                        
-                        // Convert the map to output format
-                        const sortedDates = Array.from(groupedByDate.keys()).sort();
-                        for (const date of sortedDates) {
-                            systemPrompt += `\nDate: ${date}\n`;
-                            const entries = groupedByDate.get(date)!;
-                            
-                            for (const entry of entries) {
-                                systemPrompt += `  - Time: ${entry.time}\n`;
-                                systemPrompt += `    Category: ${entry.category}, Activity: ${entry.activity}\n`;
-                                
-                                if (entry.description) {
-                                    systemPrompt += `    Description: ${entry.description}\n`;
+                    };
+
+                    // Process and group screenshots
+                    for (const s of screenshots) {
+                        const timestamp = new Date(s.timestamp);
+                        const date = timestamp.toISOString().split('T')[0];
+                        ensureDateEntry(date);
+
+                        const entry: any = {
+                            time: timestamp.toLocaleTimeString('en-US', { hour12: false }),
+                            category: s.category,
+                            activity: s.activity,
+                        };
+                        if (dataOptions.includeDescriptions && s.description && s.description.trim()) {
+                            entry.description = s.description;
+                        }
+                        if (dataOptions.includeTags && s.tags) {
+                            try { entry.tags = JSON.parse(s.tags); } catch { }
+                        }
+                        dailyData.get(date)!.activities.push(entry);
+                    }
+
+                    // Process and group notes
+                    for (const n of notes) {
+                        const timestamp = new Date(n.timestamp);
+                        const date = timestamp.toISOString().split('T')[0];
+                        ensureDateEntry(date);
+                        dailyData.get(date)!.notes.push({
+                            time: timestamp.toLocaleTimeString('en-US', { hour12: false }),
+                            content: n.content
+                        });
+                    }
+
+                    // Process and group analyses
+                    for (const a of analyses) {
+                        const date = new Date(a.date).toISOString().split('T')[0];
+                        ensureDateEntry(date);
+                        dailyData.get(date)!.analysis = a.content;
+                    }
+
+                    // Now, build the prompt string from the grouped data
+                    const sortedDates = Array.from(dailyData.keys()).sort();
+
+                    if (sortedDates.length === 0) {
+                        systemPrompt += "\nNote: No data found for the current month with the selected options.\n";
+                    }
+
+                    for (const date of sortedDates) {
+                        const data = dailyData.get(date)!;
+                        systemPrompt += `\nDate: ${date}\n`;
+
+                        // ACTIVITIES
+                        if (data.activities.length > 0) {
+                            const shouldMergeActivities = dataOptions.includeLogs && !dataOptions.includeDescriptions && !dataOptions.includeTags;
+                            if (shouldMergeActivities) {
+                                const mergedEntries = [];
+                                let currentMergedEntry = { ...data.activities[0] };
+                                for (let i = 1; i < data.activities.length; i++) {
+                                    const currentEntry = data.activities[i];
+                                    if (currentEntry.category === currentMergedEntry.category) {
+                                        currentMergedEntry.activity += `, ${currentEntry.activity}`;
+                                    } else {
+                                        mergedEntries.push(currentMergedEntry);
+                                        currentMergedEntry = { ...currentEntry };
+                                    }
                                 }
-                                
-                                if (entry.tags && entry.tags.length > 0) {
-                                    systemPrompt += `    Tags: ${entry.tags.join(', ')}\n`;
+                                mergedEntries.push(currentMergedEntry);
+                                for (const entry of mergedEntries) {
+                                    systemPrompt += `  - Activity @ ${entry.time}: [${entry.category}] ${entry.activity}\n`;
+                                }
+                            } else {
+                                for (const entry of data.activities) {
+                                    systemPrompt += `  - Activity @ ${entry.time}: [${entry.category}] ${entry.activity}\n`;
+                                    if (entry.description) systemPrompt += `    Description: ${entry.description}\n`;
+                                    if (entry.tags && entry.tags.length > 0) systemPrompt += `    Tags: ${entry.tags.join(', ')}\n`;
                                 }
                             }
                         }
-                    } else {
-                        systemPrompt += "\nNote: No activity data found for the current month with the selected options.\n";
+
+                        // NOTES
+                        if (data.notes.length > 0) {
+                            for (const note of data.notes) {
+                                systemPrompt += `  - Note @ ${note.time}: ${note.content}\n`;
+                            }
+                        }
+
+                        // DAY ANALYSIS
+                        if (data.analysis) {
+                            systemPrompt += `  - Day's Analysis: ${JSON.stringify(data.analysis)}\n`;
+                        }
                     }
                 } catch (error) {
-                    console.error('Error processing monthly activity data:', error);
-                    systemPrompt += "\nNote: Error processing monthly activity data.\n";
+                    console.error('Error processing monthly combined data:', error);
+                    systemPrompt += "\nNote: Error processing monthly data.\n";
                 }
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include current month activity data (logs, descriptions, tags) in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include any detailed current month data (logs, notes, analyses) in this conversation.\n";
             }
 
             // Add stats data if requested
@@ -916,122 +954,127 @@ The categories used in the app are:
                 systemPrompt += "\nNote: The user has chosen not to include current month daily statistics in this conversation.\n";
             }
 
-            // Add notes data if requested
-            if (dataOptions.includeNotes) {
-                const notes = await database.notes.getNotesInRange(startOfMonth, endOfMonth);
-                systemPrompt += `\nHere are the user's notes from the current month:
-${JSON.stringify(notes.map((n: any) => ({
-    timestamp: n.timestamp,
-    content: n.content
-})), null, 2)}
-`;
-            } else {
-                systemPrompt += "\nNote: The user has chosen not to include current month notes in this conversation.\n";
-            }
-
-            // Add day analyses data if requested
-            if (dataOptions.includeAnalyses) {
-                const analyses = await database.dayAnalyses.getAnalysesInRange(startOfMonth, endOfMonth);
-                systemPrompt += `\nHere are the user's day analyses from the current month:
-${JSON.stringify(analyses.map((a: any) => ({
-    date: a.date,
-    analysis: a.content
-})), null, 2)}
-`;
-            } else {
-                systemPrompt += "\nNote: The user has chosen not to include current month day analyses in this conversation.\n";
-            }
-
             // CURRENT YEAR DATA SECTIONS
             systemPrompt += "\n\n## CURRENT YEAR DATA ##\n";
             
-            // Fetch and process activity data for the current year
-            if (dataOptions.includeYearLogs || dataOptions.includeYearScreenshots || dataOptions.includeYearTags) {
-                try {
-                    // Use a more efficient query with sorting and limiting at the database level
-                    const yearScreenshots = await database.screenshots.getScreenshotsForExport(
-                        startOfYear,
-                        endOfYear,
-                        false // Don't include image data
-                    );
+            // New logic: Fetch all data for the year and group by day
+            if (dataOptions.includeYearLogs || dataOptions.includeYearScreenshots || dataOptions.includeYearTags || dataOptions.includeYearNotes || dataOptions.includeYearAnalyses) {
+                systemPrompt += `\nHere is a summary of the user's detailed data from the current year:\n`;
 
-                    if (yearScreenshots.length > 0) {
-                        systemPrompt += `\nHere is a summary of the user's activity data from the current year:\n`;
-                        
-                        // Pre-allocate a Map for better performance with date grouping
-                        const groupedByDate = new Map<string, Array<{
-                            time: string;
-                            category: string;
-                            activity: string;
-                            description?: string;
-                            tags?: string[];
-                        }>>();
-                        
-                        // Process screenshots in a single pass
-                        for (const s of yearScreenshots) {
-                            // Only include entries that match the selected options
-                            const hasDescription = dataOptions.includeYearScreenshots && s.description && s.description.trim();
-                            const hasTags = dataOptions.includeYearTags && s.tags;
-                            
-                            if (!dataOptions.includeYearLogs && !hasDescription && !hasTags) {
-                                continue;
-                            }
-                            
-                            const timestamp = new Date(s.timestamp);
-                            const date = timestamp.toISOString().split('T')[0];
-                            const time = timestamp.toLocaleTimeString('en-US', { hour12: false });
-                            
-                            if (!groupedByDate.has(date)) {
-                                groupedByDate.set(date, []);
-                            }
-                            
-                            const entry = {
-                                time,
-                                category: s.category,
-                                activity: s.activity
-                            } as any;
-                            
-                            if (hasDescription) {
-                                entry.description = s.description;
-                            }
-                            
-                            if (hasTags) {
-                                try {
-                                    entry.tags = JSON.parse(s.tags);
-                                } catch {}
-                            }
-                            
-                            groupedByDate.get(date)!.push(entry);
+                const dailyDataForYear = new Map<string, { activities: any[], notes: any[], analysis: any }>();
+
+                const yearPromises = [
+                    (dataOptions.includeYearLogs || dataOptions.includeYearScreenshots || dataOptions.includeYearTags)
+                        ? database.screenshots.getScreenshotsForExport(startOfYear, endOfYear, false)
+                        : Promise.resolve([]),
+                    dataOptions.includeYearNotes
+                        ? database.notes.getNotesInRange(startOfYear, endOfYear)
+                        : Promise.resolve([]),
+                    dataOptions.includeYearAnalyses
+                        ? database.dayAnalyses.getAnalysesInRange(startOfYear, endOfYear)
+                        : Promise.resolve([])
+                ];
+
+                try {
+                    const [yearScreenshots, yearNotes, yearAnalyses] = await Promise.all(yearPromises);
+
+                    const ensureDateEntry = (date: string) => {
+                        if (!dailyDataForYear.has(date)) {
+                            dailyDataForYear.set(date, { activities: [], notes: [], analysis: null });
                         }
-                        
-                        // Convert the map to output format
-                        const sortedDates = Array.from(groupedByDate.keys()).sort();
-                        for (const date of sortedDates) {
-                            systemPrompt += `\nDate: ${date}\n`;
-                            const entries = groupedByDate.get(date)!;
-                            
-                            for (const entry of entries) {
-                                systemPrompt += `  - Time: ${entry.time}\n`;
-                                systemPrompt += `    Category: ${entry.category}, Activity: ${entry.activity}\n`;
-                                
-                                if (entry.description) {
-                                    systemPrompt += `    Description: ${entry.description}\n`;
+                    };
+
+                    // Process and group screenshots for the year
+                    for (const s of yearScreenshots) {
+                        const timestamp = new Date(s.timestamp);
+                        const date = timestamp.toISOString().split('T')[0];
+                        ensureDateEntry(date);
+
+                        const entry: any = {
+                            time: timestamp.toLocaleTimeString('en-US', { hour12: false }),
+                            category: s.category,
+                            activity: s.activity,
+                        };
+                        if (dataOptions.includeYearScreenshots && s.description && s.description.trim()) {
+                            entry.description = s.description;
+                        }
+                        if (dataOptions.includeYearTags && s.tags) {
+                            try { entry.tags = JSON.parse(s.tags); } catch { }
+                        }
+                        dailyDataForYear.get(date)!.activities.push(entry);
+                    }
+
+                    // Process and group notes for the year
+                    for (const n of yearNotes) {
+                        const timestamp = new Date(n.timestamp);
+                        const date = timestamp.toISOString().split('T')[0];
+                        ensureDateEntry(date);
+                        dailyDataForYear.get(date)!.notes.push({
+                            time: timestamp.toLocaleTimeString('en-US', { hour12: false }),
+                            content: n.content
+                        });
+                    }
+
+                    // Process and group analyses for the year
+                    for (const a of yearAnalyses) {
+                        const date = new Date(a.date).toISOString().split('T')[0];
+                        ensureDateEntry(date);
+                        dailyDataForYear.get(date)!.analysis = a.content;
+                    }
+
+                    const sortedYearDates = Array.from(dailyDataForYear.keys()).sort();
+
+                    if (sortedYearDates.length === 0) {
+                        systemPrompt += "\nNote: No data found for the current year with the selected options.\n";
+                    }
+
+                    for (const date of sortedYearDates) {
+                        const data = dailyDataForYear.get(date)!;
+                        systemPrompt += `\nDate: ${date}\n`;
+
+                        if (data.activities.length > 0) {
+                            const shouldMergeYearActivities = dataOptions.includeYearLogs && !dataOptions.includeYearScreenshots && !dataOptions.includeYearTags;
+                            if (shouldMergeYearActivities) {
+                                const mergedEntries = [];
+                                let currentMergedEntry = { ...data.activities[0] };
+                                for (let i = 1; i < data.activities.length; i++) {
+                                    const currentEntry = data.activities[i];
+                                    if (currentEntry.category === currentMergedEntry.category) {
+                                        currentMergedEntry.activity += `, ${currentEntry.activity}`;
+                                    } else {
+                                        mergedEntries.push(currentMergedEntry);
+                                        currentMergedEntry = { ...currentEntry };
+                                    }
                                 }
-                                
-                                if (entry.tags && entry.tags.length > 0) {
-                                    systemPrompt += `    Tags: ${entry.tags.join(', ')}\n`;
+                                mergedEntries.push(currentMergedEntry);
+                                for (const entry of mergedEntries) {
+                                    systemPrompt += `  - Activity @ ${entry.time}: [${entry.category}] ${entry.activity}\n`;
+                                }
+                            } else {
+                                for (const entry of data.activities) {
+                                    systemPrompt += `  - Activity @ ${entry.time}: [${entry.category}] ${entry.activity}\n`;
+                                    if (entry.description) systemPrompt += `    Description: ${entry.description}\n`;
+                                    if (entry.tags && entry.tags.length > 0) systemPrompt += `    Tags: ${entry.tags.join(', ')}\n`;
                                 }
                             }
                         }
-                    } else {
-                        systemPrompt += "\nNote: No activity data found for the current year with the selected options.\n";
+
+                        if (data.notes.length > 0) {
+                            for (const note of data.notes) {
+                                systemPrompt += `  - Note @ ${note.time}: ${note.content}\n`;
+                            }
+                        }
+
+                        if (data.analysis) {
+                            systemPrompt += `  - Day's Analysis: ${JSON.stringify(data.analysis)}\n`;
+                        }
                     }
                 } catch (error) {
-                    console.error('Error processing yearly activity data:', error);
-                    systemPrompt += "\nNote: Error processing yearly activity data.\n";
+                    console.error('Error processing yearly combined data:', error);
+                    systemPrompt += "\nNote: Error processing yearly data.\n";
                 }
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include current year activity data (logs, descriptions, tags) in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include any detailed current year data in this conversation.\n";
             }
 
             // Add yearly stats data if requested
@@ -1170,41 +1213,7 @@ ${JSON.stringify(analyses.map((a: any) => ({
                 systemPrompt += "\nNote: The user has chosen not to include current year monthly statistics in this conversation.\n";
             }
 
-            // Add yearly notes if requested
-            if (dataOptions.includeYearNotes) {
-                try {
-                    const yearNotes = await database.notes.getNotesInRange(startOfYear, endOfYear);
-                    systemPrompt += `\nHere are the user's notes from the current year:
-${JSON.stringify(yearNotes.map((n: any) => ({
-    timestamp: n.timestamp,
-    content: n.content
-})), null, 2)}
-`;
-                } catch (error) {
-                    logger.error('Error fetching yearly notes:', error);
-                    systemPrompt += "\nNote: There was an error fetching yearly notes data.\n";
-                }
-            } else {
-                systemPrompt += "\nNote: The user has chosen not to include current year notes in this conversation.\n";
-            }
-
-            // Add yearly analyses data if requested
-            if (dataOptions.includeYearAnalyses) {
-                try {
-                    const yearAnalyses = await database.dayAnalyses.getAnalysesInRange(startOfYear, endOfYear);
-                    systemPrompt += `\nHere are the user's day analyses from the current year:
-${JSON.stringify(yearAnalyses.map((a: any) => ({
-    date: a.date,
-    analysis: a.content
-})), null, 2)}
-`;
-                } catch (error) {
-                    logger.error('Error fetching yearly analyses:', error);
-                    systemPrompt += "\nNote: There was an error fetching yearly analyses data.\n";
-                }
-            } else {
-                systemPrompt += "\nNote: The user has chosen not to include current year day analyses in this conversation.\n";
-            }
+            // The old separate data sections are removed
 
             systemPrompt += `\n\nWhen responding:
 1. Be helpful and insightful about productivity patterns
