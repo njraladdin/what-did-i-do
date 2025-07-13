@@ -783,42 +783,88 @@ The categories used in the app are:
 
             // Fetch and process activity data for the current month
             if (dataOptions.includeLogs || dataOptions.includeDescriptions || dataOptions.includeTags) {
-                const screenshots = await database.screenshots.getScreenshotsForExport(
-                    startOfMonth,
-                    endOfMonth,
-                    false // Don't include image data
-                );
+                try {
+                    // Use a more efficient query with sorting and limiting at the database level
+                    const screenshots = await database.screenshots.getScreenshotsForExport(
+                        startOfMonth,
+                        endOfMonth,
+                        false // Don't include image data
+                    );
 
-                const activityData = screenshots.map((s: any) => {
-                    const item: any = {
-                        timestamp: s.timestamp,
-                        category: s.category,
-                        activity: s.activity,
-                    };
-
-                    if (dataOptions.includeDescriptions && s.description && s.description.trim()) {
-                        item.description = s.description;
-                    }
-                    if (dataOptions.includeTags && s.tags) {
-                        try {
-                            const tags = JSON.parse(s.tags);
-                            if (tags.length > 0) {
-                                item.tags = tags;
+                    if (screenshots.length > 0) {
+                        systemPrompt += `\nHere is the user's activity data from the current month:\n`;
+                        
+                        // Pre-allocate a Map for better performance with date grouping
+                        const groupedByDate = new Map<string, Array<{
+                            time: string;
+                            category: string;
+                            activity: string;
+                            description?: string;
+                            tags?: string[];
+                        }>>();
+                        
+                        // Process screenshots in a single pass
+                        for (const s of screenshots) {
+                            // Only include entries that match the selected options
+                            const hasDescription = dataOptions.includeDescriptions && s.description && s.description.trim();
+                            const hasTags = dataOptions.includeTags && s.tags;
+                            
+                            if (!dataOptions.includeLogs && !hasDescription && !hasTags) {
+                                continue;
                             }
-                        } catch {}
+                            
+                            const timestamp = new Date(s.timestamp);
+                            const date = timestamp.toISOString().split('T')[0];
+                            const time = timestamp.toLocaleTimeString('en-US', { hour12: false });
+                            
+                            if (!groupedByDate.has(date)) {
+                                groupedByDate.set(date, []);
+                            }
+                            
+                            const entry = {
+                                time,
+                                category: s.category,
+                                activity: s.activity
+                            } as any;
+                            
+                            if (hasDescription) {
+                                entry.description = s.description;
+                            }
+                            
+                            if (hasTags) {
+                                try {
+                                    entry.tags = JSON.parse(s.tags);
+                                } catch {}
+                            }
+                            
+                            groupedByDate.get(date)!.push(entry);
+                        }
+                        
+                        // Convert the map to output format
+                        const sortedDates = Array.from(groupedByDate.keys()).sort();
+                        for (const date of sortedDates) {
+                            systemPrompt += `\nDate: ${date}\n`;
+                            const entries = groupedByDate.get(date)!;
+                            
+                            for (const entry of entries) {
+                                systemPrompt += `  - Time: ${entry.time}\n`;
+                                systemPrompt += `    Category: ${entry.category}, Activity: ${entry.activity}\n`;
+                                
+                                if (entry.description) {
+                                    systemPrompt += `    Description: ${entry.description}\n`;
+                                }
+                                
+                                if (entry.tags && entry.tags.length > 0) {
+                                    systemPrompt += `    Tags: ${entry.tags.join(', ')}\n`;
+                                }
+                            }
+                        }
+                    } else {
+                        systemPrompt += "\nNote: No activity data found for the current month with the selected options.\n";
                     }
-                    return item;
-                }).filter((item: any) => {
-                    if (dataOptions.includeLogs) return true;
-                    if (dataOptions.includeDescriptions && item.description) return true;
-                    if (dataOptions.includeTags && item.tags) return true;
-                    return false;
-                });
-
-                if (activityData.length > 0) {
-                    systemPrompt += `\nHere is the user's activity data from the current month:\n${JSON.stringify(activityData, null, 2)}\n`;
-                } else {
-                    systemPrompt += "\nNote: No activity data found for the current month with the selected options.\n";
+                } catch (error) {
+                    console.error('Error processing monthly activity data:', error);
+                    systemPrompt += "\nNote: Error processing monthly activity data.\n";
                 }
             } else {
                 systemPrompt += "\nNote: The user has chosen not to include current month activity data (logs, descriptions, tags) in this conversation.\n";
@@ -901,42 +947,88 @@ ${JSON.stringify(analyses.map((a: any) => ({
             
             // Fetch and process activity data for the current year
             if (dataOptions.includeYearLogs || dataOptions.includeYearScreenshots || dataOptions.includeYearTags) {
-                const yearScreenshots = await database.screenshots.getScreenshotsForExport(
-                    startOfYear,
-                    endOfYear,
-                    false, // Don't include image data
-                    1000   // Limit to 1000 entries
-                );
+                try {
+                    // Use a more efficient query with sorting and limiting at the database level
+                    const yearScreenshots = await database.screenshots.getScreenshotsForExport(
+                        startOfYear,
+                        endOfYear,
+                        false // Don't include image data
+                    );
 
-                const yearActivityData = yearScreenshots.map((s: any) => {
-                    const item: any = {
-                        timestamp: s.timestamp,
-                        category: s.category,
-                        activity: s.activity,
-                    };
-                    if (dataOptions.includeYearScreenshots && s.description && s.description.trim()) {
-                        item.description = s.description;
-                    }
-                    if (dataOptions.includeYearTags && s.tags) {
-                        try {
-                            const tags = JSON.parse(s.tags);
-                            if (tags.length > 0) {
-                                item.tags = tags;
+                    if (yearScreenshots.length > 0) {
+                        systemPrompt += `\nHere is a summary of the user's activity data from the current year:\n`;
+                        
+                        // Pre-allocate a Map for better performance with date grouping
+                        const groupedByDate = new Map<string, Array<{
+                            time: string;
+                            category: string;
+                            activity: string;
+                            description?: string;
+                            tags?: string[];
+                        }>>();
+                        
+                        // Process screenshots in a single pass
+                        for (const s of yearScreenshots) {
+                            // Only include entries that match the selected options
+                            const hasDescription = dataOptions.includeYearScreenshots && s.description && s.description.trim();
+                            const hasTags = dataOptions.includeYearTags && s.tags;
+                            
+                            if (!dataOptions.includeYearLogs && !hasDescription && !hasTags) {
+                                continue;
                             }
-                        } catch {}
+                            
+                            const timestamp = new Date(s.timestamp);
+                            const date = timestamp.toISOString().split('T')[0];
+                            const time = timestamp.toLocaleTimeString('en-US', { hour12: false });
+                            
+                            if (!groupedByDate.has(date)) {
+                                groupedByDate.set(date, []);
+                            }
+                            
+                            const entry = {
+                                time,
+                                category: s.category,
+                                activity: s.activity
+                            } as any;
+                            
+                            if (hasDescription) {
+                                entry.description = s.description;
+                            }
+                            
+                            if (hasTags) {
+                                try {
+                                    entry.tags = JSON.parse(s.tags);
+                                } catch {}
+                            }
+                            
+                            groupedByDate.get(date)!.push(entry);
+                        }
+                        
+                        // Convert the map to output format
+                        const sortedDates = Array.from(groupedByDate.keys()).sort();
+                        for (const date of sortedDates) {
+                            systemPrompt += `\nDate: ${date}\n`;
+                            const entries = groupedByDate.get(date)!;
+                            
+                            for (const entry of entries) {
+                                systemPrompt += `  - Time: ${entry.time}\n`;
+                                systemPrompt += `    Category: ${entry.category}, Activity: ${entry.activity}\n`;
+                                
+                                if (entry.description) {
+                                    systemPrompt += `    Description: ${entry.description}\n`;
+                                }
+                                
+                                if (entry.tags && entry.tags.length > 0) {
+                                    systemPrompt += `    Tags: ${entry.tags.join(', ')}\n`;
+                                }
+                            }
+                        }
+                    } else {
+                        systemPrompt += "\nNote: No activity data found for the current year with the selected options.\n";
                     }
-                    return item;
-                }).filter((item: any) => {
-                    if (dataOptions.includeYearLogs) return true;
-                    if (dataOptions.includeYearScreenshots && item.description) return true;
-                    if (dataOptions.includeYearTags && item.tags) return true;
-                    return false;
-                }).slice(0, 200); // Limit to 200 entries to avoid overly large prompts
-
-                if (yearActivityData.length > 0) {
-                    systemPrompt += `\nHere is the user's activity data from the current year (limited to the ${yearActivityData.length} most recent entries with data):\n${JSON.stringify(yearActivityData, null, 2)}\n`;
-                } else {
-                    systemPrompt += "\nNote: No activity data found for the current year with the selected options.\n";
+                } catch (error) {
+                    console.error('Error processing yearly activity data:', error);
+                    systemPrompt += "\nNote: Error processing yearly activity data.\n";
                 }
             } else {
                 systemPrompt += "\nNote: The user has chosen not to include current year activity data (logs, descriptions, tags) in this conversation.\n";

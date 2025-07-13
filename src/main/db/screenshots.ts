@@ -303,34 +303,23 @@ export function getScreenshotsForExport(
 ): Promise<Screenshot[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
-        const fields = [
-            'id',
-            'timestamp',
-            'category',
-            'activity',
-            'description',
-            'tags'
-        ];
-
-        if (includeMedia) {
-            fields.push('image_data', 'thumbnail_data');
-        }
-
-        // When a limit is provided, we assume we want the most recent records.
-        const orderBy = limit ? 'ORDER BY timestamp DESC' : 'ORDER BY timestamp ASC';
-
+        
         let query = `
-            SELECT ${fields.join(', ')}
+            SELECT 
+                id,
+                timestamp,
+                category,
+                activity,
+                description,
+                tags
+                ${includeMedia ? ', image_data, thumbnail_data' : ''}
             FROM screenshots 
-            WHERE timestamp BETWEEN ? AND ?
-            ${orderBy}
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
+            ORDER BY timestamp DESC
         `;
-
-        const params: any[] = [
-            startDate.toISOString(),
-            endDate.toISOString()
-        ];
-
+        
+        const params: any[] = [startDate.toISOString(), endDate.toISOString()];
+        
         if (limit) {
             query += ' LIMIT ?';
             params.push(limit);
@@ -338,15 +327,11 @@ export function getScreenshotsForExport(
 
         db.all<Screenshot>(query, params, (err, screenshots) => {
             if (err) {
+                console.error('Error getting screenshots for export:', err);
                 reject(err);
                 return;
             }
-             // If we fetched in DESC order to get the latest, we re-sort them chronologically here
-             if (limit) {
-                resolve((screenshots || []).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
-            } else {
-                resolve(screenshots || []);
-            }
+            resolve(screenshots || []);
         });
     });
 }
