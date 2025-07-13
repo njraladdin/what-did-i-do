@@ -26,6 +26,6 @@
 
 
 
-- ai chat data: add tags option. format data to be text instead of json. add token estimate for included data. include daily and monthly statistics by default. one option for activities, then pick when to include (descriptions, cateogry, tags)
+- ai chat data: add tags option. format data to be text instead of json.  include daily and monthly statistics by default. one option for activities, then pick when to include (descriptions, cateogry, tags)
 
 - more charts : create 10 most interesting charts using historical data 

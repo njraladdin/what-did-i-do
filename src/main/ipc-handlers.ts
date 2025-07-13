@@ -964,23 +964,43 @@ ${JSON.stringify(analyses.map((a: any) => ({
 
                             systemPrompt += `\n${formattedMonth}:\n`;
                             
+                            // Ensure timeInHours and monthlyAverages exist and are objects
+                            const timeInHours = data.timeInHours || {};
+                            
+                            // Calculate total hours for percentage calculation
+                            const totalHours = Object.entries(timeInHours)
+                                .filter(([category, hours]) => 
+                                    category !== 'UNKNOWN' && 
+                                    typeof hours === 'number'
+                                )
+                                .reduce((sum, [, hours]) => sum + hours, 0);
+                            
                             // Sort categories by time spent (descending)
-                            const categories = Object.entries(data.timeInHours)
-                                .filter(([category]) => category !== 'UNKNOWN' && data.timeInHours[category] > 0)
+                            const categories = Object.entries(timeInHours)
+                                .filter(([category, hours]) => 
+                                    category !== 'UNKNOWN' && 
+                                    typeof hours === 'number' && 
+                                    hours > 0
+                                )
                                 .sort(([, a], [, b]) => b - a);
 
-                            categories.forEach(([category, hours]) => {
-                                const roundedHours = Math.floor(hours);
-                                const remainingMinutes = Math.round((hours - roundedHours) * 60);
-                                
-                                const timeStr = roundedHours > 0 
-                                    ? `${roundedHours}h ${remainingMinutes}m`
-                                    : `${remainingMinutes}m`;
+                            if (categories.length === 0) {
+                                systemPrompt += `  No activity data recorded\n`;
+                            } else {
+                                categories.forEach(([category, hours]) => {
+                                    const roundedHours = Math.floor(hours);
+                                    const remainingMinutes = Math.round((hours - roundedHours) * 60);
+                                    
+                                    const timeStr = roundedHours > 0 
+                                        ? `${roundedHours}h ${remainingMinutes}m`
+                                        : `${remainingMinutes}m`;
 
-                                const percentage = data.monthlyAverages[category] || 0;
+                                    // Calculate percentage based on total hours
+                                    const percentage = totalHours > 0 ? (hours / totalHours) * 100 : 0;
 
-                                systemPrompt += `  • ${category}: ${percentage.toFixed(1)}% (${timeStr})\n`;
-                            });
+                                    systemPrompt += `  • ${category}: ${percentage.toFixed(1)}% (${timeStr})\n`;
+                                });
+                            }
 
                             if (data.daysWithData) {
                                 systemPrompt += `  Data from ${data.daysWithData} days\n`;
