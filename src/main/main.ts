@@ -215,13 +215,6 @@ async function captureAndAnalyze() {
             Return a JSON object with "category", "activity", "description", and "tags" fields, where category must be EXACTLY one of these values: 
             ${categories.join(', ')}. 
             
-            For the "tags" field, generate an array of 10-15 detailed tags following this hierarchical structure to ensure they are useful for future behavioral analysis. Tags should be action and behavior-based, not just single, vague words (e.g., use "writing javascript code" instead of "coding"). Infer user intent and avoid literal tags from UI elements (e.g., use "music discovery" instead of "recommended songs").
-            1.  **User Intention (1-2 tags):** The user's likely purpose or goal for this specific action (e.g., learning a new skill, solving a bug, relaxing).
-            2.  **Primary Activity (2-3 tags):** The main task being performed (e.g., software development, writing, watching video).
-            3.  **Tools & Technologies (2-3 tags):** Applications or platforms in use (e.g., VS Code, YouTube, JavaScript).
-            4.  **Specific Subjects (2-3 tags):** The high-level topic or project (e.g., adk-typescript project, stoicism).
-            5.  **Content Keywords (3-5 tags):** Specific nouns and concepts from the on-screen content (e.g., tanker truck of blood, animal blood processing, biodiesel).
-            6.  **Inferred User Action (2-3 tags):** The user's specific, verb-based actions (e.g., writing code, reading comments, planning improvements).
 
             Focus on the purpose of the activity rather than the specific application.
             For example:
@@ -232,6 +225,14 @@ async function captureAndAnalyze() {
             - Tasks that don't clearly fit into WORK, LEARN, SOCIAL, or ENTERTAINMENT would be "OTHER" (e.g., personal finance, shopping, health tracking, system settings, etc.)
 
             For the "description" field, provide a comprehensive description (max 150-300 words) of what the user is doing, what's visible on the screen, and any relevant context about the activity. This should be detailed enough to understand the user's behavior and the content they're interacting with.
+
+                        For the behavior analysis "tags" field, generate an array of 10-15 detailed tags following this hierarchical structure to ensure they are useful for future behavioral analysis. Tags should be action and behavior-based, not just single, vague words (e.g., use "writing javascript code" instead of "coding"). Infer user intent and avoid literal tags from UI elements (e.g., use "music discovery" instead of "recommended songs").
+            1.  **User Intention (1-2 tags):** The user's likely purpose or goal for this specific action (e.g., learning a new skill, solving a bug, relaxing).
+            2.  **Primary Activity (2-3 tags):** The main task being performed (e.g., software development, writing, watching video).
+            3.  **Tools & Technologies (2-3 tags):** Applications or platforms in use (e.g., VS Code, YouTube, JavaScript).
+            4.  **Specific Subjects (2-3 tags):** The high-level topic or project (e.g., adk-typescript project, stoicism).
+            5.  **Content Keywords (3-5 tags):** Specific nouns and concepts from the on-screen content (e.g., tanker truck of blood, animal blood processing, biodiesel).
+            6.  **Inferred User Action (2-3 tags):** The user's specific, verb-based actions (e.g., writing code, reading comments, planning improvements).
 
             Example response 1: {
               "category": "WORK", 
