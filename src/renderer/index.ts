@@ -33,7 +33,7 @@ interface WindowWithCustomProps extends Window {
     deleteAPIKey: () => void;
     toggleAutoLaunch: (event: Event) => void;
     saveGeminiModel: () => void;
-    fetchAvailableModels: () => void;
+    fetchAvailableModels: (targetElementId: string) => void;
     openLogsFile: () => void;
     showRecentLogs: () => void;
     exportData: () => void;
@@ -123,6 +123,45 @@ win.dailyProgressChart = dailyProgressChart;
 win.yearlyProgressChart = yearlyProgressChart;
 win.ipcRenderer = ipcRenderer;
 win.updateDataCounts = updateDataCounts;
+
+// Add settings functions to the window object
+win.toggleTracking = toggleTracking;
+win.testScreenshot = testScreenshot;
+win.updateInterval = Settings.updateInterval;
+win.initializeAPI = Settings.initializeAPI;
+win.deleteAPIKey = Settings.deleteAPIKey;
+win.toggleAutoLaunch = Settings.toggleAutoLaunch;
+win.saveGeminiModel = Settings.saveGeminiModel;
+win.fetchAvailableModels = Settings.fetchAvailableModels;
+win.openLogsFile = Settings.openLogsFile;
+win.showRecentLogs = Settings.showRecentLogs;
+win.exportData = Settings.exportData;
+
+// Add local functions to the window object
+win.changeDate = changeDate;
+win.changeMonth = changeMonth;
+win.dismissError = dismissError;
+win.saveNote = saveNote;
+win.loadMoreScreenshots = () => {
+    currentPage++;
+    win.currentPage = currentPage;
+    win.DOM.displayScreenshots();
+};
+win.quitApp = quitApp;
+win.openExternalLink = openExternalLink;
+win.toggleSettings = () => win.DOM.toggleSettings();
+win.toggleExportModal = () => win.DOM.toggleExportModal();
+win.toggleChatSidebar = () => win.DOM.toggleChatSidebar();
+win.showMinimizeModal = () => win.DOM.showMinimizeModal();
+win.closeMinimizeModal = (shouldClose?: boolean) => win.DOM.closeMinimizeModal(shouldClose);
+win.showAddNoteModal = showAddNoteModal;
+win.closeNoteModal = () => win.DOM.closeNoteModal();
+win.sendChatMessage = sendChatMessage;
+win.handleChatKeydown = handleChatKeydown;
+win.toggleDataOption = toggleDataOption;
+win.loadChatHistory = loadChatHistory;
+win.clearChatHistory = clearChatHistory;
+win.toggleDataPeriodView = toggleDataPeriodView;
 
 // API Key Management functions are now in settings.ts
 
@@ -323,73 +362,34 @@ async function updateYearlyProgressChart() {
 // Chat Model Functions
 async function initializeChatModelDropdown() {
     const modelSelect = document.getElementById('chatGeminiModel') as HTMLSelectElement;
-    if (!modelSelect) return;
+    const currentModel = await ipcRenderer.invoke('get-chat-gemini-model');
     
-    await populateChatModelsDropdown();
-    
-    modelSelect.addEventListener('change', saveChatGeminiModel);
+    if (modelSelect && currentModel) {
+        modelSelect.value = currentModel;
+    }
+
+    await win.fetchAvailableModels('chatGeminiModel');
+
+    // Restore selection after populating
+    if (modelSelect && currentModel) {
+        // If the current model isn't in the list, add it as a custom option
+        if (!Array.from(modelSelect.options).some(opt => opt.value === currentModel)) {
+            const customOption = document.createElement('option');
+            customOption.value = currentModel;
+            customOption.text = currentModel + ' (Custom)';
+            modelSelect.add(customOption);
+        }
+        modelSelect.value = currentModel;
+    }
 }
 
 async function saveChatGeminiModel() {
     const modelSelect = document.getElementById('chatGeminiModel') as HTMLSelectElement;
     if (modelSelect) {
-        const selectedModel = modelSelect.value;
-        await ipcRenderer.invoke('set-chat-gemini-model', selectedModel);
+        const model = modelSelect.value;
+        await ipcRenderer.invoke('set-chat-gemini-model', model);
     }
 }
-
-async function populateChatModelsDropdown() {
-    const modelSelect = document.getElementById('chatGeminiModel') as HTMLSelectElement;
-    if (!modelSelect) return;
-    
-    const savedModel = await ipcRenderer.invoke('get-chat-gemini-model');
-    
-    const loadingOption = modelSelect.querySelector('option[value="loading"]');
-    if (loadingOption) (loadingOption as HTMLOptionElement).disabled = false;
-
-    try {
-        const result = await ipcRenderer.invoke('fetch-available-models');
-        
-        if (result.success && result.models.length > 0) {
-            modelSelect.innerHTML = '<option value="gemini-2.0-flash">gemini-2.0-flash (Default)</option>';
-
-            const uniqueModels = new Set<string>(['gemini-2.0-flash']);
-            
-            result.models.forEach((model: { name: string }) => {
-                const modelName = model.name;
-                if (!uniqueModels.has(modelName)) {
-                    const option = document.createElement('option');
-                    option.value = modelName;
-                    option.text = modelName;
-                    modelSelect.add(option);
-                    uniqueModels.add(modelName);
-                }
-            });
-            
-            if (savedModel) {
-                const optionExists = Array.from(modelSelect.options).some(opt => opt.value === savedModel);
-                if (optionExists) {
-                    modelSelect.value = savedModel;
-                } else {
-                    const customOption = document.createElement('option');
-                    customOption.value = savedModel;
-                    customOption.text = `${savedModel} (Custom)`;
-                    modelSelect.add(customOption);
-                    modelSelect.value = savedModel;
-                }
-            }
-        } else {
-            console.error('Could not fetch models: ' + (result.error || 'Unknown reason'));
-        }
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Error fetching models: ' + errorMessage);
-    } finally {
-        const finalLoadingOption = modelSelect.querySelector('option[value="loading"]');
-        if (finalLoadingOption) finalLoadingOption.remove();
-    }
-}
-
 
 async function deleteScreenshot(id: number) {
     if (confirm('Are you sure you want to delete this screenshot?')) {

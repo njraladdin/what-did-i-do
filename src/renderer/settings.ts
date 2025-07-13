@@ -158,7 +158,7 @@ async function initializeGeminiModel() {
     }
     
     // Fetch available models after setting the current one
-    fetchAvailableModels();
+    await fetchAvailableModels('geminiModel');
 }
 
 async function saveGeminiModel() {
@@ -246,24 +246,28 @@ async function saveGeminiModel() {
     }
 }
 
-async function fetchAvailableModels() {
-    const modelSelect = document.getElementById('geminiModel') as HTMLSelectElement | null;
-    const refreshBtn = document.getElementById('refreshModelsBtn') as HTMLButtonElement;
-    const statusEl = document.getElementById('modelLoadingStatus');
+async function fetchAvailableModels(targetElementId: string) {
+    const modelSelect = document.getElementById(targetElementId) as HTMLSelectElement | null;
+    const isSettings = targetElementId === 'geminiModel';
+
+    const refreshBtn = isSettings ? document.getElementById('refreshModelsBtn') as HTMLButtonElement : null;
+    const statusEl = isSettings ? document.getElementById('modelLoadingStatus') : null;
     
     // Save current selection
     const currentSelection = modelSelect?.value;
     
     // Show loading state
-    if (refreshBtn) {
-        refreshBtn.classList.add('loading');
-    }
-    if (refreshBtn) {
-        refreshBtn.disabled = true;
-    }
-    if (statusEl) {
-        statusEl.textContent = 'Loading available models...';
-        statusEl.className = 'model-status';
+    if (isSettings) {
+        if (refreshBtn) {
+            refreshBtn.classList.add('loading');
+            refreshBtn.disabled = true;
+        }
+        if (statusEl) {
+            statusEl.textContent = 'Loading available models...';
+            statusEl.className = 'model-status';
+        }
+    } else if (modelSelect) {
+        modelSelect.disabled = true;
     }
     
     try {
@@ -290,8 +294,18 @@ async function fetchAvailableModels() {
                 modelSelect.add(defaultOption);
             }
             
+            // Filter out unwanted models
+            const modelsToFilter = ['preview', 'exp', 'embedding', '1.5', '1.0'];
+            const filteredModels = result.models.filter((model: { id: string, name: string }) => {
+                if(!model.name) {
+                    return false;
+                }
+                const modelName = model.name.toLowerCase();
+                return !modelsToFilter.some(substring => modelName.includes(substring));
+            });
+
             // Add fetched models
-            result.models.forEach((model: { id: string; name: string; description?: string }) => {
+            filteredModels.forEach((model: { id: string; name: string; description?: string }) => {
                 const option = document.createElement('option');
                 option.value = model.id;
                 option.text = model.name;
@@ -318,27 +332,29 @@ async function fetchAvailableModels() {
                 modelSelect.value = currentSelection;
             }
             
-            if (statusEl) {
-                statusEl.textContent = `Loaded ${result.models.length} available models`;
+            if (isSettings && statusEl) {
+                statusEl.textContent = `Loaded ${filteredModels.length} available models`;
                 statusEl.className = 'model-status success';
             }
         } else {
-            if (statusEl) {
+            if (isSettings && statusEl) {
                 statusEl.textContent = result.error || 'No models found';
                 statusEl.className = 'model-status error';
             }
         }
     } catch (error: any) {
-        if (statusEl) {
+        if (isSettings && statusEl) {
             statusEl.textContent = 'Error loading models: ' + error.message;
             statusEl.className = 'model-status error';
         }
     } finally {
-        if (refreshBtn) {
-            refreshBtn.classList.remove('loading');
-        }
-        if (refreshBtn) {
-            refreshBtn.disabled = false;
+        if (isSettings) {
+            if (refreshBtn) {
+                refreshBtn.classList.remove('loading');
+                refreshBtn.disabled = false;
+            }
+        } else if (modelSelect) {
+            modelSelect.disabled = false;
         }
     }
 }
