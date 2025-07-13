@@ -828,9 +828,44 @@ The categories used in the app are:
             if (dataOptions.includeStats) {
                 const dailyStats = await database.stats.getDailyCategoryStats(now, store.get('interval'));
                 
-                systemPrompt += `\nHere is the user's daily productivity breakdown for the current month:
-${JSON.stringify(dailyStats, null, 2)}
-`;
+                systemPrompt += `\nActivity Statistics for the current month:\n`;
+
+                type DailyStatsData = {
+                    percentages: Record<string, number>;
+                    timeInHours: Record<string, number>;
+                    totalScreenshots: number;
+                };
+                
+                (Object.entries(dailyStats) as [string, DailyStatsData][])
+                    .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
+                    .forEach(([date, data]) => {
+                        const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+
+                        systemPrompt += `\n${formattedDate}:\n`;
+                        
+                        // Sort categories by percentage (descending)
+                        const categories = Object.entries(data.percentages)
+                            .filter(([category]) => category !== 'UNKNOWN' && data.percentages[category] > 0)
+                            .sort(([, a], [, b]) => b - a);
+
+                        categories.forEach(([category, percentage]) => {
+                            const hours = data.timeInHours[category];
+                            const roundedHours = Math.floor(hours);
+                            const remainingMinutes = Math.round((hours - roundedHours) * 60);
+                            
+                            const timeStr = roundedHours > 0 
+                                ? `${roundedHours}h ${remainingMinutes}m`
+                                : `${remainingMinutes}m`;
+
+                            systemPrompt += `  • ${category}: ${percentage.toFixed(1)}% (${timeStr})\n`;
+                        });
+
+                        systemPrompt += `  Total tracked: ${data.totalScreenshots} screenshots\n`;
+                    });
             } else {
                 systemPrompt += "\nNote: The user has chosen not to include current month daily statistics in this conversation.\n";
             }
@@ -910,12 +945,47 @@ ${JSON.stringify(analyses.map((a: any) => ({
             // Add yearly stats data if requested
             if (dataOptions.includeYearStats) {
                 try {
-                    // Get monthly stats for the year instead of daily stats
                     const yearlyStats = await database.stats.getYearlyMonthlyCategoryStats(now.getFullYear(), store.get('interval'));
                     
-                    systemPrompt += `\nHere is the user's monthly productivity breakdown for the current year:
-${JSON.stringify(yearlyStats.data, null, 2)}
-`;
+                    systemPrompt += `\nActivity Statistics for the current year by month:\n`;
+
+                    type YearlyStatsData = {
+                        timeInHours: Record<string, number>;
+                        monthlyAverages: Record<string, number>;
+                        daysWithData: number;
+                    };
+                    
+                    (Object.entries(yearlyStats.data) as [string, YearlyStatsData][])
+                        .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
+                        .forEach(([monthKey, data]) => {
+                            const [year, month] = monthKey.split('-');
+                            const date = new Date(parseInt(year), parseInt(month) - 1);
+                            const formattedMonth = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+                            systemPrompt += `\n${formattedMonth}:\n`;
+                            
+                            // Sort categories by time spent (descending)
+                            const categories = Object.entries(data.timeInHours)
+                                .filter(([category]) => category !== 'UNKNOWN' && data.timeInHours[category] > 0)
+                                .sort(([, a], [, b]) => b - a);
+
+                            categories.forEach(([category, hours]) => {
+                                const roundedHours = Math.floor(hours);
+                                const remainingMinutes = Math.round((hours - roundedHours) * 60);
+                                
+                                const timeStr = roundedHours > 0 
+                                    ? `${roundedHours}h ${remainingMinutes}m`
+                                    : `${remainingMinutes}m`;
+
+                                const percentage = data.monthlyAverages[category] || 0;
+
+                                systemPrompt += `  • ${category}: ${percentage.toFixed(1)}% (${timeStr})\n`;
+                            });
+
+                            if (data.daysWithData) {
+                                systemPrompt += `  Data from ${data.daysWithData} days\n`;
+                            }
+                        });
                 } catch (error) {
                     logger.error('Error fetching yearly stats:', error);
                     systemPrompt += "\nNote: There was an error fetching yearly statistics data.\n";
