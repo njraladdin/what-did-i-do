@@ -327,6 +327,90 @@ export function getDailyCategoryStats(
 }
 
 /**
+ * Get daily category stats for an entire year.
+ * @param year - The year to analyze.
+ * @param intervalMinutes - Screenshot interval in minutes.
+ * @returns Object containing daily stats for each day in the year.
+ */
+export function getYearlyDailyCategoryStats(
+    year: number,
+    intervalMinutes: number
+): Promise<DailyCategoryStats> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        const startOfYear = new Date(year, 0, 1);
+        const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+
+        db.all<{ date: string; timestamp: string; category: Category; next_timestamp?: string; }>(`
+            SELECT 
+                DATE(timestamp) as date,
+                timestamp,
+                category,
+                LEAD(timestamp) OVER (ORDER BY timestamp ASC) as next_timestamp
+            FROM screenshots 
+            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
+            ORDER BY timestamp ASC
+        `, [
+            startOfYear.toISOString(),
+            endOfYear.toISOString()
+        ], (err, timeResults) => {
+            if (err) {
+                console.error('Error getting yearly daily category stats:', err);
+                reject(err);
+                return;
+            }
+
+            const dailyStats: DailyCategoryStats = {};
+
+            if (timeResults && timeResults.length > 0) {
+                timeResults.forEach(row => {
+                    const date = row.date;
+                    
+                    if (!dailyStats[date]) {
+                        dailyStats[date] = {
+                            percentages: initializeCategoryRecord(),
+                            timeInHours: initializeCategoryRecord(),
+                            categoryMinutes: initializeCategoryRecord(),
+                            categoryCounts: initializeCategoryRecord(),
+                            totalScreenshots: 0
+                        };
+                    }
+
+                    dailyStats[date].categoryCounts[row.category]++;
+                    dailyStats[date].totalScreenshots++;
+
+                    if (row.next_timestamp) {
+                        const currentTime = new Date(row.timestamp);
+                        const nextTime = new Date(row.next_timestamp);
+                        const diffMinutes = Math.abs((nextTime.getTime() - currentTime.getTime()) / (1000 * 60));
+
+                        if (diffMinutes <= 5) {
+                            dailyStats[date].categoryMinutes[row.category] += diffMinutes;
+                        }
+                    } else {
+                        const defaultDuration = Math.min(intervalMinutes, 5);
+                        dailyStats[date].categoryMinutes[row.category] += defaultDuration;
+                    }
+                });
+
+                Object.keys(dailyStats).forEach(date => {
+                    const dayStats = dailyStats[date];
+                    categories.forEach(category => {
+                        dayStats.percentages[category] = dayStats.totalScreenshots > 0
+                            ? (dayStats.categoryCounts[category] / dayStats.totalScreenshots) * 100
+                            : 0;
+                        dayStats.timeInHours[category] = dayStats.categoryMinutes[category] / 60;
+                    });
+                });
+            }
+
+            resolve(dailyStats);
+        });
+    });
+}
+
+
+/**
  * Get yearly monthly category stats
  * @param year - Year to analyze
  * @param intervalMinutes - Screenshot interval in minutes
@@ -533,6 +617,30 @@ export function countMonthsWithStatsInYear(year: number): Promise<number> {
         `, [startOfYear.toISOString(), endOfYear.toISOString()], (err, row) => {
             if (err) {
                 console.error('Error counting months with stats in year:', err);
+                reject(err);
+                return;
+            }
+            resolve(row ? row.count : 0);
+        });
+    });
+}
+
+/**
+ * Count the number of days with stats in a given year.
+ * @param year - The year to count days in.
+ * @returns A promise that resolves with the count of days.
+ */
+export function countDaysWithStatsInYear(year: number): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        
+        db.get<{ count: number }>(`
+            SELECT COUNT(DISTINCT DATE(timestamp)) as count 
+            FROM screenshots 
+            WHERE strftime('%Y', timestamp) = ? AND category != 'UNKNOWN'
+        `, [year.toString()], (err, row) => {
+            if (err) {
+                console.error('Error counting days with stats in year:', err);
                 reject(err);
                 return;
             }

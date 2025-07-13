@@ -945,15 +945,27 @@ ${JSON.stringify(analyses.map((a: any) => ({
             // Add yearly stats data if requested
             if (dataOptions.includeYearStats) {
                 try {
-                    const yearlyStats = await database.stats.getYearlyMonthlyCategoryStats(now.getFullYear(), store.get('interval'));
+                    const [yearlyStats, yearDailyStats] = await Promise.all([
+                        database.stats.getYearlyMonthlyCategoryStats(now.getFullYear(), store.get('interval')),
+                        database.stats.getYearlyDailyCategoryStats(now.getFullYear(), store.get('interval'))
+                    ]);
                     
-                    systemPrompt += `\nActivity Statistics for the current year by month:\n`;
+                    systemPrompt += `\nActivity Statistics for the current year:\n`;
 
                     type YearlyStatsData = {
                         timeInHours: Record<string, number>;
                         monthlyAverages: Record<string, number>;
                         daysWithData: number;
                     };
+
+                    type DailyStatsData = {
+                        percentages: Record<string, number>;
+                        timeInHours: Record<string, number>;
+                        totalScreenshots: number;
+                    };
+
+                    // First, show yearly summary by months
+                    systemPrompt += `\nYearly Summary by Month:\n`;
                     
                     (Object.entries(yearlyStats.data) as [string, YearlyStatsData][])
                         .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
@@ -964,10 +976,8 @@ ${JSON.stringify(analyses.map((a: any) => ({
 
                             systemPrompt += `\n${formattedMonth}:\n`;
                             
-                            // Ensure timeInHours and monthlyAverages exist and are objects
                             const timeInHours = data.timeInHours || {};
                             
-                            // Calculate total hours for percentage calculation
                             const totalHours = Object.entries(timeInHours)
                                 .filter(([category, hours]) => 
                                     category !== 'UNKNOWN' && 
@@ -975,7 +985,6 @@ ${JSON.stringify(analyses.map((a: any) => ({
                                 )
                                 .reduce((sum, [, hours]) => sum + hours, 0);
                             
-                            // Sort categories by time spent (descending)
                             const categories = Object.entries(timeInHours)
                                 .filter(([category, hours]) => 
                                     category !== 'UNKNOWN' && 
@@ -995,7 +1004,6 @@ ${JSON.stringify(analyses.map((a: any) => ({
                                         ? `${roundedHours}h ${remainingMinutes}m`
                                         : `${remainingMinutes}m`;
 
-                                    // Calculate percentage based on total hours
                                     const percentage = totalHours > 0 ? (hours / totalHours) * 100 : 0;
 
                                     systemPrompt += `  • ${category}: ${percentage.toFixed(1)}% (${timeStr})\n`;
@@ -1006,6 +1014,62 @@ ${JSON.stringify(analyses.map((a: any) => ({
                                 systemPrompt += `  Data from ${data.daysWithData} days\n`;
                             }
                         });
+
+                    // Then, show detailed daily breakdown for the entire year
+                    systemPrompt += `\n\nDaily Breakdown for Entire Year:\n`;
+
+                    // Create a map to group days by month
+                    const daysByMonth = new Map<string, Array<[string, DailyStatsData]>>();
+
+                    // Group all days by month
+                    (Object.entries(yearDailyStats) as [string, DailyStatsData][])
+                        .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
+                        .forEach(([dateStr, dayData]) => {
+                            const date = new Date(dateStr);
+                            const monthKey = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            
+                            if (!daysByMonth.has(monthKey)) {
+                                daysByMonth.set(monthKey, []);
+                            }
+                            daysByMonth.get(monthKey)!.push([dateStr, dayData]);
+                        });
+
+                    // Output each month's daily data
+                    for (const [monthKey, days] of daysByMonth) {
+                        systemPrompt += `\n${monthKey}:\n`;
+                        
+                        days.forEach(([dateStr, dayData]) => {
+                            const dayDate = new Date(dateStr);
+                            const formattedDate = dayDate.toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                            });
+
+                            systemPrompt += `  ${formattedDate}:\n`;
+                            
+                            // Sort categories by percentage (descending)
+                            Object.entries(dayData.percentages)
+                                .filter(([category]) => category !== 'UNKNOWN' && dayData.percentages[category] > 0)
+                                .sort(([, a], [, b]) => b - a)
+                                .forEach(([category, percentage]) => {
+                                    const hours = dayData.timeInHours[category];
+                                    const roundedHours = Math.floor(hours);
+                                    const remainingMinutes = Math.round((hours - roundedHours) * 60);
+                                    
+                                    const timeStr = roundedHours > 0 
+                                        ? `${roundedHours}h ${remainingMinutes}m`
+                                        : `${remainingMinutes}m`;
+
+                                    systemPrompt += `    • ${category}: ${percentage.toFixed(1)}% (${timeStr})\n`;
+                                });
+
+                            if (dayData.totalScreenshots) {
+                                systemPrompt += `    Total tracked: ${dayData.totalScreenshots} screenshots\n`;
+                            }
+                        });
+                    }
+
                 } catch (error) {
                     logger.error('Error fetching yearly stats:', error);
                     systemPrompt += "\nNote: There was an error fetching yearly statistics data.\n";
@@ -1155,7 +1219,7 @@ Chat history:
                 // Yearly counts
                 database.screenshots.countScreenshotsWithDescriptionInRange(startOfYear, endOfYear),
                 database.screenshots.countScreenshotsInRange(startOfYear, endOfYear),
-                database.stats.countMonthsWithStatsInYear(now.getFullYear()),
+                database.stats.countDaysWithStatsInYear(now.getFullYear()),
                 database.notes.countNotesInRange(startOfYear, endOfYear),
                 database.dayAnalyses.countAnalysesInRange(startOfYear, endOfYear),
                 
