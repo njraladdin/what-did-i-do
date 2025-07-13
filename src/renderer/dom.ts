@@ -792,6 +792,19 @@ function toggleChatSidebar(): void {
     }
 }
 
+// Add this function to handle closing the note modal
+function closeNoteModal(): void {
+    const modal = document.getElementById('noteModal');
+    const contentElement = document.getElementById('noteContent') as HTMLTextAreaElement;
+    
+    if (modal) {
+        modal.style.display = 'none';
+        if (contentElement) {
+            contentElement.value = '';
+        }
+    }
+}
+
 // Export all functions to global scope for access from index.ts
 typedWindow.DOM = {
     formatCategoryName,
@@ -817,5 +830,6 @@ typedWindow.DOM = {
     addChatMessage,
     showTypingIndicator,
     hideTypingIndicator,
+    closeNoteModal, // Add this line to expose the function
     clearChatInput
 }; 

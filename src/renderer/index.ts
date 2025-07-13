@@ -548,7 +548,19 @@ async function checkExistingError() {
 
 // Notes Management Functions
 async function showAddNoteModal() {
-    win.DOM.showAddNoteModal();
+    const modal = document.getElementById('noteModal');
+    const titleElement = document.getElementById('noteModalTitle');
+    const contentElement = document.getElementById('noteContent') as HTMLTextAreaElement;
+    
+    if (modal && titleElement && contentElement) {
+        modal.style.display = 'flex';
+        titleElement.textContent = 'Add Note';
+        contentElement.value = '';
+        contentElement.focus();
+    }
+    
+    // Load previous notes in modal
+    await loadPreviousNotesInModal();
 }
 
 async function showEditNoteModal(note: Note) {
@@ -1313,7 +1325,6 @@ win.toggleChatSidebar = win.DOM.toggleChatSidebar;
 win.showMinimizeModal = win.DOM.showMinimizeModal;
 win.closeMinimizeModal = win.DOM.closeMinimizeModal;
 win.showAddNoteModal = showAddNoteModal;
-win.closeNoteModal = win.DOM.closeNoteModal;
 win.sendChatMessage = sendChatMessage;
 win.handleChatKeydown = handleChatKeydown; 
 

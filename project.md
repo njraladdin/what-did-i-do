@@ -22,7 +22,10 @@
 - chart: add chart to see trend in activites for the past days in month, and for past months in year, done 
 - screenshot logs with context: provide screenshot logs descirption with previous logs, done 
 - data chat: ask anything about current month data (includes descriptions, notes, analyses), done 
+- detailed tags: additional more detailed tags to help differnetiate activity in same cateogry, done 
 
-- detailed tags: additional more detailed tags to help differnetiate activity in same cateogry 
+
+
+- ai chat data: add tags option. format data to be text instead of json. add token estimate for included data. include daily and monthly statistics by default. one option for activities, then pick when to include (descriptions, cateogry, tags)
+
 - more charts : create 10 most interesting charts using historical data 
-
