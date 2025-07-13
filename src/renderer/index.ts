@@ -1132,12 +1132,14 @@ async function updateDataCounts() {
             const statsCountEl = document.getElementById('statsCount');
             const notesCountEl = document.getElementById('notesCount');
             const analysesCountEl = document.getElementById('analysesCount');
+            const tagsCountEl = document.getElementById('tagsCount');
             
             if (descriptionsCountEl) descriptionsCountEl.textContent = counts.descriptions.toString();
             if (logsCountEl) logsCountEl.textContent = counts.logs.toString();
             if (statsCountEl) statsCountEl.textContent = counts.stats.toString();
             if (notesCountEl) notesCountEl.textContent = counts.notes.toString();
             if (analysesCountEl) analysesCountEl.textContent = counts.analyses.toString();
+            if (tagsCountEl) tagsCountEl.textContent = counts.tags.toString();
             
             // Update the yearly count elements
             const yearDescriptionsCountEl = document.getElementById('yearDescriptionsCount');
@@ -1145,12 +1147,14 @@ async function updateDataCounts() {
             const yearStatsCountEl = document.getElementById('yearStatsCount');
             const yearNotesCountEl = document.getElementById('yearNotesCount');
             const yearAnalysesCountEl = document.getElementById('yearAnalysesCount');
+            const yearTagsCountEl = document.getElementById('yearTagsCount');
             
             if (yearDescriptionsCountEl) yearDescriptionsCountEl.textContent = counts.yearDescriptions.toString();
             if (yearLogsCountEl) yearLogsCountEl.textContent = counts.yearLogs.toString();
             if (yearStatsCountEl) yearStatsCountEl.textContent = counts.yearStats.toString();
             if (yearNotesCountEl) yearNotesCountEl.textContent = counts.yearNotes.toString();
             if (yearAnalysesCountEl) yearAnalysesCountEl.textContent = counts.yearAnalyses.toString();
+            if (yearTagsCountEl) yearTagsCountEl.textContent = counts.yearTags.toString();
         }
     } catch (error) {
         console.error('Error updating data counts:', error);
@@ -1187,6 +1191,7 @@ async function sendChatMessage(): Promise<void> {
 
         // Get monthly data options state if month view is active
         const includeDescriptions = !isYearView && (document.getElementById('includeScreenshotsToggle')?.classList.contains('active') ?? false);
+        const includeTags = !isYearView && (document.getElementById('includeTagsToggle')?.classList.contains('active') ?? false);
         const includeLogs = !isYearView && (document.getElementById('includeLogsToggle')?.classList.contains('active') ?? false);
         const includeStats = !isYearView && (document.getElementById('includeStatsToggle')?.classList.contains('active') ?? false);
         const includeNotes = !isYearView && (document.getElementById('includeNotesToggle')?.classList.contains('active') ?? false);
@@ -1194,22 +1199,22 @@ async function sendChatMessage(): Promise<void> {
         
         // Get yearly data options state if year view is active
         const includeYearScreenshots = isYearView && (document.getElementById('includeYearScreenshotsToggle')?.classList.contains('active') ?? false);
+        const includeYearTags = isYearView && (document.getElementById('includeYearTagsToggle')?.classList.contains('active') ?? false);
         const includeYearLogs = isYearView && (document.getElementById('includeYearLogsToggle')?.classList.contains('active') ?? false);
         const includeYearStats = isYearView && (document.getElementById('includeYearStatsToggle')?.classList.contains('active') ?? false);
         const includeYearNotes = isYearView && (document.getElementById('includeYearNotesToggle')?.classList.contains('active') ?? false);
         const includeYearAnalyses = isYearView && (document.getElementById('includeYearAnalysesToggle')?.classList.contains('active') ?? false);
-        
-        // Send message to backend with data options
-        const result = await ipcRenderer.invoke('send-chat-message', message, {
-            // Monthly options
+
+        // Send message to main process
+        const response = await ipcRenderer.invoke('send-chat-message', message, {
             includeDescriptions,
+            includeTags,
             includeLogs,
             includeStats,
             includeNotes,
             includeAnalyses,
-            
-            // Yearly options
             includeYearScreenshots,
+            includeYearTags,
             includeYearLogs,
             includeYearStats,
             includeYearNotes,
@@ -1219,12 +1224,12 @@ async function sendChatMessage(): Promise<void> {
         // Hide typing indicator
         win.DOM.hideTypingIndicator();
         
-        if (result.success) {
+        if (response.success) {
             // Add AI response to chat (setting false for addToHistory since it's already stored in backend)
-            win.DOM.addChatMessage(result.response, false);
+            win.DOM.addChatMessage(response.response, false);
         } else {
             // Add error message
-            win.DOM.addChatMessage(`Sorry, I encountered an error: ${result.error}`, false);
+            win.DOM.addChatMessage(`Sorry, I encountered an error: ${response.error}`, false);
         }
         
     } catch (error) {
@@ -1238,8 +1243,11 @@ async function sendChatMessage(): Promise<void> {
         console.error('Error sending chat message:', error);
     } finally {
         // Re-enable send button
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        const sendBtn = document.getElementById('sendChatBtn') as HTMLButtonElement;
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        }
     }
 }
 
@@ -1250,6 +1258,9 @@ function toggleDataOption(option: string): void {
     switch (option) {
         case 'screenshots':
             button = document.getElementById('includeScreenshotsToggle');
+            break;
+        case 'tags':
+            button = document.getElementById('includeTagsToggle');
             break;
         case 'logs':
             button = document.getElementById('includeLogsToggle');
@@ -1266,6 +1277,9 @@ function toggleDataOption(option: string): void {
         // Year toggles
         case 'yearScreenshots':
             button = document.getElementById('includeYearScreenshotsToggle');
+            break;
+        case 'yearTags':
+            button = document.getElementById('includeYearTagsToggle');
             break;
         case 'yearLogs':
             button = document.getElementById('includeYearLogsToggle');

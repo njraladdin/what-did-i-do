@@ -707,24 +707,28 @@ function initializeIpcHandlers(dependencies: Dependencies) {
         includeStats: boolean,
         includeNotes: boolean,
         includeAnalyses: boolean,
+        includeTags: boolean,
         // Year data options
         includeYearScreenshots: boolean,
         includeYearLogs: boolean,
         includeYearStats: boolean,
         includeYearNotes: boolean,
-        includeYearAnalyses: boolean
+        includeYearAnalyses: boolean,
+        includeYearTags: boolean
     } = { 
         includeDescriptions: true, 
         includeLogs: true, 
         includeStats: true,
         includeNotes: true,
         includeAnalyses: true,
+        includeTags: true,
         // Year data options default to false
         includeYearScreenshots: false,
         includeYearLogs: false,
         includeYearStats: false,
         includeYearNotes: false,
-        includeYearAnalyses: false
+        includeYearAnalyses: false,
+        includeYearTags: false
     }) => {
         try {
             const apiKey = store.get('apiKey');
@@ -814,6 +818,22 @@ ${JSON.stringify(screenshotsWithDescriptions.map((s: any) => ({
                 systemPrompt += "\nNote: The user has chosen not to include current month activity descriptions in this conversation.\n";
             }
 
+            // Add activity tags if requested (just timestamps and tags)
+            if (dataOptions.includeTags) {
+                const screenshotsWithTags = screenshots.filter((s: any) => s.tags && JSON.parse(s.tags).length > 0);
+                
+                systemPrompt += `\nHere are the user's activity tags from the current month:
+${JSON.stringify(screenshotsWithTags.map((s: any) => ({
+    timestamp: s.timestamp,
+    category: s.category,
+    activity: s.activity,
+    tags: JSON.parse(s.tags)
+})), null, 2)}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include current month activity tags in this conversation.\n";
+            }
+
             // Add stats data if requested
             if (dataOptions.includeStats) {
                 const dailyStats = await database.stats.getDailyCategoryStats(now, store.get('interval'));
@@ -898,6 +918,26 @@ ${JSON.stringify(yearScreenshotsWithDescriptions.map((s: any) => ({
 `;
             } else {
                 systemPrompt += "\nNote: The user has chosen not to include current year activity descriptions in this conversation.\n";
+            }
+
+            // Add yearly activity tags if requested
+            if (dataOptions.includeYearTags) {
+                // Only include entries that have tags
+                const yearScreenshotsWithTags = yearScreenshots
+                    .filter((s: any) => s.tags && JSON.parse(s.tags).length > 0)
+                    // Limit to the 100 most recent to save tokens
+                    .slice(0, 100);
+                
+                systemPrompt += `\nHere are the user's activity tags from the current year (limited to most recent 100 entries with tags):
+${JSON.stringify(yearScreenshotsWithTags.map((s: any) => ({
+    timestamp: s.timestamp,
+    category: s.category,
+    activity: s.activity,
+    tags: JSON.parse(s.tags)
+})), null, 2)}
+`;
+            } else {
+                systemPrompt += "\nNote: The user has chosen not to include current year activity tags in this conversation.\n";
             }
 
             // Add yearly stats data if requested
@@ -1033,7 +1073,9 @@ Chat history:
                 yearLogsCount,
                 yearStatsCount,
                 yearNotesCount,
-                yearAnalysesCount
+                yearAnalysesCount,
+                tagsCount,
+                yearTagsCount
             ] = await Promise.all([
                 // Monthly counts
                 database.screenshots.countScreenshotsWithDescriptionInRange(startOfMonth, endOfMonth),
@@ -1047,7 +1089,11 @@ Chat history:
                 database.screenshots.countScreenshotsInRange(startOfYear, endOfYear),
                 database.stats.countMonthsWithStatsInYear(now.getFullYear()),
                 database.notes.countNotesInRange(startOfYear, endOfYear),
-                database.dayAnalyses.countAnalysesInRange(startOfYear, endOfYear)
+                database.dayAnalyses.countAnalysesInRange(startOfYear, endOfYear),
+                
+                // Tags counts
+                database.screenshots.countScreenshotsWithTagsInRange(startOfMonth, endOfMonth),
+                database.screenshots.countScreenshotsWithTagsInRange(startOfYear, endOfYear)
             ]);
             
             return {
@@ -1059,13 +1105,15 @@ Chat history:
                     stats: statsCount,
                     notes: notesCount,
                     analyses: analysesCount,
+                    tags: tagsCount,
                     
                     // Yearly counts
                     yearDescriptions: yearDescriptionsCount,
                     yearLogs: yearLogsCount,
                     yearStats: yearStatsCount,
                     yearNotes: yearNotesCount,
-                    yearAnalyses: yearAnalysesCount
+                    yearAnalyses: yearAnalysesCount,
+                    yearTags: yearTagsCount
                 }
             };
         } catch (error) {
@@ -1080,13 +1128,15 @@ Chat history:
                     stats: 0,
                     notes: 0,
                     analyses: 0,
+                    tags: 0,
                     
                     // Yearly counts
                     yearDescriptions: 0,
                     yearLogs: 0,
                     yearStats: 0,
                     yearNotes: 0,
-                    yearAnalyses: 0
+                    yearAnalyses: 0,
+                    yearTags: 0
                 }
             };
         }

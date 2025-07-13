@@ -402,3 +402,30 @@ export function countScreenshotsWithDescriptionInRange(startDate: Date, endDate:
         });
     });
 }
+
+/**
+ * Count screenshots with tags in a date range.
+ * @param startDate - The start of the date range.
+ * @param endDate - The end of the date range.
+ * @returns A promise that resolves to the number of screenshots with tags.
+ */
+export function countScreenshotsWithTagsInRange(startDate: Date, endDate: Date): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        db.get<{ count: number }>(`
+            SELECT COUNT(*) as count
+            FROM screenshots
+            WHERE timestamp BETWEEN ? AND ?
+            AND tags IS NOT NULL 
+            AND tags != '[]'
+            AND tags != ''
+        `, [startDate.toISOString(), endDate.toISOString()], (err, row) => {
+            if (err) {
+                console.error('Error counting screenshots with tags in range:', err);
+                reject(err);
+                return;
+            }
+            resolve(row ? row.count : 0);
+        });
+    });
+}
