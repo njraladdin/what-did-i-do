@@ -292,12 +292,14 @@ export function getScreenshotsForAnalysis(date: Date): Promise<Screenshot[]> {
  * @param startDate - Start date for export
  * @param endDate - End date for export
  * @param includeMedia - Whether to include image data
+ * @param limit - Optional limit for number of results. If provided, will fetch the most recent records.
  * @returns Array of screenshot data
  */
 export function getScreenshotsForExport(
     startDate: Date,
     endDate: Date,
-    includeMedia: boolean = false
+    includeMedia: boolean = false,
+    limit?: number
 ): Promise<Screenshot[]> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
@@ -306,27 +308,45 @@ export function getScreenshotsForExport(
             'timestamp',
             'category',
             'activity',
-            'description'
+            'description',
+            'tags'
         ];
 
         if (includeMedia) {
             fields.push('image_data', 'thumbnail_data');
         }
 
-        db.all<Screenshot>(`
+        // When a limit is provided, we assume we want the most recent records.
+        const orderBy = limit ? 'ORDER BY timestamp DESC' : 'ORDER BY timestamp ASC';
+
+        let query = `
             SELECT ${fields.join(', ')}
             FROM screenshots 
             WHERE timestamp BETWEEN ? AND ?
-            ORDER BY timestamp ASC
-        `, [
+            ${orderBy}
+        `;
+
+        const params: any[] = [
             startDate.toISOString(),
             endDate.toISOString()
-        ], (err, screenshots) => {
+        ];
+
+        if (limit) {
+            query += ' LIMIT ?';
+            params.push(limit);
+        }
+
+        db.all<Screenshot>(query, params, (err, screenshots) => {
             if (err) {
                 reject(err);
                 return;
             }
-            resolve(screenshots || []);
+             // If we fetched in DESC order to get the latest, we re-sort them chronologically here
+             if (limit) {
+                resolve((screenshots || []).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+            } else {
+                resolve(screenshots || []);
+            }
         });
     });
 }

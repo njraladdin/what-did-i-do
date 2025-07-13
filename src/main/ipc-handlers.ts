@@ -1,5 +1,7 @@
 import { ipcMain, IpcMainInvokeEvent, dialog, app, shell } from 'electron';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import axios from 'axios';
 import { categories } from './db/core';
 import { GoogleGenAI } from '@google/genai';
@@ -779,59 +781,47 @@ The categories used in the app are:
             // CURRENT MONTH DATA SECTIONS
             systemPrompt += "\n## CURRENT MONTH DATA ##\n";
 
-            // Fetch screenshots data once if needed for any option
-            let screenshots = [];
-            if (dataOptions.includeDescriptions || dataOptions.includeLogs) {
-                screenshots = await database.screenshots.getScreenshotsForExport(
+            // Fetch and process activity data for the current month
+            if (dataOptions.includeLogs || dataOptions.includeDescriptions || dataOptions.includeTags) {
+                const screenshots = await database.screenshots.getScreenshotsForExport(
                     startOfMonth,
                     endOfMonth,
                     false // Don't include image data
                 );
-            }
 
-            // Add activity logs if requested (just timestamps and categories)
-            if (dataOptions.includeLogs) {
-                systemPrompt += `\nHere's the user's activity logs from the current month:
-${JSON.stringify(screenshots.map((s: any) => ({
-    timestamp: s.timestamp,
-    category: s.category,
-    activity: s.activity
-})), null, 2)}
-`;
-            } else {
-                systemPrompt += "\nNote: The user has chosen not to include current month activity logs in this conversation.\n";
-            }
+                const activityData = screenshots.map((s: any) => {
+                    const item: any = {
+                        timestamp: s.timestamp,
+                        category: s.category,
+                        activity: s.activity,
+                    };
 
-            // Add activity descriptions if requested (detailed descriptions of activities)
-            if (dataOptions.includeDescriptions) {
-                const screenshotsWithDescriptions = screenshots.filter((s: any) => s.description && s.description.trim());
-                
-                systemPrompt += `\nHere are detailed descriptions of the user's activities from the current month:
-${JSON.stringify(screenshotsWithDescriptions.map((s: any) => ({
-    timestamp: s.timestamp,
-    category: s.category,
-    activity: s.activity,
-    description: s.description
-})), null, 2)}
-`;
-            } else {
-                systemPrompt += "\nNote: The user has chosen not to include current month activity descriptions in this conversation.\n";
-            }
+                    if (dataOptions.includeDescriptions && s.description && s.description.trim()) {
+                        item.description = s.description;
+                    }
+                    if (dataOptions.includeTags && s.tags) {
+                        try {
+                            const tags = JSON.parse(s.tags);
+                            if (tags.length > 0) {
+                                item.tags = tags;
+                            }
+                        } catch {}
+                    }
+                    return item;
+                }).filter((item: any) => {
+                    if (dataOptions.includeLogs) return true;
+                    if (dataOptions.includeDescriptions && item.description) return true;
+                    if (dataOptions.includeTags && item.tags) return true;
+                    return false;
+                });
 
-            // Add activity tags if requested (just timestamps and tags)
-            if (dataOptions.includeTags) {
-                const screenshotsWithTags = screenshots.filter((s: any) => s.tags && JSON.parse(s.tags).length > 0);
-                
-                systemPrompt += `\nHere are the user's activity tags from the current month:
-${JSON.stringify(screenshotsWithTags.map((s: any) => ({
-    timestamp: s.timestamp,
-    category: s.category,
-    activity: s.activity,
-    tags: JSON.parse(s.tags)
-})), null, 2)}
-`;
+                if (activityData.length > 0) {
+                    systemPrompt += `\nHere is the user's activity data from the current month:\n${JSON.stringify(activityData, null, 2)}\n`;
+                } else {
+                    systemPrompt += "\nNote: No activity data found for the current month with the selected options.\n";
+                }
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include current month activity tags in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include current month activity data (logs, descriptions, tags) in this conversation.\n";
             }
 
             // Add stats data if requested
@@ -874,70 +864,47 @@ ${JSON.stringify(analyses.map((a: any) => ({
             // CURRENT YEAR DATA SECTIONS
             systemPrompt += "\n\n## CURRENT YEAR DATA ##\n";
             
-            // Fetch year data if needed
-            let yearScreenshots = [];
-            if (dataOptions.includeYearScreenshots || dataOptions.includeYearLogs) {
-                // Fetch year data (limit to most recent 1000 entries to avoid token limits)
-                yearScreenshots = await database.screenshots.getScreenshotsForExport(
+            // Fetch and process activity data for the current year
+            if (dataOptions.includeYearLogs || dataOptions.includeYearScreenshots || dataOptions.includeYearTags) {
+                const yearScreenshots = await database.screenshots.getScreenshotsForExport(
                     startOfYear,
                     endOfYear,
                     false, // Don't include image data
                     1000   // Limit to 1000 entries
                 );
-            }
-            
-            // Add yearly activity logs if requested
-            if (dataOptions.includeYearLogs) {
-                // For yearly logs, just include timestamps and categories without full descriptions to save tokens
-                systemPrompt += `\nHere's the user's activity logs for the current year (limited to most recent 1000 entries):
-${JSON.stringify(yearScreenshots.map((s: any) => ({
-    timestamp: s.timestamp,
-    category: s.category,
-    activity: s.activity
-})), null, 2)}
-`;
-            } else {
-                systemPrompt += "\nNote: The user has chosen not to include current year activity logs in this conversation.\n";
-            }
 
-            // Add yearly activity descriptions if requested
-            if (dataOptions.includeYearScreenshots) {
-                // Only include entries that have meaningful descriptions
-                const yearScreenshotsWithDescriptions = yearScreenshots
-                    .filter((s: any) => s.description && s.description.trim())
-                    // Limit to the 100 most recent to save tokens
-                    .slice(0, 100);
-                
-                systemPrompt += `\nHere are detailed descriptions of the user's activities from the current year (limited to most recent 100 entries with descriptions):
-${JSON.stringify(yearScreenshotsWithDescriptions.map((s: any) => ({
-    timestamp: s.timestamp,
-    category: s.category,
-    activity: s.activity,
-    description: s.description
-})), null, 2)}
-`;
-            } else {
-                systemPrompt += "\nNote: The user has chosen not to include current year activity descriptions in this conversation.\n";
-            }
+                const yearActivityData = yearScreenshots.map((s: any) => {
+                    const item: any = {
+                        timestamp: s.timestamp,
+                        category: s.category,
+                        activity: s.activity,
+                    };
+                    if (dataOptions.includeYearScreenshots && s.description && s.description.trim()) {
+                        item.description = s.description;
+                    }
+                    if (dataOptions.includeYearTags && s.tags) {
+                        try {
+                            const tags = JSON.parse(s.tags);
+                            if (tags.length > 0) {
+                                item.tags = tags;
+                            }
+                        } catch {}
+                    }
+                    return item;
+                }).filter((item: any) => {
+                    if (dataOptions.includeYearLogs) return true;
+                    if (dataOptions.includeYearScreenshots && item.description) return true;
+                    if (dataOptions.includeYearTags && item.tags) return true;
+                    return false;
+                }).slice(0, 200); // Limit to 200 entries to avoid overly large prompts
 
-            // Add yearly activity tags if requested
-            if (dataOptions.includeYearTags) {
-                // Only include entries that have tags
-                const yearScreenshotsWithTags = yearScreenshots
-                    .filter((s: any) => s.tags && JSON.parse(s.tags).length > 0)
-                    // Limit to the 100 most recent to save tokens
-                    .slice(0, 100);
-                
-                systemPrompt += `\nHere are the user's activity tags from the current year (limited to most recent 100 entries with tags):
-${JSON.stringify(yearScreenshotsWithTags.map((s: any) => ({
-    timestamp: s.timestamp,
-    category: s.category,
-    activity: s.activity,
-    tags: JSON.parse(s.tags)
-})), null, 2)}
-`;
+                if (yearActivityData.length > 0) {
+                    systemPrompt += `\nHere is the user's activity data from the current year (limited to the ${yearActivityData.length} most recent entries with data):\n${JSON.stringify(yearActivityData, null, 2)}\n`;
+                } else {
+                    systemPrompt += "\nNote: No activity data found for the current year with the selected options.\n";
+                }
             } else {
-                systemPrompt += "\nNote: The user has chosen not to include current year activity tags in this conversation.\n";
+                systemPrompt += "\nNote: The user has chosen not to include current year activity data (logs, descriptions, tags) in this conversation.\n";
             }
 
             // Add yearly stats data if requested
@@ -1016,6 +983,17 @@ Chat history:
             
             // Add current user message
             systemPrompt += `\n\nUser: ${message}`;
+
+            // For debugging: save the prompt to a temp file
+            try {
+                const tmpDir = os.tmpdir();
+                const fileName = `gemini-prompt-${new Date().toISOString().replace(/[:.]/g, '-')}.log`;
+                const filePath = path.join(tmpDir, fileName);
+                fs.writeFileSync(filePath, systemPrompt, 'utf8');
+                logger.info(`Saved Gemini prompt for debugging to: ${filePath}`);
+            } catch (debugError) {
+                logger.error('Failed to save Gemini prompt for debugging:', debugError);
+            }
 
             const result = await genAI.models.generateContent({
                 model: store.get('chatGeminiModel') || 'gemini-2.0-flash',
