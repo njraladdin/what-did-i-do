@@ -160,6 +160,22 @@
     
      .screenshot-time { font-size: 13px; color: var(--color-text-muted); letter-spacing: -0.1px; margin-top: 2px; }
      
+     .screenshot-tags {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+     }
+
+     .screenshot-tag {
+        background-color: var(--color-bg-elevated);
+        color: var(--color-text-secondary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+     }
+
      .screenshot-description-tooltip {
         position: absolute;
         bottom: 100%;

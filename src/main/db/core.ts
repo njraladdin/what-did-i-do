@@ -89,6 +89,7 @@ export async function initializeDatabase(): Promise<void> {
                             image_data BLOB NOT NULL,
                             thumbnail_data BLOB NOT NULL,
                             description TEXT,
+                            tags TEXT,
                             created_at TEXT DEFAULT CURRENT_TIMESTAMP
                         )
                     `, (err) => {
@@ -115,6 +116,29 @@ export async function initializeDatabase(): Promise<void> {
                         if (err) {
                             console.error('Day analyses table creation error:', err);
                             reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+
+                // Add 'tags' column to screenshots table if it doesn't exist
+                await new Promise<void>((resolve, reject) => {
+                    db!.all("PRAGMA table_info(screenshots)", (err, columns) => {
+                        if (err) {
+                            console.error('Error getting table info:', err);
+                            return reject(err);
+                        }
+
+                        const hasTagsColumn = columns.some((col: any) => col.name === 'tags');
+                        if (!hasTagsColumn) {
+                            db!.run("ALTER TABLE screenshots ADD COLUMN tags TEXT", (err) => {
+                                if (err) {
+                                    console.error('Error adding tags column:', err);
+                                    return reject(err);
+                                }
+                                resolve();
+                            });
                         } else {
                             resolve();
                         }

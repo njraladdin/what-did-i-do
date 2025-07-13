@@ -11,6 +11,7 @@ interface Screenshot {
     activity?: string;
     category?: string;
     description?: string;
+    tags?: string[];
 }
 
 interface Note {
@@ -94,6 +95,12 @@ function displayScreenshots(): void {
                 ? `<div class="screenshot-info-icon"><i class="fas fa-info-circle"></i></div>`
                 : '';
             
+            const tagsHTML = screenshot.tags && screenshot.tags.length > 0
+                ? `<div class="screenshot-tags">` + 
+                  screenshot.tags.map(tag => `<span class="screenshot-tag">${tag}</span>`).join('') + 
+                  `</div>`
+                : '';
+
             if (screenshotDiv) {
                 screenshotDiv.innerHTML = `
                     <div class="screenshot-thumbnail-container">
@@ -105,6 +112,7 @@ function displayScreenshots(): void {
                         <div class="screenshot-activity">Activity: ${screenshot.activity || 'Unknown'}</div>
                         <div class="screenshot-category category-label ${screenshot.category}">Category: ${formatCategoryName(screenshot.category || 'UNKNOWN')}</div>
                         <div class="screenshot-time">Time: ${date.toLocaleString()}</div>
+                        ${tagsHTML}
                     </div>
                     <button class="delete-screenshot" onclick="typedWindow.deleteScreenshot(${screenshot.id})">
                         <i class="fas fa-trash"></i>

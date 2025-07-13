@@ -7,6 +7,7 @@ interface Screenshot {
     category: Category;
     activity: string;
     description?: string;
+    tags?: string;
     image_data?: Buffer;
     thumbnail_data?: Buffer;
     created_at?: string;
@@ -19,6 +20,7 @@ interface ProcessedScreenshot {
     activity: string;
     description: string;
     thumbnail: string;
+    tags: string[];
 }
 
 interface ScreenshotTiming {
@@ -43,7 +45,8 @@ export function saveScreenshot(
     activity: string,
     imageBuffer: Buffer,
     thumbnailBuffer: Buffer,
-    description: string
+    description: string,
+    tags: string[]
 ): Promise<number> {
     return new Promise((resolve, reject) => {
         const db = getConnection();
@@ -54,15 +57,17 @@ export function saveScreenshot(
                 activity, 
                 image_data, 
                 thumbnail_data,
-                description
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                description,
+                tags
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [
             timestamp,
             category,
             activity,
             imageBuffer,
             thumbnailBuffer,
-            description
+            description,
+            JSON.stringify(tags)
         ], function(err) {
             if (err) {
                 console.error('Error saving screenshot:', err);
@@ -120,7 +125,8 @@ export function getMoreScreenshots(
                 category,
                 activity,
                 thumbnail_data,
-                description
+                description,
+                tags
             FROM screenshots 
             WHERE timestamp BETWEEN ? AND ?
             ORDER BY timestamp DESC
@@ -145,7 +151,8 @@ export function getMoreScreenshots(
                 category: screenshot.category,
                 activity: screenshot.activity,
                 description: screenshot.description || '',
-                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data!.toString('base64')}`
+                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data!.toString('base64')}`,
+                tags: screenshot.tags ? JSON.parse(screenshot.tags) : []
             }));
 
             resolve(processedScreenshots);
@@ -176,7 +183,8 @@ export function getScreenshotsForDate(currentDate: Date): Promise<ProcessedScree
                 category,
                 activity,
                 thumbnail_data,
-                description
+                description,
+                tags
             FROM screenshots 
             WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
             ORDER BY timestamp DESC
@@ -199,7 +207,8 @@ export function getScreenshotsForDate(currentDate: Date): Promise<ProcessedScree
                 category: screenshot.category,
                 activity: screenshot.activity,
                 description: screenshot.description || '',
-                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data!.toString('base64')}`
+                thumbnail: `data:image/png;base64,${screenshot.thumbnail_data!.toString('base64')}`,
+                tags: screenshot.tags ? JSON.parse(screenshot.tags) : []
             }));
 
             resolve(processedScreenshots);

@@ -30,6 +30,7 @@ export interface AnalysisResponse {
   category: string;
   activity: string;
   description: string;
+  tags: string[];
 }
 
 export interface GeminiApiResponse {

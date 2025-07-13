@@ -163,7 +163,8 @@ async function captureAndAnalyze() {
         let response: AnalysisResponse = {
             category: 'UNKNOWN',  // Changed from 'WORK' to 'UNKNOWN' to avoid misleading categorization
             activity: 'screenshot captured (analysis unavailable)',
-            description: 'No description available due to analysis failure.'
+            description: 'No description available due to analysis failure.',
+            tags: []
         };
 
         // Try Gemini analysis with full error isolation
@@ -211,8 +212,17 @@ async function captureAndAnalyze() {
                 : '';
             console.log(recentHistoryContext);
             const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
-            Return a JSON object with "category", "activity", and "description" fields, where category must be EXACTLY one of these values: 
+            Return a JSON object with "category", "activity", "description", and "tags" fields, where category must be EXACTLY one of these values: 
             ${categories.join(', ')}. 
+            
+            For the "tags" field, generate an array of 10-15 detailed tags following this hierarchical structure to ensure they are useful for future behavioral analysis. Tags should be action and behavior-based, not just single, vague words (e.g., use "writing javascript code" instead of "coding"). Infer user intent and avoid literal tags from UI elements (e.g., use "music discovery" instead of "recommended songs").
+            1.  **User Intention (1-2 tags):** The user's likely purpose or goal for this specific action (e.g., learning a new skill, solving a bug, relaxing).
+            2.  **Primary Activity (2-3 tags):** The main task being performed (e.g., software development, writing, watching video).
+            3.  **Tools & Technologies (2-3 tags):** Applications or platforms in use (e.g., VS Code, YouTube, JavaScript).
+            4.  **Specific Subjects (2-3 tags):** The high-level topic or project (e.g., adk-typescript project, stoicism).
+            5.  **Content Keywords (3-5 tags):** Specific nouns and concepts from the on-screen content (e.g., tanker truck of blood, animal blood processing, biodiesel).
+            6.  **Inferred User Action (2-3 tags):** The user's specific, verb-based actions (e.g., writing code, reading comments, planning improvements).
+
             Focus on the purpose of the activity rather than the specific application.
             For example:
             - Games, videos, entertainment live streams, clearly entertainment YouTube videos, social media content consumption, casual browsing, or scrolling would be "ENTERTAINMENT" (even if user is commenting/chatting on entertainment content)
@@ -223,12 +233,26 @@ async function captureAndAnalyze() {
 
             For the "description" field, provide a comprehensive description (max 150-300 words) of what the user is doing, what's visible on the screen, and any relevant context about the activity. This should be detailed enough to understand the user's behavior and the content they're interacting with.
 
-            Example response: {
+            Example response 1: {
               "category": "WORK", 
               "activity": "software development",
-              "description": "The user is engaged in software development work in an IDE. They appear to be writing JavaScript code for a web application, with multiple files open in tabs. The code seems to be related to data processing or API integration based on the function names visible. The user has a terminal open at the bottom of the screen showing recent command executions. There's also a browser window partially visible with what looks like documentation or Stack Overflow. The overall context suggests focused programming work on a professional project. "
+              "description": "The user is engaged in software development work in an IDE. They appear to be writing JavaScript code for their 'adk-typescript' project, with multiple files open in tabs. The code seems to be related to data processing or API integration based on the function names visible. The user has a terminal open at the bottom of the screen showing recent command executions. There's also a browser window partially visible with what looks like documentation or Stack Overflow. The overall context suggests focused programming work on a professional project.",
+              "tags": ["feature development", "software development", "web development", "visual studio code", "javascript", "adk-typescript project", "api integration", "writing javascript code", "refactoring api module", "debugging code", "reading documentation"]
             }
 
+            Example response 2: {
+              "category": "LEARN",
+              "activity": "AI-assisted self-reflection",
+              "description": "The user is interacting with an AI chat assistant (ChatGPT) to analyze and improve their personal productivity. They are expressing frustration about not accomplishing enough work on the previous day and are seeking strategies to overcome procrastination. The conversation references Stoic philosophy, specifically ideas from Marcus Aurelius, as a framework for building better discipline. This indicates a targeted effort to diagnose a specific productivity issue and find actionable solutions.",
+              "tags": ["overcoming procrastination", "improving daily discipline", "ai-assisted self-reflection", "chatgpt", "web browser", "stoic philosophy", "marcus aurelius", "previous day's performance", "analyzing past behavior", "seeking advice", "planning focus techniques"]
+            }
+
+            Example response 3: {
+              "category": "ENTERTAINMENT",
+              "activity": "browsing reddit",
+              "description": "The user is browsing Reddit, specifically on the r/mildlyinteresting subreddit. The main content of the page is a post featuring a tanker truck filled with blood. The user is viewing the comments section of this post, which contains discussions related to the origin and purpose of the blood. One comment mentions working at a waste reduction plant that processed animal blood into biodiesel and fertilizer.",
+              "tags": ["casual entertainment", "browsing social media", "reading user-generated content", "reddit", "web browser", "r/mildlyinteresting", "tanker truck of blood", "animal blood processing", "biodiesel", "reading comments", "scrolling content"]
+            }
               
             ${recentHistoryContext}`;
             
@@ -274,9 +298,16 @@ async function captureAndAnalyze() {
                                 description: {
                                     type: "STRING",
                                     description: "Detailed description of what the user is doing, what's visible on screen, and context about the activity (150-200 words)"
+                                },
+                                tags: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "STRING"
+                                    },
+                                    description: "An array of 10-15 detailed tags about the activity."
                                 }
                             },
-                            required: ["category", "activity", "description"]
+                            required: ["category", "activity", "description", "tags"]
                         }
                     }
                 });
@@ -297,7 +328,8 @@ async function captureAndAnalyze() {
                             response = {
                                 category: normalizedCategory,
                                 activity: parsedResponse.activity,
-                                description: parsedResponse.description || 'No description available.'
+                                description: parsedResponse.description || 'No description available.',
+                                tags: parsedResponse.tags || []
                             };
                             state.appLogger.info('Successfully parsed Gemini response:', response);
                         } else {
@@ -365,7 +397,8 @@ async function captureAndAnalyze() {
                     response.activity,
                     imgBuffer,
                     thumbnailBuffer,
-                    response.description
+                    response.description,
+                    response.tags
                 );
                 
                 // Clear any previous analysis error on success
@@ -714,9 +747,9 @@ app.whenReady().then(async () => {
             idleThresholdMinutes: store.get('interval') // Skip if idle for interval duration
         });
 
-        // Initialize day analysis scheduler (every 6 hours = 360 minutes)
+        // Initialize day analysis scheduler (every 3 hours = 180 minutes)
         state.dayAnalysisScheduler = new SimpleRobustScheduler(state.appLogger, {
-            intervalMinutes: 360,
+            intervalMinutes: 180,
             maxRetries: 2,
             idleThresholdMinutes: 0 // No idle threshold - run analysis regardless of system state
         });
