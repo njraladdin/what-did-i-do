@@ -29,6 +29,7 @@ interface WindowExtended extends Window {
     editingNoteId: number | null;
     dailyProgressChart: any;
     yearlyProgressChart: any;
+    productivityByHourChart: any;
     ipcRenderer: any;
     DOM: any;
     deleteScreenshot: (id: number) => void;
@@ -755,6 +756,130 @@ function hideTypingIndicator(): void {
     }
 }
 
+// Productivity Chart Functions
+function renderProductivityByHourChart(data: Record<string, { work: number; learn: number; total: number }>): void {
+    console.log('Rendering productivity by hour chart with data:', data);
+
+    // Get chart context
+    const ctx = document.getElementById('productivityByHourChart') as HTMLCanvasElement | null;
+    if (!ctx) {
+        console.error('Could not find productivity by hour chart canvas element');
+        return;
+    }
+
+    // Destroy existing chart if it exists
+    if (typedWindow.productivityByHourChart && typeof typedWindow.productivityByHourChart.destroy === 'function') {
+        typedWindow.productivityByHourChart.destroy();
+    }
+
+    // Prepare data for the chart
+    const hours = Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b)); // Sort hours numerically
+    const workData = hours.map(hour => data[hour].work);
+    const learnData = hours.map(hour => data[hour].learn);
+    const totalData = hours.map(hour => data[hour].total);
+
+    // Create new chart
+    typedWindow.productivityByHourChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: hours.map(hour => `${hour}:00`),
+            datasets: [
+                {
+                    label: 'Work',
+                    data: workData,
+                    backgroundColor: 'rgba(37, 99, 235, 0.8)', // Blue
+                    borderColor: 'rgba(37, 99, 235, 0.8)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    maxBarThickness: 32,
+                },
+                {
+                    label: 'Learn',
+                    data: learnData,
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)', // Green
+                    borderColor: 'rgba(34, 197, 94, 0.8)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    maxBarThickness: 32,
+                },
+                {
+                    label: 'Total',
+                    data: totalData,
+                    backgroundColor: 'rgba(251, 191, 36, 0.8)', // Amber/Gold (symbolizes total/summary)
+                    borderColor: 'rgba(251, 191, 36, 0.8)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    maxBarThickness: 32,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        boxWidth: 12,
+                        font: {
+                            size: 13
+                        }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context: any) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2) + ' hours';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 13
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(200, 200, 200, 0.2)'
+                    },
+                    ticks: {
+                        font: {
+                            size: 13
+                        },
+                        callback: function(value: any) {
+                            return `${value}h`;
+                        }
+                    }
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            }
+        }
+    });
+}
+
 function clearChatInput(): void {
     const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement;
     if (chatInput) {
@@ -827,9 +952,10 @@ typedWindow.DOM = {
     displayNotes,
     updateDailyProgressChart: renderDailyProgressChart,
     updateYearlyProgressChart: renderYearlyProgressChart,
+    updateProductivityByHourChart: renderProductivityByHourChart,
     addChatMessage,
     showTypingIndicator,
     hideTypingIndicator,
-    closeNoteModal, // Add this line to expose the function
+    closeNoteModal,
     clearChatInput
 }; 

@@ -11,6 +11,7 @@
 - memories: everything it knows about  you so far based on what you do on the computer  (what you're working on) 
 - ui : the ui is takign too much space than it needs, make it more compact. check Rize ui 
 - mcp : expose day analysises and analytics and memories and diary logs in an MCP server 
+- more charts : create 10 most interesting charts using historical data 
 
 # TODO 
 - details: include more detailed description about current task. helpful for future analytics, done 
@@ -23,7 +24,7 @@
 - screenshot logs with context: provide screenshot logs descirption with previous logs, done 
 - data chat: ask anything about current month data (includes descriptions, notes, analyses), done 
 - detailed tags: additional more detailed tags to help differnetiate activity in same cateogry, done 
-- ai chat data: add tags option. format data to be text instead of json.  include daily and monthly statistics by default, done 
+- ai chat data: add tags option. format data to be text. organize data per day, done 
 
 
-- more charts : create 10 most interesting charts using historical data 
+

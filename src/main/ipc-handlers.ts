@@ -1374,6 +1374,110 @@ Chat history:
             };
         }
     });
+
+    // Get productivity by hour handler
+    ipcMain.handle('get-productivity-by-hour', async () => {
+        try {
+            const db = dependencies.database.getConnection();
+            const now = new Date();
+            const startDate = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000)); // 365 days ago
+
+            interface HourlyDataRow {
+                hour: string;
+                timestamp: string;
+                category: 'WORK' | 'LEARN';
+                next_timestamp: string | null;
+            }
+
+            // Query to get hourly productivity data
+            const results = await new Promise<HourlyDataRow[]>((resolve, reject) => {
+                db.all(`
+                    SELECT 
+                        strftime('%H', timestamp) as hour,
+                        timestamp,
+                        category,
+                        LEAD(timestamp) OVER (PARTITION BY strftime('%Y-%m-%d', timestamp) ORDER BY timestamp ASC) as next_timestamp
+                    FROM screenshots 
+                    WHERE 
+                        timestamp >= ? 
+                        AND timestamp <= ? 
+                        AND category IN ('WORK', 'LEARN')
+                    ORDER BY timestamp ASC
+                `, [
+                    startDate.toISOString(),
+                    now.toISOString()
+                ], (err: Error | null, rows: HourlyDataRow[]) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+                    resolve(rows || []);
+                });
+            });
+            
+            const intervalMinutes = store.get('interval') || 5;
+
+            // Process the results into hourly data (in minutes)
+            const hourlyMinutes: Record<string, { work: number; learn: number }> = {};
+            
+            // Initialize all hours
+            for (let i = 0; i < 24; i++) {
+                const hour = i.toString().padStart(2, '0');
+                hourlyMinutes[hour] = { work: 0, learn: 0 };
+            }
+
+            // Fill in the data
+            results.forEach(row => {
+                const hour = row.hour;
+                const category = row.category.toLowerCase();
+                
+                let diffMinutes = 0;
+                if (row.next_timestamp) {
+                    const currentTime = new Date(row.timestamp);
+                    const nextTime = new Date(row.next_timestamp);
+                    const calculatedDiff = Math.abs((nextTime.getTime() - currentTime.getTime()) / (1000 * 60));
+                    
+                    if (calculatedDiff <= intervalMinutes) {
+                        diffMinutes = calculatedDiff;
+                    } else {
+                        diffMinutes = intervalMinutes;
+                    }
+                } else {
+                    diffMinutes = intervalMinutes;
+                }
+                
+                if (category === 'work') {
+                    hourlyMinutes[hour].work += diffMinutes;
+                } else if (category === 'learn') {
+                    hourlyMinutes[hour].learn += diffMinutes;
+                }
+            });
+
+            // Convert minutes to hours and calculate total
+            const hourlyData: Record<string, { work: number; learn: number; total: number }> = {};
+            Object.keys(hourlyMinutes).forEach(hour => {
+                const workHours = hourlyMinutes[hour].work / 60;
+                const learnHours = hourlyMinutes[hour].learn / 60;
+                hourlyData[hour] = {
+                    work: workHours,
+                    learn: learnHours,
+                    total: workHours + learnHours
+                };
+            });
+
+            return {
+                success: true,
+                data: hourlyData
+            };
+        } catch (error) {
+            console.error('Error getting productivity by hour:', error);
+            return {
+                success: false,
+                error: getErrorMessage(error),
+                data: {}
+            };
+        }
+    });
 }
 
 // Add error type interface

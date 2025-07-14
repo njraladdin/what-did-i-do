@@ -20,6 +20,7 @@ interface WindowWithCustomProps extends Window {
     editingNoteId: number | null;
     dailyProgressChart: any;
     yearlyProgressChart: any;
+    productivityByHourChart: any;
     ipcRenderer: any;
     DOM: any;
     deleteScreenshot: (id: number) => void;
@@ -109,6 +110,7 @@ let currentPage = 1;
 let allScreenshots: Screenshot[] = [];
 let dailyProgressChart: any = null;
 let yearlyProgressChart: any = null;
+let productivityByHourChart: any = null;
 let previewCache: { [key: string]: any } = {};
 
 const SCREENSHOTS_PER_PAGE = 5;
@@ -121,6 +123,7 @@ win.SCREENSHOTS_PER_PAGE = SCREENSHOTS_PER_PAGE;
 win.editingNoteId = editingNoteId;
 win.dailyProgressChart = dailyProgressChart;
 win.yearlyProgressChart = yearlyProgressChart;
+win.productivityByHourChart = productivityByHourChart;
 win.ipcRenderer = ipcRenderer;
 win.updateDataCounts = updateDataCounts;
 
@@ -715,6 +718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Initialize the daily progress chart
             await updateDailyProgressChart();
             await updateYearlyProgressChart();
+            await updateProductivityByHourChart();
             
             // Initialize chat model dropdown
             await initializeChatModelDropdown();
@@ -1392,3 +1396,27 @@ function toggleDataPeriodView() {
         }
     }
 } 
+
+// Add the new function to update productivity chart
+async function updateProductivityByHourChart() {
+    try {
+        const result = await ipcRenderer.invoke('get-productivity-by-hour');
+        if (result.success) {
+            win.DOM.updateProductivityByHourChart(result.data);
+        } else {
+            console.error('Error getting productivity by hour data:', result.error);
+        }
+    } catch (error) {
+        console.error('Error updating productivity by hour chart:', error);
+    }
+}
+
+// Add collapse functionality for productivity chart
+document.getElementById('toggleProductivityChartBtn')?.addEventListener('click', () => {
+    const container = document.getElementById('productivityByHourContainer');
+    const chevron = document.getElementById('productivityChartChevron');
+    if (container && chevron) {
+        container.classList.toggle('collapsed');
+        chevron.classList.toggle('collapsed');
+    }
+}); 
