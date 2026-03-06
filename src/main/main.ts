@@ -16,13 +16,11 @@ import { Category, categories, initializeDatabase, closeDatabase } from './db/co
 const store = new Store<{
     interval: number;
     geminiModel: string;
-    chatGeminiModel: string;
     apiKey?: string;
 }>({
     defaults: {
         interval: 1, // Default to 1 minute
-        geminiModel: 'gemini-2.0-flash', // Default Gemini model
-        chatGeminiModel: 'gemini-2.0-flash'
+        geminiModel: 'gemini-3.1-flash-lite-preview'
     }
 });
 
@@ -109,7 +107,7 @@ async function initializeGeminiAPI(apiKey: string): Promise<GeminiApiResponse> {
         
         // Test the API key with a simple request
         const result = await state.ai.models.generateContent({
-            model: store.get('geminiModel') || 'gemini-2.0-flash',
+            model: store.get('geminiModel') || 'gemini-3.1-flash-lite-preview',
             contents: 'Hello, this is a test message.'
         });
         
@@ -266,7 +264,7 @@ async function captureAndAnalyze() {
                 }
                 
                 const result = await state.ai.models.generateContent({
-                    model: store.get('geminiModel') || 'gemini-2.0-flash',
+                    model: store.get('geminiModel') || 'gemini-3.1-flash-lite-preview',
                     contents: [
                         {
                             parts: [
@@ -388,60 +386,64 @@ async function captureAndAnalyze() {
             }
         }
 
-        // Only save to database if analysis was successful
-        if (response.category !== 'UNKNOWN' || response.activity !== 'screenshot captured (analysis unavailable)') {
-            // Store in database - wrap in try-catch to prevent database errors from breaking the schedule
-            try {
-                await database.screenshots.saveScreenshot(
-                    timestamp,
-                    response.category as Category,
-                    response.activity,
-                    imgBuffer,
-                    thumbnailBuffer,
-                    response.description,
-                    response.tags
-                );
-                
-                // Clear any previous analysis error on success
+        const analysisSucceeded = response.category !== 'UNKNOWN' ||
+            response.activity !== 'screenshot captured (analysis unavailable)';
+
+        // Store the screenshot even when analysis fails so history can still show it.
+        try {
+            await database.screenshots.saveScreenshot(
+                timestamp,
+                response.category as Category,
+                response.activity,
+                imgBuffer,
+                thumbnailBuffer,
+                response.description,
+                response.tags
+            );
+
+            if (analysisSucceeded) {
                 state.lastAnalysisError = null;
-                
-                // Try to update UI, but don't let it break the process
-                try {
-                    const updatedData = await database.stats.getActivityStats(state.currentDate, store.get('interval'));
-                    
-                    if (state.mainWindow?.webContents) {
-                        state.mainWindow.webContents.send('activity-updated', updatedData);
-                        state.mainWindow.webContents.send('analysis-error-cleared'); // Clear error in UI
-                        setTimeout(() => {
-                            state.mainWindow?.webContents.send('refresh-ui');
-                        }, 100);
+            } else {
+                const errorMessage = 'AI analysis failed - screenshot captured but could not be categorized';
+                state.lastAnalysisError = {
+                    timestamp: new Date().toISOString(),
+                    message: errorMessage,
+                    type: 'analysis_failed'
+                };
+                state.appLogger.info('Screenshot capture completed, analysis failed, and fallback data was saved');
+            }
+
+            // Try to update UI, but don't let it break the process
+            try {
+                const updatedData = await database.stats.getActivityStats(state.currentDate, store.get('interval'));
+
+                if (state.mainWindow?.webContents) {
+                    state.mainWindow.webContents.send('activity-updated', updatedData);
+
+                    if (analysisSucceeded) {
+                        state.mainWindow.webContents.send('analysis-error-cleared');
+                    } else {
+                        state.mainWindow.webContents.send('analysis-error', state.lastAnalysisError);
                     }
-                } catch (error) {
-                    if (error instanceof Error) {
-                        state.appLogger.error('Error updating UI (non-critical):', error.message);
-                    }
+
+                    setTimeout(() => {
+                        state.mainWindow?.webContents.send('refresh-ui');
+                    }, 100);
                 }
-                
-                state.appLogger.info('Screenshot capture and analysis completed successfully');
             } catch (error) {
                 if (error instanceof Error) {
-                    state.appLogger.error('Database operation failed (non-critical):', error.message);
+                    state.appLogger.error('Error updating UI (non-critical):', error.message);
                 }
             }
-        } else {
-            // Analysis failed - track the error and notify UI
-            const errorMessage = 'AI analysis failed - screenshot captured but could not be categorized';
-            state.lastAnalysisError = {
-                timestamp: new Date().toISOString(),
-                message: errorMessage,
-                type: 'analysis_failed'
-            };
-            
-            state.appLogger.info('Screenshot capture completed, but analysis FAILED - skipping database insertion');
-            
-            // Send error to UI
-            if (state.mainWindow && !state.mainWindow.isDestroyed()) {
-                state.mainWindow.webContents.send('analysis-error', state.lastAnalysisError);
+
+            state.appLogger.info(
+                analysisSucceeded
+                    ? 'Screenshot capture and analysis completed successfully'
+                    : 'Screenshot capture completed with analysis fallback'
+            );
+        } catch (error) {
+            if (error instanceof Error) {
+                state.appLogger.error('Database operation failed (non-critical):', error.message);
             }
         }
 
@@ -458,6 +460,7 @@ async function captureAndAnalyze() {
 async function generateDayAnalysis(date: string): Promise<string> {
     try {
         state.appLogger.info('Starting day analysis generation for date:', date);
+        const selectedModel = store.get('geminiModel') || 'gemini-3.1-flash-lite-preview';
         
         // Get all required data in parallel
         const [data, dailyStats] = await Promise.all([
@@ -520,7 +523,7 @@ When analyzing trends and progress:
 
         state.appLogger.info('Sending request to Gemini API', { prompt: (prompt) });
         const result = await state.ai.models.generateContent({
-             model: "gemini-2.5-pro",
+             model: selectedModel,
              contents: prompt,
              config: {
                 temperature: 0.7,
@@ -766,15 +769,6 @@ app.whenReady().then(async () => {
             showWindowAndOpenNoteModal();
         });
         
-        // Register global shortcut for chat sidebar
-        globalShortcut.register('CommandOrControl+Shift+C', () => {
-            if (state.mainWindow) {
-                state.mainWindow.show();
-                state.mainWindow.focus();
-                state.mainWindow.webContents.send('toggle-chat-sidebar');
-            }
-        });
-        
         // Initialize IPC handlers with type-safe dependencies
         initializeIpcHandlers({
             database,
@@ -858,5 +852,3 @@ app.on('will-quit', async () => {
     // Unregister all global shortcuts
     globalShortcut.unregisterAll();
 });
-
-

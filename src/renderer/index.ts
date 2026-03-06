@@ -34,7 +34,6 @@ interface WindowWithCustomProps extends Window {
     deleteAPIKey: () => void;
     toggleAutoLaunch: (event: Event) => void;
     saveGeminiModel: () => void;
-    fetchAvailableModels: (targetElementId: string) => void;
     openLogsFile: () => void;
     showRecentLogs: () => void;
     exportData: () => void;
@@ -47,18 +46,10 @@ interface WindowWithCustomProps extends Window {
     openExternalLink: (url: string) => void;
     toggleSettings: () => void;
     toggleExportModal: () => void;
-    toggleChatSidebar: () => void;
     showMinimizeModal: () => void;
     closeMinimizeModal: (shouldClose?: boolean) => void;
     showAddNoteModal: () => void;
     closeNoteModal: () => void;
-    sendChatMessage: () => void;
-    handleChatKeydown: (event: KeyboardEvent) => void;
-    toggleDataOption: (option: string) => void;
-    updateDataCounts: () => void;
-    loadChatHistory: () => void;
-    clearChatHistory: () => void;
-    toggleDataPeriodView: () => void;
 }
 
 // Cast window to our extended interface
@@ -125,7 +116,6 @@ win.dailyProgressChart = dailyProgressChart;
 win.yearlyProgressChart = yearlyProgressChart;
 win.productivityByHourChart = productivityByHourChart;
 win.ipcRenderer = ipcRenderer;
-win.updateDataCounts = updateDataCounts;
 
 // Add settings functions to the window object
 win.toggleTracking = toggleTracking;
@@ -135,7 +125,6 @@ win.initializeAPI = Settings.initializeAPI;
 win.deleteAPIKey = Settings.deleteAPIKey;
 win.toggleAutoLaunch = Settings.toggleAutoLaunch;
 win.saveGeminiModel = Settings.saveGeminiModel;
-win.fetchAvailableModels = Settings.fetchAvailableModels;
 win.openLogsFile = Settings.openLogsFile;
 win.showRecentLogs = Settings.showRecentLogs;
 win.exportData = Settings.exportData;
@@ -154,17 +143,10 @@ win.quitApp = quitApp;
 win.openExternalLink = openExternalLink;
 win.toggleSettings = () => win.DOM.toggleSettings();
 win.toggleExportModal = () => win.DOM.toggleExportModal();
-win.toggleChatSidebar = () => win.DOM.toggleChatSidebar();
 win.showMinimizeModal = () => win.DOM.showMinimizeModal();
 win.closeMinimizeModal = (shouldClose?: boolean) => win.DOM.closeMinimizeModal(shouldClose);
 win.showAddNoteModal = showAddNoteModal;
 win.closeNoteModal = () => win.DOM.closeNoteModal();
-win.sendChatMessage = sendChatMessage;
-win.handleChatKeydown = handleChatKeydown;
-win.toggleDataOption = toggleDataOption;
-win.loadChatHistory = loadChatHistory;
-win.clearChatHistory = clearChatHistory;
-win.toggleDataPeriodView = toggleDataPeriodView;
 
 // API Key Management functions are now in settings.ts
 
@@ -276,57 +258,129 @@ async function updateMonthlyAverages(): Promise<void> {
     }
 }
 
+function formatDateForInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatMonthForInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+}
+
+function parseDateInputValue(value: string): Date | null {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return null;
+    }
+
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
+function parseMonthInputValue(value: string): Date | null {
+    const [year, month] = value.split('-').map(Number);
+    if (!year || !month) {
+        return null;
+    }
+
+    const day = Math.min(currentDate.getDate(), new Date(year, month, 0).getDate());
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
+function syncDateControls(): void {
+    const currentDateElement = document.getElementById('currentDate');
+    if (currentDateElement) {
+        currentDateElement.textContent = win.DOM.formatDate(currentDate);
+    }
+
+    const nextDateBtn = document.getElementById('nextDateBtn') as HTMLButtonElement | null;
+    if (nextDateBtn) {
+        nextDateBtn.disabled = win.DOM.isToday(currentDate);
+    }
+
+    const currentDatePicker = document.getElementById('currentDatePicker') as HTMLInputElement | null;
+    if (currentDatePicker) {
+        currentDatePicker.value = formatDateForInput(currentDate);
+    }
+
+    const currentMonthPicker = document.getElementById('currentMonthPicker') as HTMLInputElement | null;
+    if (currentMonthPicker) {
+        currentMonthPicker.value = formatMonthForInput(currentDate);
+    }
+}
+
+function openNativePicker(inputId: string): void {
+    const input = document.getElementById(inputId) as (HTMLInputElement & { showPicker?: () => void }) | null;
+    if (!input) {
+        return;
+    }
+
+    input.focus();
+    if (typeof input.showPicker === 'function') {
+        input.showPicker();
+        return;
+    }
+
+    input.click();
+}
+
+async function loadCurrentDateData(): Promise<void> {
+    const data = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
+    console.log('Received data for date change:', data);
+
+    win.DOM.updateCategoryStats(data.stats, data.timeInHours);
+
+    if (Array.isArray(data.screenshots)) {
+        allScreenshots = data.screenshots;
+        win.allScreenshots = allScreenshots;
+        currentPage = 1;
+        win.currentPage = currentPage;
+        win.DOM.displayScreenshots();
+    } else {
+        console.error('Invalid screenshots data:', data.screenshots);
+        allScreenshots = [];
+        win.allScreenshots = allScreenshots;
+        win.DOM.displayScreenshots();
+    }
+
+    if (data.notes) {
+        win.DOM.displayNotes(data.notes);
+    } else {
+        await refreshNotes();
+    }
+
+    const contentDiv = document.getElementById('dayAnalysisContent');
+    if (contentDiv) {
+        if (data.dayAnalysis && data.dayAnalysis.content) {
+            contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
+        } else {
+            contentDiv.textContent = 'No analysis generated yet for this day.';
+        }
+    }
+}
+
 async function changeMonth(offset: number) {
-    // Create a new date object to avoid modifying the current date
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + offset);
-    
-    // Update the current date with the new month
+
     currentDate = newDate;
     win.currentDate = currentDate;
-    
+    syncDateControls();
+
     try {
-        // Update the monthly averages with the new month
         const data = await ipcRenderer.invoke('update-current-month', 
             currentDate.getFullYear(), 
             currentDate.getMonth()
         );
-        
-        // Update UI using DOM module
+
         win.DOM.updateMonthlyAnalyticsDisplay(data);
-        
-        // Update the next month button state
         win.DOM.updateNextMonthButtonState();
-        
-        // Update the daily progress chart
         await updateDailyProgressChart();
-        
-        // Also update the daily view to match the month
-        const currentDateElement = document.getElementById('currentDate');
-        if (currentDateElement) {
-            currentDateElement.textContent = win.DOM.formatDate(currentDate);
-        }
-        const nextDateBtn = document.getElementById('nextDateBtn');
-        if (nextDateBtn) {
-            (nextDateBtn as HTMLButtonElement).disabled = win.DOM.isToday(currentDate);
-        }
-        
-        // Fetch updated data for the day view
-        const dayData = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
-        win.DOM.updateCategoryStats(dayData.stats, dayData.timeInHours);
-        
-        // Update screenshots
-        if (Array.isArray(dayData.screenshots)) {
-            allScreenshots = dayData.screenshots;
-            win.allScreenshots = allScreenshots;
-            currentPage = 1;
-            win.currentPage = currentPage;
-            win.DOM.displayScreenshots();
-        } else {
-            allScreenshots = [];
-            win.allScreenshots = allScreenshots;
-            win.DOM.displayScreenshots();
-        }
+        await updateYearlyProgressChart();
+        await loadCurrentDateData();
     } catch (error) {
         console.error('Error changing month:', error);
     }
@@ -349,7 +403,7 @@ async function updateDailyProgressChart(): Promise<void> {
 
 async function updateYearlyProgressChart() {
     try {
-        const year = new Date().getFullYear();
+        const year = currentDate.getFullYear();
         const result = await ipcRenderer.invoke('get-yearly-monthly-category-stats', year);
         if (!result.success) {
             console.error('Error getting yearly monthly stats for chart:', result.error);
@@ -359,38 +413,6 @@ async function updateYearlyProgressChart() {
         win.DOM.updateYearlyProgressChart(result);
     } catch (error) {
         console.error('Error updating yearly progress chart:', error);
-    }
-}
-
-// Chat Model Functions
-async function initializeChatModelDropdown() {
-    const modelSelect = document.getElementById('chatGeminiModel') as HTMLSelectElement;
-    const currentModel = await ipcRenderer.invoke('get-chat-gemini-model');
-    
-    if (modelSelect && currentModel) {
-        modelSelect.value = currentModel;
-    }
-
-    await win.fetchAvailableModels('chatGeminiModel');
-
-    // Restore selection after populating
-    if (modelSelect && currentModel) {
-        // If the current model isn't in the list, add it as a custom option
-        if (!Array.from(modelSelect.options).some(opt => opt.value === currentModel)) {
-            const customOption = document.createElement('option');
-            customOption.value = currentModel;
-            customOption.text = currentModel + ' (Custom)';
-            modelSelect.add(customOption);
-        }
-        modelSelect.value = currentModel;
-    }
-}
-
-async function saveChatGeminiModel() {
-    const modelSelect = document.getElementById('chatGeminiModel') as HTMLSelectElement;
-    if (modelSelect) {
-        const model = modelSelect.value;
-        await ipcRenderer.invoke('set-chat-gemini-model', model);
     }
 }
 
@@ -424,61 +446,16 @@ win.deleteScreenshot = deleteScreenshot;
 
 // Date Management Functions
 async function changeDate(offset: number) {
-    currentDate.setDate(currentDate.getDate() + offset);
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + offset);
+    currentDate = newDate;
     win.currentDate = currentDate;
-
-    const nextDateBtn = document.getElementById('nextDateBtn') as HTMLButtonElement;
-    if (nextDateBtn) {
-        (nextDateBtn as HTMLButtonElement).disabled = win.DOM.isToday(currentDate);
-    }
-    const currentDateElement = document.getElementById('currentDate');
-    if (currentDateElement) {
-        currentDateElement.textContent = win.DOM.formatDate(currentDate);
-    }
+    syncDateControls();
 
     try {
-        const data = await ipcRenderer.invoke('update-current-date', currentDate.toISOString());
-        console.log('Received data for date change:', data);
-
-        // Pass both stats and timeInHours to the update function
-        win.DOM.updateCategoryStats(data.stats, data.timeInHours);
-
-        // Update monthly averages when date changes
         await updateMonthlyAverages();
-        
-        // Update next month button state in case the month changed
-        win.DOM.updateNextMonthButtonState();
-
-        // Update screenshots
-        if (Array.isArray(data.screenshots)) {
-            allScreenshots = data.screenshots;
-            win.allScreenshots = allScreenshots;
-            currentPage = 1;
-            win.currentPage = currentPage;
-            win.DOM.displayScreenshots();
-        } else {
-            console.error('Invalid screenshots data:', data.screenshots);
-            allScreenshots = [];
-            win.allScreenshots = allScreenshots;
-            win.DOM.displayScreenshots();
-        }
-
-        // Update notes for the new date
-        if (data.notes) {
-            win.DOM.displayNotes(data.notes);
-        } else {
-            await refreshNotes();
-        }
-
-        // Update day analysis
-        const contentDiv = document.getElementById('dayAnalysisContent');
-        if (contentDiv) {
-            if (data.dayAnalysis && data.dayAnalysis.content) {
-                contentDiv.innerHTML = marked.parse(data.dayAnalysis.content);
-            } else {
-                contentDiv.textContent = 'No analysis generated yet for this day.';
-            }
-        }
+        await updateYearlyProgressChart();
+        await loadCurrentDateData();
     } catch (error) {
         console.error('Error changing date:', error);
         allScreenshots = [];
@@ -677,17 +654,7 @@ async function loadDayAnalysis() {
 // Event Listeners and Initialization
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Initialize date display
-        const currentDateElement = document.getElementById('currentDate');
-        if (currentDateElement) {
-            currentDateElement.textContent = win.DOM.formatDate(currentDate);
-        }
-        const nextDateBtn = document.getElementById('nextDateBtn') as HTMLButtonElement;
-        if (nextDateBtn) {
-            (nextDateBtn as HTMLButtonElement).disabled = win.DOM.isToday(currentDate);
-        }
-        
-        // Initialize next month button state
+        syncDateControls();
         win.DOM.updateNextMonthButtonState();
 
         // Check for existing analysis error
@@ -719,15 +686,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             await updateDailyProgressChart();
             await updateYearlyProgressChart();
             await updateProductivityByHourChart();
-            
-            // Initialize chat model dropdown
-            await initializeChatModelDropdown();
-        }
-
-        // Initialize period toggle
-        const periodToggle = document.getElementById('periodToggle') as HTMLInputElement;
-        if (periodToggle) {
-            periodToggle.addEventListener('change', toggleDataPeriodView);
         }
     } catch (error) {
         console.error('Error initializing data:', error);
@@ -765,17 +723,76 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize Gemini model input
     await Settings.initializeGeminiModel();
 
-    // Initialize date navigation on page load
-    const currentDateElement = document.getElementById('currentDate');
-    if (currentDateElement) {
-        currentDateElement.textContent = win.DOM.formatDate(currentDate);
+    const currentDateBtn = document.getElementById('currentDateBtn');
+    if (currentDateBtn) {
+        currentDateBtn.addEventListener('click', () => openNativePicker('currentDatePicker'));
     }
-    const nextDateBtn = document.getElementById('nextDateBtn');
-    if (nextDateBtn) {
-        (nextDateBtn as HTMLButtonElement).disabled = win.DOM.isToday(currentDate);
+
+    const currentMonthBtn = document.getElementById('currentMonthBtn');
+    if (currentMonthBtn) {
+        currentMonthBtn.addEventListener('click', () => openNativePicker('currentMonthPicker'));
     }
-    
-    // Initialize month navigation
+
+    const currentDatePicker = document.getElementById('currentDatePicker') as HTMLInputElement | null;
+    if (currentDatePicker) {
+        currentDatePicker.addEventListener('change', async () => {
+            if (!currentDatePicker.value) {
+                return;
+            }
+
+            const selectedDate = parseDateInputValue(currentDatePicker.value);
+            if (!selectedDate) {
+                return;
+            }
+
+            currentDate = selectedDate;
+            win.currentDate = currentDate;
+            syncDateControls();
+
+            try {
+                await updateMonthlyAverages();
+                await updateYearlyProgressChart();
+                await loadCurrentDateData();
+                clearPreviewCache();
+            } catch (error) {
+                console.error('Error jumping to date:', error);
+            }
+        });
+    }
+
+    const currentMonthPicker = document.getElementById('currentMonthPicker') as HTMLInputElement | null;
+    if (currentMonthPicker) {
+        currentMonthPicker.addEventListener('change', async () => {
+            if (!currentMonthPicker.value) {
+                return;
+            }
+
+            const selectedMonth = parseMonthInputValue(currentMonthPicker.value);
+            if (!selectedMonth) {
+                return;
+            }
+
+            currentDate = selectedMonth;
+            win.currentDate = currentDate;
+            syncDateControls();
+
+            try {
+                const data = await ipcRenderer.invoke('update-current-month',
+                    currentDate.getFullYear(),
+                    currentDate.getMonth()
+                );
+                win.DOM.updateMonthlyAnalyticsDisplay(data);
+                win.DOM.updateNextMonthButtonState();
+                await updateDailyProgressChart();
+                await updateYearlyProgressChart();
+                await loadCurrentDateData();
+                clearPreviewCache();
+            } catch (error) {
+                console.error('Error jumping to month:', error);
+            }
+        });
+    }
+
     win.DOM.updateNextMonthButtonState();
 
     // Add event listeners for export modal
@@ -947,15 +964,10 @@ if (minimizeModal) {
 // Escape key handler for closing modals
 document.addEventListener('keydown', (e) => {
     const settingsModal = document.getElementById('settingsModal');
-    const chatSidebar = document.getElementById('chatSidebar');
     
     if (settingsModal && settingsModal.style.display === 'flex') {
         if (e.key === 'Escape') {
             win.DOM.toggleSettings();
-        }
-    } else if (chatSidebar && chatSidebar.classList.contains('open')) {
-        if (e.key === 'Escape') {
-            win.DOM.toggleChatSidebar();
         }
     }
 });
@@ -1089,30 +1101,6 @@ ipcRenderer.on('open-note-modal', () => {
     showAddNoteModal();
 });
 
-// Listen for global shortcut to toggle chat sidebar
-ipcRenderer.on('toggle-chat-sidebar', () => {
-    win.DOM.toggleChatSidebar();
-});
-
-// Add function to clear chat history
-async function clearChatHistory() {
-    try {
-        await ipcRenderer.invoke('clear-chat-history');
-        const chatMessages = document.getElementById('chatMessages');
-        if (chatMessages) {
-            chatMessages.innerHTML = '';
-        }
-    } catch (error) {
-        console.error('Error clearing chat history:', error);
-    }
-}
-
-// Export clearChatHistory to window
-win.clearChatHistory = clearChatHistory;
-
-// Export loadChatHistory to window
-win.loadChatHistory = loadChatHistory;
-
 ipcRenderer.on('quit-app', () => {
     // Handle quit app event
 });
@@ -1120,196 +1108,7 @@ ipcRenderer.on('quit-app', () => {
 // Function to clear the preview cache
 function clearPreviewCache() {
     previewCache = {};
-    updateDataCounts();
 }
-
-// Function to update data counts on the buttons
-async function updateDataCounts() {
-    try {
-        const result = await ipcRenderer.invoke('get-data-counts');
-        if (result.success) {
-            const { counts } = result;
-            
-            // Update the monthly count elements
-            const descriptionsCountEl = document.getElementById('descriptionsCount');
-            const logsCountEl = document.getElementById('logsCount');
-            const statsCountEl = document.getElementById('statsCount');
-            const notesCountEl = document.getElementById('notesCount');
-            const analysesCountEl = document.getElementById('analysesCount');
-            const tagsCountEl = document.getElementById('tagsCount');
-            
-            if (descriptionsCountEl) descriptionsCountEl.textContent = counts.descriptions.toString();
-            if (logsCountEl) logsCountEl.textContent = counts.logs.toString();
-            if (statsCountEl) statsCountEl.textContent = counts.stats.toString();
-            if (notesCountEl) notesCountEl.textContent = counts.notes.toString();
-            if (analysesCountEl) analysesCountEl.textContent = counts.analyses.toString();
-            if (tagsCountEl) tagsCountEl.textContent = counts.tags.toString();
-            
-            // Update the yearly count elements
-            const yearDescriptionsCountEl = document.getElementById('yearDescriptionsCount');
-            const yearLogsCountEl = document.getElementById('yearLogsCount');
-            const yearStatsCountEl = document.getElementById('yearStatsCount');
-            const yearNotesCountEl = document.getElementById('yearNotesCount');
-            const yearAnalysesCountEl = document.getElementById('yearAnalysesCount');
-            const yearTagsCountEl = document.getElementById('yearTagsCount');
-            
-            if (yearDescriptionsCountEl) yearDescriptionsCountEl.textContent = counts.yearDescriptions.toString();
-            if (yearLogsCountEl) yearLogsCountEl.textContent = counts.yearLogs.toString();
-            if (yearStatsCountEl) yearStatsCountEl.textContent = counts.yearStats.toString();
-            if (yearNotesCountEl) yearNotesCountEl.textContent = counts.yearNotes.toString();
-            if (yearAnalysesCountEl) yearAnalysesCountEl.textContent = counts.yearAnalyses.toString();
-            if (yearTagsCountEl) yearTagsCountEl.textContent = counts.yearTags.toString();
-        }
-    } catch (error) {
-        console.error('Error updating data counts:', error);
-    }
-}
-
-// Chat Functions
-async function sendChatMessage(): Promise<void> {
-    const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement;
-    const sendBtn = document.getElementById('sendChatBtn') as HTMLButtonElement;
-    
-    if (!chatInput || !sendBtn) return;
-    
-    const message = chatInput.value.trim();
-    if (!message) return;
-    
-    // Disable send button and show loading state
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    
-    try {
-        // Add user message to chat
-        win.DOM.addChatMessage(message, true);
-        
-        // Clear input
-        win.DOM.clearChatInput();
-        
-        // Show typing indicator
-        win.DOM.showTypingIndicator();
-        
-        // Determine selected data period
-        const periodToggle = document.getElementById('periodToggle') as HTMLInputElement;
-        const isYearView = periodToggle ? periodToggle.checked : false;
-
-        // Get monthly data options state if month view is active
-        const includeDescriptions = !isYearView && (document.getElementById('includeScreenshotsToggle')?.classList.contains('active') ?? false);
-        const includeTags = !isYearView && (document.getElementById('includeTagsToggle')?.classList.contains('active') ?? false);
-        const includeLogs = !isYearView && (document.getElementById('includeLogsToggle')?.classList.contains('active') ?? false);
-        const includeStats = !isYearView && (document.getElementById('includeStatsToggle')?.classList.contains('active') ?? false);
-        const includeNotes = !isYearView && (document.getElementById('includeNotesToggle')?.classList.contains('active') ?? false);
-        const includeAnalyses = !isYearView && (document.getElementById('includeAnalysesToggle')?.classList.contains('active') ?? false);
-        
-        // Get yearly data options state if year view is active
-        const includeYearScreenshots = isYearView && (document.getElementById('includeYearScreenshotsToggle')?.classList.contains('active') ?? false);
-        const includeYearTags = isYearView && (document.getElementById('includeYearTagsToggle')?.classList.contains('active') ?? false);
-        const includeYearLogs = isYearView && (document.getElementById('includeYearLogsToggle')?.classList.contains('active') ?? false);
-        const includeYearStats = isYearView && (document.getElementById('includeYearStatsToggle')?.classList.contains('active') ?? false);
-        const includeYearNotes = isYearView && (document.getElementById('includeYearNotesToggle')?.classList.contains('active') ?? false);
-        const includeYearAnalyses = isYearView && (document.getElementById('includeYearAnalysesToggle')?.classList.contains('active') ?? false);
-
-        // Send message to main process
-        const response = await ipcRenderer.invoke('send-chat-message', message, {
-            includeDescriptions,
-            includeTags,
-            includeLogs,
-            includeStats,
-            includeNotes,
-            includeAnalyses,
-            includeYearScreenshots,
-            includeYearTags,
-            includeYearLogs,
-            includeYearStats,
-            includeYearNotes,
-            includeYearAnalyses
-        });
-        
-        // Hide typing indicator
-        win.DOM.hideTypingIndicator();
-        
-        if (response.success) {
-            // Add AI response to chat (setting false for addToHistory since it's already stored in backend)
-            win.DOM.addChatMessage(response.response, false);
-        } else {
-            // Add error message
-            win.DOM.addChatMessage(`Sorry, I encountered an error: ${response.error}`, false);
-        }
-        
-    } catch (error) {
-        // Hide typing indicator on error
-        win.DOM.hideTypingIndicator();
-        
-        // Add error message
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        win.DOM.addChatMessage(`Sorry, I encountered an error: ${errorMessage}`, false);
-        
-        console.error('Error sending chat message:', error);
-    } finally {
-        // Re-enable send button
-        const sendBtn = document.getElementById('sendChatBtn') as HTMLButtonElement;
-        if (sendBtn) {
-            sendBtn.disabled = false;
-            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
-        }
-    }
-}
-
-// Toggle data option pills
-function toggleDataOption(option: string): void {
-    let button: HTMLElement | null = null;
-    
-    switch (option) {
-        case 'screenshots':
-            button = document.getElementById('includeScreenshotsToggle');
-            break;
-        case 'tags':
-            button = document.getElementById('includeTagsToggle');
-            break;
-        case 'logs':
-            button = document.getElementById('includeLogsToggle');
-            break;
-        case 'stats':
-            button = document.getElementById('includeStatsToggle');
-            break;
-        case 'notes':
-            button = document.getElementById('includeNotesToggle');
-            break;
-        case 'analyses':
-            button = document.getElementById('includeAnalysesToggle');
-            break;
-        // Year toggles
-        case 'yearScreenshots':
-            button = document.getElementById('includeYearScreenshotsToggle');
-            break;
-        case 'yearTags':
-            button = document.getElementById('includeYearTagsToggle');
-            break;
-        case 'yearLogs':
-            button = document.getElementById('includeYearLogsToggle');
-            break;
-        case 'yearStats':
-            button = document.getElementById('includeYearStatsToggle');
-            break;
-        case 'yearNotes':
-            button = document.getElementById('includeYearNotesToggle');
-            break;
-        case 'yearAnalyses':
-            button = document.getElementById('includeYearAnalysesToggle');
-            break;
-    }
-        
-    if (button) {
-        button.classList.toggle('active');
-    }
-}
-
-function handleChatKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendChatMessage();
-    }
-} 
 
 // Global function exports for HTML onclick handlers
 win.toggleTracking = toggleTracking;
@@ -1319,7 +1118,6 @@ win.initializeAPI = Settings.initializeAPI;
 win.deleteAPIKey = Settings.deleteAPIKey;
 win.toggleAutoLaunch = Settings.toggleAutoLaunch;
 win.saveGeminiModel = Settings.saveGeminiModel;
-win.fetchAvailableModels = Settings.fetchAvailableModels;
 win.openLogsFile = Settings.openLogsFile;
 win.showRecentLogs = Settings.showRecentLogs;
 win.exportData = Settings.exportData;
@@ -1334,68 +1132,13 @@ win.loadMoreScreenshots = () => {
 };
 win.quitApp = quitApp;
 win.openExternalLink = openExternalLink;
-win.toggleDataOption = toggleDataOption;
 
 // Export DOM functions to global scope for HTML onclick handlers
 win.toggleSettings = win.DOM.toggleSettings;
 win.toggleExportModal = win.DOM.toggleExportModal;
-win.toggleChatSidebar = win.DOM.toggleChatSidebar;
 win.showMinimizeModal = win.DOM.showMinimizeModal;
 win.closeMinimizeModal = win.DOM.closeMinimizeModal;
 win.showAddNoteModal = showAddNoteModal;
-win.sendChatMessage = sendChatMessage;
-win.handleChatKeydown = handleChatKeydown; 
-
-// Add this function to load chat history when the chat sidebar is opened
-async function loadChatHistory() {
-    try {
-        const chatMessages = document.getElementById('chatMessages');
-        if (!chatMessages) return;
-        
-        // Clear current messages
-        chatMessages.innerHTML = '';
-        
-        // Fetch chat history from main process
-        const history = await ipcRenderer.invoke('get-chat-history');
-        
-        // Display all messages in the history
-        history.forEach((message: {content: string, role: string}) => {
-            win.DOM.addChatMessage(message.content, message.role === 'user', false);
-        });
-        
-        // Scroll to bottom
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    } catch (error) {
-        console.error('Error loading chat history:', error);
-    }
-} 
-
-// Function to toggle between month and year data views
-function toggleDataPeriodView() {
-    const periodToggle = document.getElementById('periodToggle') as HTMLInputElement;
-    const monthOptions = document.getElementById('monthDataOptions');
-    const yearOptions = document.getElementById('yearDataOptions');
-    const monthLabel = document.getElementById('month-label');
-    const yearLabel = document.getElementById('year-label');
-
-    if (periodToggle && monthOptions && yearOptions && monthLabel && yearLabel) {
-        if (periodToggle.checked) { // Year is selected
-            monthOptions.style.display = 'none';
-            yearOptions.style.display = 'block';
-            monthLabel.style.color = 'var(--color-text-muted)';
-            monthLabel.style.fontWeight = 'normal';
-            yearLabel.style.color = 'var(--color-primary)';
-            yearLabel.style.fontWeight = '500';
-        } else { // Month is selected
-            monthOptions.style.display = 'block';
-            yearOptions.style.display = 'none';
-            monthLabel.style.color = 'var(--color-primary)';
-            monthLabel.style.fontWeight = '500';
-            yearLabel.style.color = 'var(--color-text-muted)';
-            yearLabel.style.fontWeight = 'normal';
-        }
-    }
-} 
 
 // Add the new function to update productivity chart
 async function updateProductivityByHourChart() {

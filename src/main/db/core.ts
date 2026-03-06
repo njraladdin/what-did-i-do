@@ -11,7 +11,7 @@ export const categories = [
     'SOCIAL',         // Meetings, chat, emails, social media
     'ENTERTAINMENT',  // Games, videos, browsing for fun
     'OTHER',          // Tasks that don't fit other categories
-    'UNKNOWN'         // Internal use only - for failed analyses, not shown in UI
+    'UNKNOWN'         // Internal use for failed analyses; excluded from stats but kept in history
 ] as const;
 
 export type Category = typeof categories[number];

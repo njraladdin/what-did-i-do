@@ -2,6 +2,7 @@
 // Get references to global variables with different names to avoid conflicts
 const { ipcRenderer: ipc } = require('electron');
 const settingsWin = (window as any);
+const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite-preview';
 
 // API Key Management
 async function checkExistingApiKey(): Promise<void> {
@@ -139,36 +140,20 @@ async function toggleAutoLaunch(event: Event) {
 // Model Management
 async function initializeGeminiModel() {
     const currentModel = await ipcRenderer.invoke('get-gemini-model');
-    
-    // Set the current model first
-    const modelSelect = document.getElementById('geminiModel') as HTMLSelectElement | null;
-    if (modelSelect) {
-        modelSelect.value = currentModel;
+    const modelInput = document.getElementById('geminiModel') as HTMLInputElement | null;
+    if (modelInput) {
+        modelInput.value = currentModel || DEFAULT_GEMINI_MODEL;
     }
-    
-    // If the current model isn't in the default options, add it
-    if (modelSelect) {
-        if (!Array.from(modelSelect.options).some(opt => opt.value === currentModel)) {
-            const option = document.createElement('option');
-            option.value = currentModel;
-            option.text = currentModel;
-            option.selected = true;
-            modelSelect.add(option);
-        }
-    }
-    
-    // Fetch available models after setting the current one
-    await fetchAvailableModels('geminiModel');
 }
 
 async function saveGeminiModel() {
-    const modelSelect = document.getElementById('geminiModel') as HTMLSelectElement | null;
+    const modelInput = document.getElementById('geminiModel') as HTMLInputElement | null;
     const saveButton = document.getElementById('saveModelBtn') as HTMLButtonElement;
     const statusEl = document.getElementById('modelLoadingStatus');
-    const model = modelSelect?.value;
+    const model = modelInput?.value.trim() || '';
 
-    if (!model || model === 'loading') {
-        alert('Please select a valid model');
+    if (!model) {
+        alert('Please enter a valid model name');
         return;
     }
 
@@ -176,33 +161,14 @@ async function saveGeminiModel() {
         saveButton.disabled = true;
     }
     if (saveButton) {
-        saveButton.textContent = 'Testing model...';
+        saveButton.textContent = 'Saving...';
     }
     if (statusEl) {
-        statusEl.textContent = 'Testing model with a simple request...';
+        statusEl.textContent = 'Saving model...';
         statusEl.className = 'model-status';
     }
 
     try {
-        // First test the model
-        const testResult = await ipcRenderer.invoke('test-gemini-model', model);
-        
-        if (!testResult.success) {
-            if (statusEl) {
-                statusEl.textContent = 'Model test failed: ' + testResult.error;
-                statusEl.className = 'model-status error';
-            }
-            if (saveButton) {
-                saveButton.textContent = 'Save';
-                saveButton.disabled = false;
-            }
-            return;
-        }
-
-        // If test passed, save the model
-        if (saveButton) {
-            saveButton.textContent = 'Saving...';
-        }
         const result = await ipcRenderer.invoke('set-gemini-model', model);
         
         if (result.success) {
@@ -210,7 +176,7 @@ async function saveGeminiModel() {
                 saveButton.textContent = 'Saved!';
             }
             if (statusEl) {
-                statusEl.textContent = 'Model tested and saved successfully!';
+                statusEl.textContent = 'Model saved successfully.';
                 statusEl.className = 'model-status success';
             }
             setTimeout(() => {
@@ -242,119 +208,6 @@ async function saveGeminiModel() {
         if (saveButton) {
             saveButton.textContent = 'Save';
             saveButton.disabled = false;
-        }
-    }
-}
-
-async function fetchAvailableModels(targetElementId: string) {
-    const modelSelect = document.getElementById(targetElementId) as HTMLSelectElement | null;
-    const isSettings = targetElementId === 'geminiModel';
-
-    const refreshBtn = isSettings ? document.getElementById('refreshModelsBtn') as HTMLButtonElement : null;
-    const statusEl = isSettings ? document.getElementById('modelLoadingStatus') : null;
-    
-    // Save current selection
-    const currentSelection = modelSelect?.value;
-    
-    // Show loading state
-    if (isSettings) {
-        if (refreshBtn) {
-            refreshBtn.classList.add('loading');
-            refreshBtn.disabled = true;
-        }
-        if (statusEl) {
-            statusEl.textContent = 'Loading available models...';
-            statusEl.className = 'model-status';
-        }
-    } else if (modelSelect) {
-        modelSelect.disabled = true;
-    }
-    
-    try {
-        const result = await ipcRenderer.invoke('fetch-available-models');
-        
-        if (result.success && result.models.length > 0) {
-            // Keep track of existing options to preserve custom ones
-            const existingOptions = Array.from(modelSelect?.options || []).map(opt => ({
-                value: opt.value,
-                text: opt.text,
-                selected: opt.selected
-            }));
-            
-            // Clear all options
-            if (modelSelect) {
-                modelSelect.innerHTML = '';
-            }
-            
-            // Add default option
-            const defaultOption = document.createElement('option');
-            defaultOption.value = 'gemini-2.0-flash';
-            defaultOption.text = 'gemini-2.0-flash (Default)';
-            if (modelSelect) {
-                modelSelect.add(defaultOption);
-            }
-            
-            // Filter out unwanted models
-            const modelsToFilter = ['preview', 'exp', 'embedding', '1.5', '1.0'];
-            const filteredModels = result.models.filter((model: { id: string, name: string }) => {
-                if(!model.name) {
-                    return false;
-                }
-                const modelName = model.name.toLowerCase();
-                return !modelsToFilter.some(substring => modelName.includes(substring));
-            });
-
-            // Add fetched models
-            filteredModels.forEach((model: { id: string; name: string; description?: string }) => {
-                const option = document.createElement('option');
-                option.value = model.id;
-                option.text = model.name;
-                if (model.description) {
-                    option.title = model.description;
-                }
-                if (modelSelect) {
-                    modelSelect.add(option);
-                }
-            });
-            
-            // Restore selection - if the saved model isn't in the list, add it
-            if (currentSelection && modelSelect && !Array.from(modelSelect.options).some(opt => opt.value === currentSelection)) {
-                const customOption = document.createElement('option');
-                customOption.value = currentSelection;
-                customOption.text = currentSelection + ' (Custom)';
-                if (modelSelect) {
-                    modelSelect.add(customOption);
-                }
-            }
-            
-            // Set the selection
-            if (modelSelect && currentSelection) {
-                modelSelect.value = currentSelection;
-            }
-            
-            if (isSettings && statusEl) {
-                statusEl.textContent = `Loaded ${filteredModels.length} available models`;
-                statusEl.className = 'model-status success';
-            }
-        } else {
-            if (isSettings && statusEl) {
-                statusEl.textContent = result.error || 'No models found';
-                statusEl.className = 'model-status error';
-            }
-        }
-    } catch (error: any) {
-        if (isSettings && statusEl) {
-            statusEl.textContent = 'Error loading models: ' + error.message;
-            statusEl.className = 'model-status error';
-        }
-    } finally {
-        if (isSettings) {
-            if (refreshBtn) {
-                refreshBtn.classList.remove('loading');
-                refreshBtn.disabled = false;
-            }
-        } else if (modelSelect) {
-            modelSelect.disabled = false;
         }
     }
 }
@@ -489,7 +342,6 @@ module.exports = {
     toggleAutoLaunch,
     initializeGeminiModel,
     saveGeminiModel,
-    fetchAvailableModels,
     openLogsFile,
     showRecentLogs,
     exportData

@@ -73,13 +73,12 @@
                 <div class="setting-item">
                     <label for="geminiModel" class="setting-label">Gemini Model:</label>
                     <div class="model-select-wrapper">
-                        <select id="geminiModel" class="model-select">
-                            <option value="gemini-2.0-flash">gemini-2.0-flash (Default)</option>
-                            <option value="loading" disabled>Loading available models...</option>
-                        </select>
-                        <button id="refreshModelsBtn" onclick="fetchAvailableModels('geminiModel')" title="Refresh models list" class="refresh-btn">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
+                        <input
+                            type="text"
+                            id="geminiModel"
+                            class="model-input"
+                            placeholder="gemini-3.1-flash-lite-preview"
+                        >
                     </div>
                 </div>
                 <div id="modelLoadingStatus" class="model-status"></div>
@@ -200,11 +199,6 @@
                     <span class="button-text">Export Data</span>
                 </button>
 
-                <button id="chatBtn" onclick="toggleChatSidebar()" title="AI Chat (Ctrl+Shift+C)">
-                    <i class="fas fa-comments"></i>
-                    <span class="button-text">AI Chat</span>
-                </button>
-
                 <span id="countdown"></span>
 
                 <!-- Move contact section here, right after the buttons -->
@@ -247,7 +241,12 @@
                             <button class="nav-button" onclick="changeDate(-1)">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
-                            <div class="current-date" id="currentDate"></div>
+                            <button class="date-display-button current-date-button" id="currentDateBtn" title="Jump to any date">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="current-date" id="currentDate"></span>
+                                <i class="fas fa-chevron-down date-display-chevron"></i>
+                            </button>
+                            <input type="date" id="currentDatePicker" class="picker-input-hidden" aria-label="Choose date">
                             <button class="nav-button" onclick="changeDate(1)" id="nextDateBtn">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
@@ -264,7 +263,12 @@
                             <button class="nav-button" onclick="changeMonth(-1)">
                                 <i class="fas fa-chevron-left"></i>
                             </button>
-                            <div class="month-indicator" id="currentMonth"></div>
+                            <button class="date-display-button month-indicator-button" id="currentMonthBtn" title="Jump to any month or year">
+                                <i class="fas fa-calendar"></i>
+                                <span class="month-indicator" id="currentMonth"></span>
+                                <i class="fas fa-chevron-down date-display-chevron"></i>
+                            </button>
+                            <input type="month" id="currentMonthPicker" class="picker-input-hidden" aria-label="Choose month">
                             <button class="nav-button" onclick="changeMonth(1)" id="nextMonthBtn">
                                 <i class="fas fa-chevron-right"></i>
                             </button>
@@ -418,140 +422,7 @@
                 </div>
             </div>
         </div>
-
-        <div class="chat-sidebar" id="chatSidebar">
-            <div class="chat-header">
-                <h3>AI Assistant</h3>
-                <div class="chat-model-selector">
-                    <div class="model-select-wrapper">
-                        <select id="chatGeminiModel" class="model-select">
-                            <option value="gemini-2.0-flash">gemini-2.0-flash (Default)</option>
-                            <option value="loading" disabled>Loading available models...</option>
-                        </select>
-                    </div>
-                </div>
-                <button class="chat-clear-btn" onclick="clearChatHistory()" title="Clear chat history">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-                <button class="chat-toggle-btn" onclick="toggleChatSidebar()" title="Close chat">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="chat-container">
-                <div class="chat-messages" id="chatMessages">
-                    <div class="chat-message assistant-message">
-                        <div class="message-content">
-                            <i class="fas fa-robot message-icon"></i>
-                            <div class="message-text">
-                                Hello! I'm your AI productivity assistant. I can analyze your activity data from the current month.
-                                <br><br>
-                                You can control what data I have access to using the options below:
-                                <br>
-                                • Screenshot Descriptions - Detailed content of your activities
-                                <br>
-                                • Screenshot Activity - Timeline of your activities and categories
-                                <br>
-                                • Activity Statistics - Daily breakdown of your time distribution
-                                <br><br>
-                                Ask me anything about your productivity patterns or work habits!
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="chat-data-options">
-                    <div class="data-options-header">
-                        <div class="data-options-label">Data Period:</div>
-                        <div class="period-toggle">
-                            <label class="toggle-label" id="month-label">Month</label>
-                            <label class="switch">
-                                <input type="checkbox" id="periodToggle">
-                                <span class="slider round"></span>
-                            </label>
-                            <label class="toggle-label" id="year-label">Year</label>
-                        </div>
-                    </div>
-
-                    <div id="monthDataOptions">
-                        <div class="data-option-pills">
-                            <button id="includeScreenshotsToggle" class="data-pill active" onclick="toggleDataOption('screenshots')">
-                                <span>Screenshot Descriptions</span>
-                                <span class="data-count" id="descriptionsCount">0</span>
-                            </button>
-                            <button id="includeTagsToggle" class="data-pill active" onclick="toggleDataOption('tags')">
-                                <span>Screenshot Tags</span>
-                                <span class="data-count" id="tagsCount">0</span>
-                            </button>
-                            <button id="includeLogsToggle" class="data-pill active" onclick="toggleDataOption('logs')">
-                                <span>Screenshot Activity</span>
-                                <span class="data-count" id="logsCount">0</span>
-                            </button>
-                            <button id="includeStatsToggle" class="data-pill active" onclick="toggleDataOption('stats')">
-                                <span>Activity Statistics</span>
-                                <span class="data-count" id="statsCount">0</span>
-                            </button>
-                            <button id="includeNotesToggle" class="data-pill active" onclick="toggleDataOption('notes')">
-                                <span>Notes</span>
-                                <span class="data-count" id="notesCount">0</span>
-                            </button>
-                            <button id="includeAnalysesToggle" class="data-pill active" onclick="toggleDataOption('analyses')">
-                                <span>Day Analyses</span>
-                                <span class="data-count" id="analysesCount">0</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div id="yearDataOptions" style="display: none;">
-                        <div class="data-option-pills">
-                            <button id="includeYearScreenshotsToggle" class="data-pill active" onclick="toggleDataOption('yearScreenshots')">
-                                <span>Screenshot Descriptions</span>
-                                <span class="data-count" id="yearDescriptionsCount">0</span>
-                            </button>
-                            <button id="includeYearTagsToggle" class="data-pill active" onclick="toggleDataOption('yearTags')">
-                                <span>Screenshot Tags</span>
-                                <span class="data-count" id="yearTagsCount">0</span>
-                            </button>
-                            <button id="includeYearLogsToggle" class="data-pill active" onclick="toggleDataOption('yearLogs')">
-                                <span>Screenshot Activity</span>
-                                <span class="data-count" id="yearLogsCount">0</span>
-                            </button>
-                            <button id="includeYearStatsToggle" class="data-pill active" onclick="toggleDataOption('yearStats')">
-                                <span>Activity Statistics</span>
-                                <span class="data-count" id="yearStatsCount">0</span>
-                            </button>
-                            <button id="includeYearNotesToggle" class="data-pill active" onclick="toggleDataOption('yearNotes')">
-                                <span>Notes</span>
-                                <span class="data-count" id="yearNotesCount">0</span>
-                            </button>
-                            <button id="includeYearAnalysesToggle" class="data-pill active" onclick="toggleDataOption('yearAnalyses')">
-                                <span>Day Analyses</span>
-                                <span class="data-count" id="yearAnalysesCount">0</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="chat-input-container">
-                    <div class="chat-input-wrapper">
-                        <textarea 
-                            id="chatInput" 
-                            placeholder="Ask me about your productivity patterns..."
-                            rows="3"
-                            onkeydown="handleChatKeydown(event)"
-                        ></textarea>
-                        <button id="sendChatBtn" onclick="sendChatMessage()" class="send-btn">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                    <div class="chat-input-hint">
-                        Press Enter to send, Shift+Enter for new line
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
-
     <div id="noteModal" class="modal">
         <div class="modal-content note-modal-content">
             <button class="modal-close" onclick="DOM.closeNoteModal()">
@@ -606,3 +477,5 @@
 </body>
 
 </html>
+
+

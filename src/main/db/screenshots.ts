@@ -186,7 +186,7 @@ export function getScreenshotsForDate(currentDate: Date): Promise<ProcessedScree
                 description,
                 tags
             FROM screenshots 
-            WHERE timestamp BETWEEN ? AND ? AND category != 'UNKNOWN'
+            WHERE timestamp BETWEEN ? AND ?
             ORDER BY timestamp DESC
             LIMIT 100
         `, [

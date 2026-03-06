@@ -36,9 +36,6 @@ interface WindowExtended extends Window {
     showEditNoteModal: (note: Note) => void;
     deleteNote: (id: number) => void;
     loadPreviousNotesInModal: (excludeId?: number | null) => void;
-    updateDataCounts: () => void; // Added updateDataCounts to the interface
-    loadChatHistory: () => void; // Added loadChatHistory to the interface
-    clearChatHistory: () => void; // Added clearChatHistory to the interface
 }
 
 // Get typed window reference
@@ -687,75 +684,6 @@ function renderYearlyProgressChart(result: {
 }
 
 
-// Chat Functions
-function addChatMessage(message: string, isUser: boolean = false, addToHistory: boolean = true): void {
-    const chatMessages = document.getElementById('chatMessages');
-    if (!chatMessages) return;
-
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `chat-message ${isUser ? 'user-message' : 'assistant-message'}`;
-    
-    const icon = isUser ? 'fas fa-user' : 'fas fa-robot';
-    
-    // Format the message with basic markdown-like styling for AI responses
-    let formattedMessage = message;
-    if (!isUser) {
-        formattedMessage = message
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-            .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
-            .replace(/\n/g, '<br>') // Line breaks
-            .replace(/^\d+\.\s/gm, '<br>$&') // Add line breaks before numbered lists
-            .replace(/^-\s/gm, '<br>• '); // Convert dashes to bullets
-    } else {
-        formattedMessage = message.replace(/\n/g, '<br>');
-    }
-    
-    messageDiv.innerHTML = `
-        <div class="message-content">
-            <i class="${icon} message-icon"></i>
-            <div class="message-text">${formattedMessage}</div>
-        </div>
-    `;
-    
-    chatMessages.appendChild(messageDiv);
-    
-    // Scroll to bottom
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function showTypingIndicator(): void {
-    const chatMessages = document.getElementById('chatMessages');
-    if (!chatMessages) return;
-
-    const typingDiv = document.createElement('div');
-    typingDiv.className = 'chat-message assistant-message';
-    typingDiv.id = 'typingIndicator';
-    
-    typingDiv.innerHTML = `
-        <div class="message-content">
-            <i class="fas fa-robot message-icon"></i>
-            <div class="typing-indicator">
-                <span>AI is thinking</span>
-                <div class="typing-dots">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    chatMessages.appendChild(typingDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function hideTypingIndicator(): void {
-    const typingIndicator = document.getElementById('typingIndicator');
-    if (typingIndicator) {
-        typingIndicator.remove();
-    }
-}
-
 // Productivity Chart Functions
 function renderProductivityByHourChart(data: Record<string, { work: number; learn: number; total: number }>): void {
     console.log('Rendering productivity by hour chart with data:', data);
@@ -880,42 +808,7 @@ function renderProductivityByHourChart(data: Record<string, { work: number; lear
     });
 }
 
-function clearChatInput(): void {
-    const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement;
-    if (chatInput) {
-        chatInput.value = '';
-        chatInput.style.height = 'auto';
-    }
-}
 
-function toggleChatSidebar(): void {
-    const sidebar = document.getElementById('chatSidebar');
-    const layoutContainer = document.querySelector('.layout-container');
-    
-    if (sidebar && layoutContainer) {
-        const isOpening = !sidebar.classList.contains('open');
-        sidebar.classList.toggle('open');
-        layoutContainer.classList.toggle('chat-open');
-        
-        if (isOpening) {
-            // Load chat history when opening sidebar
-            if (typeof typedWindow.loadChatHistory === 'function') {
-                typedWindow.loadChatHistory();
-            }
-            
-            // Call updateDataCounts from window object
-            if (typeof typedWindow.updateDataCounts === 'function') {
-                typedWindow.updateDataCounts();
-            }
-            
-            // Focus chat input
-            setTimeout(() => {
-                const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement;
-                if (chatInput) chatInput.focus();
-            }, 100);
-        }
-    }
-}
 
 // Add this function to handle closing the note modal
 function closeNoteModal(): void {
@@ -939,7 +832,6 @@ typedWindow.DOM = {
     updateMonthlyAnalyticsDisplay,
     toggleSettings,
     toggleExportModal,
-    toggleChatSidebar,
     showMinimizeModal,
     closeMinimizeModal,
     handleModalClick,
@@ -953,9 +845,6 @@ typedWindow.DOM = {
     updateDailyProgressChart: renderDailyProgressChart,
     updateYearlyProgressChart: renderYearlyProgressChart,
     updateProductivityByHourChart: renderProductivityByHourChart,
-    addChatMessage,
-    showTypingIndicator,
-    hideTypingIndicator,
-    closeNoteModal,
-    clearChatInput
+    closeNoteModal
 }; 
+
