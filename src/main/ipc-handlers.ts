@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { categories } from './db/core';
+import { buildCompactMarkdown } from './export-utils';
 
 const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite-preview';
 
@@ -487,6 +488,12 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             console.log('Starting data export with options:', options);
             
             const { startDate, endDate, rangeType } = options;
+            const startDateValue = new Date(startDate);
+            const endDateValue = new Date(endDate);
+
+            if (Number.isNaN(startDateValue.getTime()) || Number.isNaN(endDateValue.getTime())) {
+                return { success: false, error: 'Invalid export date range' };
+            }
             
             const result = await dialog.showSaveDialog(mainWindow, {
                 title: 'Export What Did I Do Data',
@@ -502,10 +509,15 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             }
 
             const exportPath = result.filePath;
+            const parsedExportPath = path.parse(exportPath);
+            const compactMarkdownPath = path.join(
+                parsedExportPath.dir,
+                `${parsedExportPath.name}-compact.md`
+            );
             
             const exportData = await database.exportData(
-                new Date(startDate), 
-                new Date(endDate), 
+                startDateValue, 
+                endDateValue, 
                 false,
                 true
             );
@@ -535,12 +547,15 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             };
 
             fs.writeFileSync(exportPath, JSON.stringify(exportJson, null, 2), 'utf8');
+            fs.writeFileSync(compactMarkdownPath, buildCompactMarkdown(exportJson), 'utf8');
             
             console.log(`Export completed: ${exportPath}`);
+            console.log(`Compact Markdown export completed: ${compactMarkdownPath}`);
             
             return { 
                 success: true, 
                 filePath: exportPath,
+                markdownPath: compactMarkdownPath,
                 screenshotCount: exportData.screenshots.length
             };
 

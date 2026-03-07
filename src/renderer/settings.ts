@@ -304,18 +304,28 @@ async function exportData() {
             return;
         }
 
+        const normalizedStartDate = startDate instanceof Date ? startDate : new Date(startDate);
+        const normalizedEndDate = endDate instanceof Date ? endDate : new Date(endDate);
+
+        if (Number.isNaN(normalizedStartDate.getTime()) || Number.isNaN(normalizedEndDate.getTime())) {
+            alert('Invalid date range');
+            return;
+        }
+
         // Call export function
         const result = await ipcRenderer.invoke('export-data', {
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
+            startDate: normalizedStartDate.toISOString(),
+            endDate: normalizedEndDate.toISOString(),
             rangeType: selectedRange?.value
         });
 
         if (result.success) {
             // Close modal and show success message
             win.DOM.toggleExportModal();
-            // You could add a toast notification here
-            console.log('Export successful:', result.filePath);
+            console.log('JSON export successful:', result.filePath);
+            if (result.markdownPath) {
+                console.log('Compact Markdown export successful:', result.markdownPath);
+            }
         } else {
             alert('Export failed: ' + result.error);
         }

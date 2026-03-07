@@ -1,0 +1,770 @@
+# Compact Activity Export
+
+## Overview
+- export_date: 2026-03-07T05:35:49.231Z
+- date_range: 2025-11-30T23:00:00.000Z to 2025-12-31T22:59:59.999Z
+- screenshots: 801
+- top_activities: Software Development [work] x69, AI Model Prompt Engineering [work] x23, Software Development and Debugging [work] x23, Software Development and Documentation [work] x23, Browsing Reddit [entertainment] x22, Social Media Interaction [social] x21, AI Prompt Engineering [work] x17, Browsing Reddit [social] x15
+
+## Daily Summaries
+### 2025-12-01
+- counts: work 63, learn 15, social 19, entertainment 31, other 2
+- hours: work 3h, learn 0.7h, social 0.8h, entertainment 1.6h, other 0.1h
+- share: work 48.5%, learn 11.5%, social 14.6%, entertainment 23.8%, other 1.5%
+- 12:34 | WORK | Software Development and Project Management | 1 shots | Working on a software development project using an IDE, likely VS Code, as indicated by the file explorer and open files
+- 12:44 | OTHER | Software Update | 1 shots | Viewing a software update notification window for NetLimiter, a network traffic control and monitoring tool
+- 13:05 | ENTERTAINMENT | watching video | 1 shots | Watching a video, likely a TV show or movie, as evidenced by the playback controls at the bottom of the screen and the title card indicating the writers
+- 13:08 | WORK | Software Development | 1 shots | Working on a software development project named 'agnt'
+- 13:11 | SOCIAL | browsing Twitter/X | 1 shots | Browsing Twitter/X, looking at posts from various accounts
+- 13:14 | SOCIAL | Social Media Browsing | 1 shots | Browsing Twitter (X) on their computer
+- 13:17 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically focusing on deploying agents
+- 13:21 | ENTERTAINMENT | Browsing Reddit | 1 shots | The screen displays the Reddit homepage with the left sidebar showing options like "Home", "Popular", "Explore", and "All"
+- 13:24 | LEARN | Researching AI and GPT models on Reddit | 1 shots | Browsing Reddit, specifically looking at posts related to AI and GPT models
+- 14:58 | WORK | AI model prompting and configuration | 1 shots | Interacting with Google AI Studio, specifically working with a prompt related to "Gift Idea For Fashionista"
+- 15:01 | LEARN | Reading scientific paper on Reddit | 1 shots | On Reddit, specifically in the r/accelerate subreddit, and appears to be reading a scientific paper
+- 15:04 | ENTERTAINMENT | Watching TikTok video and reading/engaging with comments | 1 shots | On TikTok, watching a video related to outfit inspiration
+- 15:07 | ENTERTAINMENT | watching tiktok | 1 shots | Watching a TikTok video on their computer
+- 15:13 | WORK | Software Development and Code Review | 1 shots | Engaged in software development, specifically working on browser automation tools within the context of an 'agnt' project, likely related to 'Antigravity'
+- 15:16 | WORK | Software Development: Refactoring Browser Module | 1 shots | In a software development environment (likely VS Code), working on refactoring a browser module to be session-aware
+- 15:20 | WORK | Software Development and Refactoring | 1 shots | Working on a software development project, specifically focusing on refactoring a browser module to a session-scoped architecture
+- 15:23 | WORK | AI Model Interaction and Prompt Engineering | 1 shots | Working within Google AI Studio, likely experimenting with prompt engineering for the Gemini 3 Pro Preview model
+- 15:26 | SOCIAL | Discussing AI agent development on Reddit | 1 shots | On Reddit, specifically in the r/AI_Agents subreddit
+- 15:29 | WORK | Software Development and Refactoring | 1 shots | Working on a software development project, specifically refactoring a "Browser Module"
+- 15:32 | WORK | AI Model Prompt Engineering | 1 shots | Working on Google AI Studio, specifically on a project titled "Gift Idea For Fashionista"
+- 15:38 | WORK | Software Development and Version Control | 1 shots | Working on a software development project, specifically related to browser automation with AI
+- 15:42 | WORK | AI Model Development | 1 shots | Working in Google AI Studio, likely creating or modifying an AI model or prompt
+- 15:45 | LEARN | AI Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on a prompt related to "Gift Idea For Fashionista"
+- 15:48 | WORK | Software Development | 1 shots | Working on a software development project, specifically related to browser automation with AI
+- 15:51 | SOCIAL | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/interesting subreddit, viewing a post about the explosive growth of China's car exports
+- 15:54 | LEARN | Watching educational YouTube video | 1 shots | Watching a YouTube video titled "Stop outsourcing what drives your growth" from the channel Hormozi Highlights
+- 15:57 | LEARN | AI Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on a project named "Gift Idea For Fashionista"
+- 16:00 | WORK | AI Model Development | 1 shots | Working on an AI model development task using Google AI Studio
+- 16:04 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing the r/movies subreddit on Reddit
+- 16:07 | WORK | AI Model Prompting and Experimentation | 1 shots | Working with Google AI Studio, specifically prompting the Gemini 3 Pro Preview model
+- 16:10 | WORK | AI Prompt Engineering | 1 shots | Working with Google AI Studio, specifically focusing on prompt engineering
+- 16:13 | SOCIAL | Browsing Reddit | 1 shots | Browsing Reddit on their computer
+- 16:16 | WORK | AI Model Prompt Engineering | 1 shots | Working in Google AI Studio, likely prompt engineering or experimenting with AI models
+- 16:19 | SOCIAL | Browsing and participating in a Reddit community | 1 shots | On Reddit, specifically browsing and interacting with the r/ManusOfficial subreddit
+- 16:29 | WORK | AI Model Development and Research | 1 shots | Working on AI model development and research
+- 16:47 | LEARN | Watching a business video on YouTube | 1 shots | Watching a YouTube video titled "Stop outsourcing what drives your growth" from the channel "Hormozi Highlights"
+- 16:50 | WORK | AI Prompt Engineering | 1 shots | Working in Google AI Studio, likely experimenting with prompt engineering for a large language model
+- 16:54 | WORK | AI Model Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on a prompt for an AI model
+- 16:57 | SOCIAL | Browsing Reddit | 1 shots | Browsing Reddit, specifically the home page
+- 17:18 | WORK | Software Development | 1 shots | In the process of scaffolding a new React project using Vite
+- 17:21-17:28 | WORK | Software Development and Refactoring | 2 shots | Working on a software development project, specifically refactoring a browser module to be session-aware
+- 17:31-17:34 | ENTERTAINMENT | Watching and interacting with TikTok videos | 2 shots | On TikTok, watching a video by 'rahma_ghorbel7'
+- 17:37 | WORK | Debugging and fixing API server code | 1 shots | Working on debugging and fixing the API server code for a browser agent
+- 17:40 | ENTERTAINMENT | Consuming social media content | 1 shots | Browsing Instagram, specifically watching a reel
+- 17:43 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, specifically debugging an API server implementation
+- 17:46 | ENTERTAINMENT | Consuming social media content | 1 shots | Browsing Instagram reels and interacting with comments on a reel featuring Chamath Palihapitiya
+- 17:50 | LEARN | AI Model Prompting and Analysis | 1 shots | Working within Google AI Studio, specifically focusing on a prompt related to "Gift Idea For Fashionista"
+- 17:53 | WORK | Software Development and Debugging | 1 shots | Working on a software development project related to an agent automation tool
+- 17:56 | LEARN | Researching AI Agents | 1 shots | On Reddit, specifically browsing the r/AI_Agents subreddit
+- 17:59 | WORK | AI Model Interaction and Prompt Engineering | 1 shots | Interacting with Google AI Studio, specifically working on a prompt for the Gemini 3 Pro model
+- 18:02 | LEARN | AI Prompt Engineering and Learning | 1 shots | On the Google AI Studio platform, likely experimenting with and learning about AI prompt engineering
+- 18:05 | WORK | AI Model Prompting and Experimentation | 1 shots | Working within Google AI Studio, likely experimenting with prompt engineering for the Gemini 3 Pro Preview model
+- 18:08 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, specifically prompt engineering for the Gemini 3 Pro Preview model
+- 18:12 | LEARN | Browsing AI agent news on Reddit | 1 shots | Browsing the r/AI_Agents subreddit on Reddit
+- 18:15 | WORK | AI Prompt Engineering | 1 shots | Working in Google AI Studio, specifically prompt engineering
+- 18:18 | LEARN | AI Prompt Engineering | 1 shots | Working within Google AI Studio, specifically focusing on prompt engineering
+- 18:21 | WORK | AI Prompt Engineering | 1 shots | Working with Google AI Studio, specifically prompt engineering for the Gemini 3 Pro Preview model
+- 18:24 | WORK | Software Development and Debugging | 1 shots | Actively engaged in software development, specifically debugging a Python application related to browser automation
+- 18:33 | WORK | Debugging and fixing a Python API server | 1 shots | Working on debugging and fixing a Python API server
+- 18:36 | WORK | Debugging and testing software | 1 shots | In a software development environment, likely debugging and testing code related to a browser automation project
+- 18:40 | SOCIAL | Browsing Reddit | 1 shots | Browsing Reddit, a social media platform
+- 18:43 | LEARN | Software Development Documentation | 1 shots | Viewing documentation for the Vite JavaScript framework
+- 20:15 | SOCIAL | Visiting someone in prison | 1 shots | The image shows a scene at what appears to be a prison visitation area
+- 20:24 | SOCIAL | In-person conversation | 1 shots | The image shows three people engaged in a conversation at what appears to be a trade show or convention
+- 20:27 | SOCIAL | Networking at a trade show | 1 shots | The image shows people interacting at a trade show, specifically at booths for "Peace Fare" and "simplicity." Attendees are standing around talking to representatives at the booths
+- 20:33-20:36 | SOCIAL | Interview | 2 shots | The image shows three men in what appears to be an interview setting
+- 20:40 | ENTERTAINMENT | Attending a conference/presentation | 1 shots | The image shows a large crowd of people seated in an auditorium, presumably attending a conference or presentation
+- 20:43 | ENTERTAINMENT | watching TV show credits | 1 shots | Watching the end credits of a TV show episode
+- 20:46 | LEARN | Reading AI trends | 1 shots | Reading an email from DigitalOcean about AI trends
+- 20:49 | WORK | Software Development | 1 shots | Working on a software development project, specifically focusing on integrating Claude models from Vertex AI
+- 20:52 | ENTERTAINMENT | Browsing Reddit and commenting on a TV show discussion | 1 shots | Browsing Reddit, specifically the r/SiliconValleyHBO subreddit
+- 20:55 | WORK | Software Development and Testing | 1 shots | Working on a software development project, specifically related to browser automation
+- 20:58 | SOCIAL | Browsing and commenting on Reddit | 1 shots | Browsing the r/pics subreddit on Reddit and reading through a thread about Luigi Mangione in New York court
+- 21:01 | WORK | Software Development | 1 shots | Working on a software development project named 'agnt-web'
+- 21:05-21:08 | ENTERTAINMENT | Watching TikTok and reading comments | 2 shots | Watching a TikTok video on their computer
+- 21:11 | ENTERTAINMENT | Watching and commenting on TikTok videos | 1 shots | On TikTok, watching a video featuring a man speaking in Arabic
+- 21:14 | ENTERTAINMENT | Watching and interacting with TikTok videos | 1 shots | On TikTok, watching a video posted by @rahal.issam
+- 21:17 | WORK | Software Development | 1 shots | Working on a software development project, specifically related to an "agnt-web" application
+- 21:20 | WORK | Software Development and Agent Integration | 1 shots | Working on a software development project, specifically related to integrating an agent library with a browser using FastAPI
+- 21:23 | ENTERTAINMENT | Consuming social media content | 1 shots | The main content visible is a post from @yujifty, which appears to be related to the anime Jujutsu Kaisen (JJK)
+- 21:26 | SOCIAL | Social Media Interaction | 1 shots | The screen displays an Instagram post featuring a recording studio
+- 21:30 | ENTERTAINMENT | Social Media Entertainment Consumption | 1 shots | On Instagram, specifically viewing a reel related to basketball
+- 21:33 | ENTERTAINMENT | watching instagram reels | 1 shots | Watching Instagram reels
+- 21:36 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, specifically viewing a reel from the account "etalkctv"
+- 21:39 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, specifically debugging an issue with a browser-enabled AI agent
+- 21:42 | ENTERTAINMENT | Watching and commenting on Instagram Reels | 1 shots | On Instagram, specifically viewing Reels
+- 21:45 | WORK | AI-powered web automation assistant | 1 shots | Interacting with a web application called 'Browser Agent', which is described as an 'AI-powered web automation assistant'
+- 21:48 | SOCIAL | Browsing and commenting on Reddit | 1 shots | Browsing the r/interestingasfuck subreddit on Reddit
+- 21:51 | ENTERTAINMENT | Browsing Reddit | 1 shots | The Reddit homepage is visible, with various posts from different subreddits
+- 21:55 | WORK | AI Agent Research and Development | 1 shots | Researching and developing an AI agent called Fara-7B, which is designed to interact with web pages visually
+- 21:58 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, specifically on a "browser_agent" application
+- 22:01 | WORK | AI research and development | 1 shots | Viewing a research blog post about Fara-7B, an efficient agentic model for computer use, likely related to AI research and development
+- 22:04 | LEARN | Reading an article about effective harnesses for long-running agents | 1 shots | Currently viewing a webpage on anthropic.com, specifically an article titled "Effective harnesses for long-running agents"
+- 22:07-22:13 | WORK | Software Development and Documentation | 3 shots | Working on a software development project, specifically focused on creating a browser agent
+- 22:17 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/mildlyinteresting subreddit
+- 22:20 | WORK | AI Agent Development and Testing | 1 shots | Working with Google AI Studio, specifically focusing on developing and testing long-running AI agents
+- 22:23-22:26 | WORK | AI Agent Development | 2 shots | Working in Google AI Studio on an "Effective Harness for Long Agents" project
+- 22:29 | WORK | AI model prompting and configuration | 1 shots | Working with Google AI Studio, likely to develop or refine prompts for an AI model (Gemini 3 Pro Preview)
+- 22:32 | ENTERTAINMENT | Watching and commenting on a YouTube short | 1 shots | On YouTube, watching a short video featuring Christoph Waltz from the movie "Inglourious Basterds"
+- 22:35 | ENTERTAINMENT | Watching YouTube shorts and reading comments | 1 shots | Watching a YouTube short, likely related to the TV show 'The Walking Dead', as the video title mentions Rick
+- 22:38 | ENTERTAINMENT | Watching YouTube Shorts and reading comments | 1 shots | On YouTube, specifically watching a short video
+- 22:42 | SOCIAL | Social Media Browsing | 1 shots | The main content displayed is a post from "variety" featuring Scarlett Johansson defending her support of Woody Allen
+- 22:45 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically related to the Agent Development Kit (ADK)
+- 22:48 | WORK | AI Agent Development | 1 shots | Working in Google AI Studio, developing an AI agent
+- 22:51 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically focusing on an agent-based system
+- 22:54 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/skyrim subreddit
+- 22:57 | LEARN | Researching AI Agents | 1 shots | Browsing the r/AI_Agents subreddit on Reddit
+- 23:00 | ENTERTAINMENT | Watching music video on YouTube | 1 shots | On YouTube, watching the music video "Djo - End of Beginning (slowed + reverb + lyrics)" by Dead Man's Slowed
+- 23:03 | WORK | Software Development and Research | 1 shots | Working on a software development project related to an agent-based system
+- 23:07 | WORK | AI Tool Development & Feedback | 1 shots | On Reddit, specifically the r/LocalLLaMA subreddit, likely seeking feedback on an AI tool they developed
+- 23:10 | WORK | Software Development and Version Control | 1 shots | Working on a software development project, likely using Python, as indicated by the open files (.py, .toml, .md)
+- 23:13 | WORK | Software Development & Documentation | 1 shots | Working on a software development project, specifically related to an agent architecture
+- 23:16 | WORK | Software Development and Documentation | 1 shots | Working on a software development project named "agnt-web"
+- 23:19 | WORK | AI Prompt Engineering | 1 shots | Working on AI prompt engineering, likely using Google AI Studio
+- 23:22 | WORK | AI Model Prompt Engineering | 1 shots | Working within Google AI Studio, specifically on prompt engineering for a project titled "Gift Idea For Fashionista"
+- 23:25 | SOCIAL | Viewing Instagram stories | 1 shots | Viewing Instagram stories
+- 23:28 | ENTERTAINMENT | Browsing Instagram | 1 shots | Browsing Instagram on their computer
+- 23:32 | ENTERTAINMENT | Browsing Instagram Reels | 1 shots | Browsing Instagram Reels
+- 23:35 | ENTERTAINMENT | Watching Instagram Reels and interacting with comments | 1 shots | Watching an Instagram Reel on their computer
+- 23:38 | ENTERTAINMENT | Watching Instagram Reels | 1 shots | Watching Instagram Reels on their computer
+- 23:41 | OTHER | Searching for a tattoo shop | 1 shots | Using Google Search to find a tattoo shop in Djerba
+- 23:44 | WORK | Project Management and AI Development | 1 shots | Working on a project called "Aladdin's Project Motivations" within Google AI Studio
+- 23:47 | WORK | Software Development & Documentation | 1 shots | Working on a software development project named "agnt-web"
+
+### 2025-12-02
+- counts: work 75, learn 19, social 26, entertainment 23, other 2
+- hours: work 3.1h, learn 0.6h, social 1.2h, entertainment 1h, other 0.1h
+- share: work 51.7%, learn 13.1%, social 17.9%, entertainment 15.9%, other 1.4%
+- 11:36 | WORK | Software Development and Code Comparison | 1 shots | On GitHub, specifically comparing two versions of code within a repository named 'agnt' owned by 'njraladdin'
+- 11:45 | WORK | cryptocurrency mining setup | 1 shots | Working with cryptocurrency mining hardware
+- 11:48 | SOCIAL | talking on the phone while eating | 1 shots | The image shows a woman in a blue patterned shirt and a grey jacket eating something with a spoon
+- 12:04 | SOCIAL | Business Meeting | 1 shots | The image shows two people engaged in what appears to be a business meeting
+- 12:07-12:10 | ENTERTAINMENT | Browsing Reddit | 2 shots | Browsing Reddit, specifically the r/SiliconValleyHBO subreddit
+- 12:13 | SOCIAL | Browsing Instagram Reels | 1 shots | On the Instagram website, specifically on the Reels section
+- 12:16 | WORK | Code Review and Comparison | 1 shots | On GitHub, reviewing code changes between two branches of a repository named 'agnt'
+- 12:19 | SOCIAL | Browsing Instagram | 1 shots | Browsing Instagram on a desktop computer
+- 12:23 | ENTERTAINMENT | watching Instagram reels | 1 shots | Watching Instagram reels on their computer
+- 12:26 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, specifically interacting with the Gemini 3 Pro Preview
+- 12:29 | WORK | AI Development | 1 shots | Working with Google AI Studio, likely developing AI models or applications
+- 12:32 | LEARN | Watching an AI-related YouTube video | 1 shots | Watching a YouTube video titled "Advice for machine learning beginners | Andrej Karpathy and Lex Fridman." This indicates that the user is likely learning about machine learning, a
+- 12:35 | LEARN | Watching a machine learning tutorial | 1 shots | Watching a YouTube video titled "Advice for machine learning beginners | Andrej Karpathy and Lex Fridman"
+- 12:38 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the homepage
+- 12:41 | WORK | AI Model Development | 1 shots | Working on an AI model or project using Google AI Studio
+- 12:44 | ENTERTAINMENT | Browsing Reddit | 1 shots | The main content displayed is a Reddit post from the r/movies subreddit about the movie Gladiator (2000)
+- 12:48 | WORK | AI Prompt Engineering | 1 shots | Working within Google AI Studio, developing prompts for an AI model, likely Gemini 3 Pro
+- 12:51 | LEARN | Watching a machine learning tutorial | 1 shots | On YouTube, watching a video titled "Advice for machine learning beginners | Andrej Karpathy and Lex Fridman"
+- 12:54 | ENTERTAINMENT | Browsing and interacting with Reddit | 1 shots | Browsing the Reddit website, specifically the r/MadeMeSmile subreddit
+- 12:57 | ENTERTAINMENT | browsing Reddit | 1 shots | Browsing Reddit on their computer
+- 13:00 | ENTERTAINMENT | Browsing Reddit | 1 shots | The Reddit homepage with various subreddits and posts
+- 13:07 | LEARN | AI model experimentation and research | 1 shots | Working with Google AI Studio and has multiple tabs open related to AI and machine learning
+- 13:10 | WORK | AI Model Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on a project called 'Aladdin's Project Motivations'
+- 13:13 | WORK | AI Model Development | 1 shots | Working on AI model development using Google AI Studio
+- 13:19 | LEARN | AI model reproduction | 1 shots | Currently viewing a browser window with multiple tabs open
+- 13:26 | ENTERTAINMENT | Browsing and commenting on Reddit | 1 shots | Browsing the r/movies subreddit on Reddit
+- 13:29 | LEARN | Watching an AI research video on YouTube | 1 shots | Watching a YouTube video titled "How They Became Leading AI Researchers in Just 1 Year - Sholto Douglas & Trenton Bricken" by Dwarkesh Patel
+- 13:35 | ENTERTAINMENT | Watching TikTok and engaging with comments | 1 shots | On TikTok, watching a video from the user 'charlotte_downes0'
+- 13:38 | ENTERTAINMENT | Watching and interacting with TikTok content | 1 shots | On TikTok, watching a video by 'ahmed_riabi_'
+- 13:44 | LEARN | Watching AI/ML YouTube video | 1 shots | Watching a YouTube video titled "How They Became Leading AI Researchers in Just 1 Year - Sholto Douglas & Trenton Bricken" by Dwarkesh Patel
+- 13:54 | WORK | AI Model Development | 1 shots | Working on an AI model development project using Google AI Studio
+- 13:57 | WORK | AI Model Prompting and Experimentation | 1 shots | Working within Google AI Studio, experimenting with prompting an AI model (Gemini 3 Pro Preview)
+- 14:00 | WORK | AI model development and research | 1 shots | Working on or researching AI models, specifically within the Google AI Studio environment
+- 14:03 | SOCIAL | Social Media Browsing | 1 shots | The left sidebar shows the Instagram navigation menu with options like Home, Search, Explore, Reels, Messages, Notifications, Create, Dashboard, Profile, and More
+- 14:06 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, likely viewing reels and engaging with comments
+- 14:19 | LEARN | AI model experimentation and research | 1 shots | Working with Google AI Studio, likely experimenting with prompts or models
+- 14:22-14:25 | WORK | AI Model Prompting | 2 shots | Working with Google AI Studio, specifically on a project named "Aladdin's Project Motivations." is writing prompts for an AI model, likely Gemini 3 Pro Preview, as indicated on the
+- 14:29 | WORK | AI Agent Development | 1 shots | Working on an AI agent development project using Google AI Studio
+- 14:32 | WORK | AI Prompt Engineering | 1 shots | Working with Google AI Studio, likely creating or editing prompts for an AI model
+- 14:35 | SOCIAL | Social Media Interaction | 1 shots | Interacting with Instagram
+- 14:38 | SOCIAL | browsing instagram | 1 shots | Browsing Instagram on their computer
+- 14:41 | SOCIAL | Instagram browsing | 1 shots | Browsing Instagram on their computer
+- 14:48-14:51 | SOCIAL | Social Media Interaction | 2 shots | Interacting with Instagram
+- 14:54 | SOCIAL | Instagram browsing | 1 shots | Browsing Instagram on their computer
+- 14:57 | WORK | AI Prompt Engineering and Model Interaction | 1 shots | Working within Google AI Studio, specifically focusing on crafting prompts for the Gemini 3 Pro Preview model
+- 15:03 | ENTERTAINMENT | Social Media Entertainment Consumption | 1 shots | On Instagram, viewing a reel from "insidehistory" about a Christmas light display that stunned a neighborhood
+- 15:06 | SOCIAL | Instagram Reel browsing | 1 shots | Browsing Instagram reels on a desktop computer
+- 15:10 | ENTERTAINMENT | Watching and commenting on YouTube video | 1 shots | On YouTube, watching a video titled "Iron Man Trilogy Mix - Productivity Suite" by To Remix And Beyond
+- 15:13 | ENTERTAINMENT | Watching and listening to music on YouTube | 1 shots | On YouTube, watching and listening to an "Iron Man Trilogy Mix - Productivity Suite." They are on the video page, with the video playing
+- 15:16 | WORK | AI Model Prompting | 1 shots | Working with Google AI Studio, specifically on a prompt related to a "Gift Idea For Fashionista"
+- 15:19 | ENTERTAINMENT | Watching TikTok videos and engaging with comments | 1 shots | On TikTok, watching a video from user maciej.mp
+- 15:26 | WORK | AI Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on a prompt related to "Gift Idea For Fashionista." The prompt includes details about the ideal characteristics of a person, such as sleep
+- 15:32 | WORK | AI Model Development/Configuration | 1 shots | Working in Google AI Studio, seemingly configuring and developing an AI model
+- 15:36 | WORK | AI Model Prompt Engineering | 1 shots | Working within Google AI Studio, likely engaged in prompt engineering for an AI model
+- 15:39 | WORK | AI model development | 1 shots | Working within Google AI Studio on a project titled "Aladdin's Project Motivations"
+- 15:42 | WORK | AI Model Development and Experimentation | 1 shots | Working within Google AI Studio, likely developing and experimenting with AI models
+- 15:45 | ENTERTAINMENT | Listening to music on YouTube | 1 shots | On YouTube, listening to a song called "Unshaken I Slowed+Reverb" by FS000 I Slowed & Reverb
+- 15:48 | SOCIAL | Browsing and commenting on Reddit | 1 shots | Browsing Reddit, specifically the r/movies subreddit
+- 15:51 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working within Google AI Studio on a project titled "Aladdin's Project Motivations." The interface shows elements related to prompt engineering, including a text input area, visual
+- 15:55 | WORK | AI Project Development | 1 shots | Working on an AI project in Google AI Studio
+- 15:58 | ENTERTAINMENT | Browsing Reddit | 1 shots | The Reddit homepage with various subreddits and posts
+- 16:01 | WORK | AI Model Prompting and Debugging | 1 shots | Working within Google AI Studio, specifically prompting and debugging an AI model
+- 16:13 | WORK | AI Model Prompting | 1 shots | Working with Google AI Studio, specifically on a prompt related to 'Gift Idea For Fashionista'
+- 16:16 | WORK | AI Model Prompt Engineering | 1 shots | Working within the Google AI Studio environment, specifically on a 'Gift Idea For Fashionista' project
+- 16:20 | WORK | AI Prompt Engineering | 1 shots | Working within Google AI Studio, specifically on prompt engineering
+- 16:26 | WORK | AI Model Prompting | 1 shots | Working with Google AI Studio, specifically focusing on prompting and refining a model for a specific task, which seems to be related to relationships and gender roles
+- 16:35 | WORK | AI Prompt Engineering | 1 shots | Working within Google AI Studio, specifically on prompt engineering
+- 16:38 | ENTERTAINMENT | watching youtube videos | 1 shots | Watching a YouTube video titled "The Walters - I love you so (español)// Re: Zero [AMV]" by RycKMestN
+- 16:42 | OTHER | Checking the weather and wind direction | 1 shots | Using Google Search to check the wind direction for today in El Mahboubine
+- 16:45 | SOCIAL | Social Media Interaction on Instagram | 1 shots | On Instagram, viewing a post by 'star_dx_edits'
+- 16:48 | SOCIAL | Instagram browsing and commenting | 1 shots | Browsing Instagram and viewing a reel
+- 16:51 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, viewing a post from 'amvrizz'
+- 16:54-16:57 | ENTERTAINMENT | Social Media Entertainment Consumption | 2 shots | Browsing Instagram and watching a video
+- 17:00 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, viewing and interacting with a post
+- 17:04 | WORK | AI Model Prompting and Configuration | 1 shots | Working within the Google AI Studio environment
+- 17:13 | ENTERTAINMENT | Consuming social media content | 1 shots | Browsing Instagram and viewing a reel
+- 17:19 | SOCIAL | Social media interaction | 1 shots | On Instagram, viewing and interacting with a post from the user 'rahmagobrel'
+- 17:22 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, viewing a post featuring an anime character and a meme-style caption
+- 17:25 | WORK | AI model development and prompt engineering | 1 shots | Working on Google AI Studio, specifically on a project named 'Aladdin's Project Motivations'
+- 17:28 | WORK | AI Model Development | 1 shots | Working on a project named "Aladdin's Project Motivations" in Google AI Studio, which involves developing or refining an AI model
+- 17:32 | WORK | AI Model Prompting | 1 shots | Working with Google AI Studio, specifically with the Gemini 3 Pro Preview model
+- 17:35 | WORK | AI Model Prompting and Testing | 1 shots | Working in Google AI Studio, likely prompting and testing an AI model (Gemini 3 Pro Preview)
+- 17:38 | WORK | AI Model Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on prompt engineering for a project titled "Gift Idea For Fashionista." The screen displays a text-based prompt being developed, which inc
+- 17:41 | ENTERTAINMENT | Watching YouTube videos | 1 shots | Watching a YouTube video titled "gta iv - soviet connection (slowed + reverb)" on the YouTube website
+- 17:44 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, specifically focusing on prompt engineering for a Gemini 3 Pro Preview model
+- 17:47 | WORK | AI Model Prompting and Experimentation | 1 shots | Working within the Google AI Studio environment, likely experimenting with prompt engineering for a language model
+- 17:50 | WORK | Customer management | 1 shots | Using Gumroad, a platform for creators, to manage customer sales
+- 17:54 | SOCIAL | Browsing Reddit | 1 shots | The Reddit homepage with a variety of posts from different subreddits
+- 17:57 | WORK | Managing Gumroad products | 1 shots | On the Gumroad website, specifically on the products page
+- 18:00 | WORK | AI Model Prompt Engineering | 1 shots | Working within Google AI Studio, specifically on crafting or refining prompts for an AI model
+- 18:03 | WORK | AI Prompt Engineering | 1 shots | Working in Google AI Studio, specifically focusing on prompt engineering for a Gemini 3 Pro Preview
+- 18:06 | SOCIAL | Social Media Interaction | 1 shots | On Twitter, viewing a post from a user named Rodin who claims to have cold emailed the founder of YC and received a response in 2 minutes
+- 18:09 | WORK | Prompt Engineering | 1 shots | Working in Google AI Studio, likely creating or refining prompts
+- 18:12 | WORK | AI Prompt Engineering | 1 shots | Working with Google AI Studio, specifically prompt engineering
+- 18:16 | WORK | AI Model Prompting and Experimentation | 1 shots | Working with Google AI Studio, specifically experimenting with prompts for the Gemini 3 Pro model
+- 18:19-18:22 | WORK | AI Model Prompt Engineering | 2 shots | Working within Google AI Studio, likely prompt engineering or experimenting with AI models
+- 18:25 | LEARN | Reading and reflecting on personal development notes | 1 shots | Viewing a document containing notes and reflections on personal development
+- 18:28 | WORK | AI Model Development and Evaluation | 1 shots | Working within Google AI Studio, specifically focusing on 'Aladdin's Project Motivations'
+- 18:31 | WORK | AI agent development | 1 shots | Working on an AI agent development project within the Google AI Studio environment
+- 18:34 | WORK | AI Model Development and Testing | 1 shots | Working with Google AI Studio, specifically focusing on "Aladdin's Project Motivations." The screen shows a document outlining the trap of "General Benchmarks" and a recommendation
+- 18:50 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working within Google AI Studio, seemingly designing and refining prompts for an AI model
+- 18:53 | WORK | AI Model Development and Strategy | 1 shots | Working in Google AI Studio, developing and strategizing for an AI model
+- 19:05 | WORK | AI Model Prompt Engineering and Strategy | 1 shots | Working within Google AI Studio, focusing on refining prompts for an AI model, likely Gemini 3 Pro Preview, based on the interface elements visible
+- 19:08 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working in Google AI Studio, developing and testing prompts for an AI model
+- 19:11 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, likely in a prompt engineering context
+- 19:14 | WORK | AI Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on prompt engineering
+- 19:17 | WORK | AI Model Prompting and Experimentation | 1 shots | Working within Google AI Studio, likely experimenting with prompt engineering for a large language model (LLM)
+- 19:21 | ENTERTAINMENT | Consuming social media content | 1 shots | Viewing an Instagram post, specifically a reel or video shared by the user "bladeax." The post appears to feature a clip from a video game, possibly Assassin's Creed, with the text
+- 19:24 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, specifically on a project titled "Aladdin's Project Motivations"
+- 19:27 | WORK | AI Model Prompting and Development | 1 shots | Working within Google AI Studio, specifically focusing on 'Aladdin's Project Motivations.' The screen displays a text prompt area where the user interacts with the AI model
+- 19:33 | WORK | AI Model Prompt Engineering | 1 shots | Working within the Google AI Studio platform, specifically focusing on prompt engineering for the Gemini 3 Pro Preview model
+- 19:36 | SOCIAL | Social Media Interaction | 1 shots | Viewing an Instagram post featuring an image from The Lion King with the text "song as old" overlaid
+- 19:39 | WORK | AI model development and testing | 1 shots | Working on Google AI Studio, specifically focusing on "Aladdin's Project Motivations." The screen displays a set of benchmarks related to engineering intelligence, suggesting the u
+- 19:43 | SOCIAL | Email Management | 1 shots | Managing their Gmail inbox
+- 19:46 | WORK | AI Model Development | 1 shots | Working in Google AI Studio, specifically on a project named "Aladdin's Project Motivations." The screen displays a visual representation of a project architecture or workflow, sho
+- 19:49 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, specifically focusing on prompt engineering for an AI model
+- 19:52 | LEARN | Researching Gemini CLI | 1 shots | On a webpage titled "Code Wiki" exploring documentation for "google-gemini/gemini-cli"
+- 19:55 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working within Google AI Studio, a platform for developing and experimenting with AI models
+- 20:25 | WORK | AI Prompt Engineering | 1 shots | Working with Google AI Studio, specifically creating or refining a prompt for a language model
+- 20:28 | LEARN | Watching an AI-related YouTube video | 1 shots | Watching a YouTube video titled "How They Became Leading AI Researchers in Just 1 Year - Sholto Douglas & Trenton Bricken" by Dwarkesh Patel
+- 20:31 | LEARN | Watching an AI research video on YouTube | 1 shots | Watching a YouTube video titled "How They Became Leading AI Researchers in Just 1 Year - Sholto Douglas & Trenton Bricken" by Dwarkesh Patel
+- 20:35 | SOCIAL | Social Media Interaction | 1 shots | On Twitter (X), viewing the profile of Sholto Douglas
+- 20:38 | OTHER | AI model interaction | 1 shots | Interacting with Google AI Studio, likely to generate text or explore the capabilities of a language model
+- 20:41 | WORK | AI Model Development | 1 shots | Working in Google AI Studio, an environment likely used for developing and testing AI models
+- 20:44 | WORK | AI Model Interaction | 1 shots | Interacting with Google AI Studio, specifically the Playground feature
+- 20:47 | WORK | AI Model Development and Testing | 1 shots | Working within Google AI Studio, likely developing and testing AI models
+- 20:50 | WORK | AI Agent Development | 1 shots | Working on an AI agent development project using Google AI Studio
+- 20:56 | WORK | AI Model Development and Testing | 1 shots | Working on a project in Google AI Studio, specifically focused on 'Aladdin's Project Motivations'
+- 21:00 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, specifically focusing on prompt engineering for AI models
+- 21:06 | WORK | AI Model Prompt Engineering and Testing | 1 shots | Working within Google AI Studio, focused on refining prompts for the Gemini 3 Pro Preview model
+- 21:18 | WORK | AI Model Development and Testing | 1 shots | Working with Google AI Studio, likely developing or testing an AI model
+- 21:21 | SOCIAL | Browsing and commenting on Reddit | 1 shots | On Reddit, browsing the r/pics subreddit and engaging in a comment thread
+- 21:24 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, specifically focusing on crafting prompts for an AI model
+- 22:18 | LEARN | Language Translation | 1 shots | Using Google Translate to translate the phrase "coutner intuitive" from English to another language
+- 22:39 | LEARN | Language Translation | 1 shots | Using Google Translate to translate the phrase "counter intuitive" from English to Arabic
+- 22:46 | LEARN | Language Translation and Definition Lookup | 1 shots | Using Google Translate to translate and look up the definition of the phrase "counter intuitive"
+- 22:55 | LEARN | AI Prompt Engineering | 1 shots | Working within Google AI Studio, likely experimenting with prompt engineering for a large language model
+- 22:58 | LEARN | Watching a Machine Learning Career Advice video on YouTube | 1 shots | Watching a YouTube video titled "Andrew Ng Machine Learning Career Advice" by Jared Beckwith, R
+- 23:01 | LEARN | Watching an AI/Machine Learning Career Advice video | 1 shots | Watching a YouTube video titled "Andrew Ng Machine Learning Career Advice" by Jared Beckwith, R
+- 23:04 | LEARN | Watching an AI research video on YouTube | 1 shots | Watching a YouTube video titled "How They Became Leading AI Researchers in Just 1 Year - Sholto Douglas & Trenton Bricken" by Dwarkesh Patel
+
+### 2025-12-03
+- counts: work 62, learn 5, social 20, entertainment 26, other 11
+- hours: work 2.6h, learn 0.2h, social 1h, entertainment 1.2h, other 0.4h
+- share: work 50%, learn 4%, social 16.1%, entertainment 21%, other 8.9%
+- 13:03 | ENTERTAINMENT | Watching Silicon Valley | 1 shots | Watching season 5 of the TV show Silicon Valley on flixbaba.is
+- 13:09 | SOCIAL | Browsing Reddit and reading news about Anthropic | 1 shots | Browsing Reddit, specifically the r/ClaudeAI subreddit, and is reading a post about Anthropic, an AI company
+- 13:12 | SOCIAL | Accessing Instagram | 1 shots | Accessing Instagram via a web browser
+- 13:15 | LEARN | Researching and discussing LLMs for coding assistance | 1 shots | On Reddit, specifically in the r/agentdevelopmentkit subreddit
+- 15:17 | ENTERTAINMENT | Watching YouTube video | 1 shots | Watching a YouTube video titled "Mary On A Cross~ Miku Nakano [AMV]" by RycKMestN
+- 15:20 | WORK | Software Development and UI Design | 1 shots | Engaged in software development, specifically working on the frontend of a web application
+- 15:23 | ENTERTAINMENT | Watching YouTube Shorts and interacting with comments | 1 shots | On the YouTube website, specifically watching a Short
+- 15:30 | OTHER | Using ChatGPT | 1 shots | Interacting with the ChatGPT interface
+- 15:33 | OTHER | Brainstorming gift ideas | 1 shots | Using ChatGPT to brainstorm gift ideas for someone
+- 15:36 | SOCIAL | Relationship advice or discussion | 1 shots | On ChatGPT and appears to be discussing or analyzing aspects of a potential romantic interaction
+- 15:39 | ENTERTAINMENT | Watching YouTube shorts and engaging with comments | 1 shots | Watching a YouTube short video related to Tony Soprano and GTA IV
+- 15:42 | ENTERTAINMENT | Watching YouTube video | 1 shots | Watching a YouTube video titled "You get on base | Moneyball • 1 Hour Playlist" by the channel "Higher don't mentions." The video appears to be a playlist related to the movie Mone
+- 15:45-15:49 | WORK | Software Development | 2 shots | Working on a software development project using an IDE
+- 15:52 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/singularity subreddit
+- 15:55 | WORK | Software Development and API Documentation | 1 shots | Working on a software development project, specifically focused on creating and documenting an agent API
+- 15:58-16:01 | WORK | Software Development and Documentation | 2 shots | Working on documenting an Agent API, focusing on streaming chat patterns with React
+- 16:04 | WORK | Software Development & Documentation | 1 shots | Working on a software development project
+- 16:08-16:17 | WORK | Software Development | 4 shots | Working on a software development project using a code editor, likely VS Code
+- 16:20 | ENTERTAINMENT | Consuming social media content | 1 shots | Browsing Instagram reels and engaging with the comments section of a video
+- 16:23 | WORK | Software Development & Debugging | 1 shots | Working on a software development project called "agnt-web," likely related to an agent-based system or AI
+- 16:27 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, specifically viewing a Reel
+- 16:30 | ENTERTAINMENT | Social media entertainment consumption | 1 shots | On Instagram, specifically viewing a reel
+- 16:33 | SOCIAL | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/Strava subreddit
+- 16:36 | SOCIAL | Browsing and commenting on Reddit | 1 shots | Browsing Reddit, specifically the r/Tunisia subreddit
+- 16:40 | WORK | Software Development and Browser Automation Tooling | 1 shots | Working on a software development project, specifically focused on building and documenting browser automation tools
+- 16:43 | WORK | Software Development and Frontend Debugging | 1 shots | Working on a software development project, likely related to building a web application with real-time agent interaction
+- 17:01 | WORK | Software Development | 1 shots | Actively engaged in software development, specifically working on a project named 'agnt-web'
+- 17:04-17:10 | ENTERTAINMENT | Browsing TikTok | 3 shots | Browsing TikTok on their computer
+- 17:14 | ENTERTAINMENT | Watching YouTube Video | 1 shots | Watching a YouTube video titled "Iron Man Trilogy Mix - Productivity Suite" by To Remix And Beyond
+- 17:17 | WORK | Software Development and Browser Automation Tooling | 1 shots | Working on a software development project, focusing on browser automation tools
+- 17:20 | SOCIAL | Browsing and Commenting on Reddit | 1 shots | Browsing Reddit and viewing a post, likely a video, in the r/robotics subreddit
+- 17:29 | ENTERTAINMENT | Watching YouTube Music | 1 shots | On YouTube, watching the music video "Wonderful Life" by Smith & Burrows
+- 17:36 | WORK | Software Development and Agent Development Kit (ADK) Research | 1 shots | Currently on a webpage that appears to be documentation for Google's Agent Development Kit (ADK) for Python
+- 17:39 | WORK | Software Development and Agent Development Kit (ADK) Integration | 1 shots | Engaged in software development, focusing on integrating Google's Agent Development Kit (ADK) into their project
+- 17:42 | WORK | Documenting and Extending Agent Functionality with Plugins | 1 shots | Focused on documenting and extending the functionality of an agent system using plugins
+- 17:45 | LEARN | Researching Agent Development Kit (ADK) Plugin Architecture | 1 shots | Researching the plugin architecture of Google's Agent Development Kit (ADK) for Python
+- 17:48 | ENTERTAINMENT | Watching Instagram Reels | 1 shots | Watching Instagram Reels
+- 17:51 | SOCIAL | Browsing Instagram | 1 shots | Currently on Instagram, viewing their saved posts
+- 17:54 | LEARN | Researching Agent Development Kit (ADK) Plugin Architecture | 1 shots | Continuing their research on Google's Agent Development Kit (ADK) for Python, specifically focusing on its plugin architecture
+- 18:04 | WORK | Documenting and Extending Agent Functionality with Plugins | 1 shots | Actively working on documenting and extending the functionality of an agent system using plugins
+- 18:07-18:10 | ENTERTAINMENT | watching youtube music | 2 shots | On YouTube, watching a music video titled "SKYFALL Adele (slowed) Success Edit" by NSX - Studios
+- 18:13-18:16 | SOCIAL | Browsing Instagram | 2 shots | On Instagram, viewing a post about a pharmacy called "Parapharmacie 360"
+- 18:19 | WORK | Developing and Documenting Browser Automation Module for Agent System | 1 shots | Working on a browser automation module for an agent system
+- 18:23 | ENTERTAINMENT | watching youtube music | 1 shots | On YouTube, watching the music video "Naruto Shippuden OST: Ochihabune Extended"
+- 18:26 | SOCIAL | Browsing and Commenting on Reddit | 1 shots | Browsing Reddit, specifically on the r/interestingasfuck subreddit
+- 18:29-18:35 | SOCIAL | Browsing TikTok | 3 shots | On TikTok, as indicated by the open tab in the browser
+- 18:38 | WORK | Developing and Implementing Automated Page Map Generation for Agent System | 1 shots | Working on developing and implementing an automated page map generation feature for an agent system
+- 18:41 | SOCIAL | Browsing and Commenting on Reddit | 1 shots | The main content of the page is a post from the r/armenia subreddit about Pope Leo XIV laying a wreath at the tomb of Mustafa Kemal Atatürk
+- 18:45 | LEARN | Learning about Google's Agent Development Kit (ADK) | 1 shots | On a webpage that appears to be a documentation page for Google's Agent Development Kit (ADK) for Python, specifically the google/adk-python repository
+- 18:48 | ENTERTAINMENT | watching youtube music | 1 shots | On YouTube, watching a music video titled "YEAT - if we being real (Slowed + reverb) Best Part" by HMOOD Edits
+- 18:54 | WORK | Developing and Implementing Automated Page Map Generation for Agent System | 1 shots | Working on developing and implementing an automated page map generation feature for an agent system
+- 18:57 | SOCIAL | Opening Instagram | 1 shots | The Instagram logo in the center of a black background
+- 19:00-19:03 | ENTERTAINMENT | watching instagram reels | 2 shots | On Instagram and is watching a reel
+- 19:07 | SOCIAL | Browsing Reddit | 1 shots | The main content of the page is a post from an unknown subreddit featuring a dental clinic
+- 19:13 | ENTERTAINMENT | watching instagram reels | 1 shots | Watching an Instagram reel
+- 19:16 | WORK | Developing and Documenting Browser Automation Module for Agent System | 1 shots | Working on developing and implementing an automated page map generation feature for an agent system
+- 19:19-19:22 | ENTERTAINMENT | watching instagram reels and reading comments | 2 shots | Watching an Instagram reel featuring a man talking to the camera with a landscape video playing below
+- 19:25 | ENTERTAINMENT | watching youtube music | 1 shots | On YouTube, watching a music video titled "Una Lady Como Tú - MTZ Manuel Turizo I [AMV] Hiraku Dear Moments" by Hiraku Dear Moments
+- 19:29 | ENTERTAINMENT | listening to music on youtube | 1 shots | On YouTube, listening to the song "Let Down by Radiohead, but it will change your life." They are subscribed to the channel GetHype, which has 16.8k subscribers
+- 19:32-19:38 | WORK | Developing and Documenting Browser Automation Module for Agent System | 3 shots | Working on developing and documenting a browser automation module for an agent system
+- 19:44 | WORK | Developing and debugging agent system with real-time event streaming | 1 shots | Working on developing and debugging an agent system
+- 19:59 | WORK | Developing and debugging agent system with real-time event streaming | 1 shots | Actively engaged in developing and debugging an agent system, continuing from previous sessions
+- 20:03 | WORK | Extending Claude's capabilities with Skills | 1 shots | Working on extending Claude's capabilities using Skills in Google AI Studio
+- 20:12 | WORK | Developing and debugging agent system with real-time event streaming | 1 shots | Actively engaged in developing and debugging an agent system, continuing from previous sessions
+- 20:21 | SOCIAL | Managing email accounts | 1 shots | Interacting with their Gmail inbox
+- 20:24 | WORK | Developing and debugging agent system with real-time event streaming | 1 shots | Actively engaged in developing and debugging an agent system, continuing from previous sessions
+- 20:27 | OTHER | Planning workout routine | 1 shots | Viewing a workout plan summary card
+- 20:33 | WORK | Developing and debugging agent system with real-time event streaming | 1 shots | Actively engaged in developing and debugging an agent system, continuing from previous sessions
+- 20:37 | WORK | Developing and debugging agent system with browser automation | 1 shots | Working on developing and debugging an AI agent system that automates web browsing tasks
+- 20:40 | WORK | Debugging Browser Automation Agent | 1 shots | Debugging an AI agent system designed to automate web browsing tasks
+- 20:43-20:55 | WORK | Developing and Documenting Browser Automation Module for Agent System | 3 shots | Working on developing and implementing an automated page map generation feature for an agent system
+- 20:58 | LEARN | Following documentation to configure a TypeScript project | 1 shots | Following documentation on a website to configure a TypeScript project using Vite
+- 21:01 | WORK | Developing and Documenting Browser Automation Module for Agent System | 1 shots | Working on developing and implementing an automated page map generation feature for an agent system
+- 21:05 | OTHER | Using a timer | 1 shots | Using a timer application, which is currently displaying a countdown of 39 seconds
+- 21:17 | WORK | Developing and Documenting Browser Automation Module for Agent System | 1 shots | Working on developing and implementing an automated page map generation feature for an agent system
+- 21:20 | OTHER | Planning workout routine | 1 shots | Viewing a workout plan summary card
+- 21:23-21:26 | WORK | Developing and Documenting Browser Automation Module for Agent System | 2 shots | Actively engaged in developing and implementing an automated page map generation feature for an agent system
+- 21:41 | WORK | Developing and Documenting Browser Automation Module for Agent System | 1 shots | Actively engaged in developing and documenting an automated page map generation feature for an agent system
+- 21:45-21:51 | WORK | Debugging Browser Automation Agent | 3 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 22:03 | OTHER | Using a timer | 1 shots | Using a timer application, which is currently displaying a countdown of 3 minutes
+- 22:06 | WORK | Debugging Browser Automation Agent | 1 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 22:09-22:13 | WORK | Debugging Browser Automation Agent and Planning System Instructions | 2 shots | Actively debugging an AI agent system designed to automate web browsing tasks, while also planning the system instructions for the agent
+- 22:16 | SOCIAL | managing email | 1 shots | Managing their Gmail inbox
+- 22:19 | WORK | Developing and Debugging Browser Automation Agent with Debugging Plugin | 1 shots | Working on developing and debugging a browser automation agent system
+- 22:28 | OTHER | Using a timer | 1 shots | Using a timer application, which is currently displaying a countdown of 3 minutes
+- 22:31 | WORK | Debugging Browser Automation Agent | 1 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 22:43-22:46 | WORK | Debugging Browser Automation Agent | 2 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 22:50 | ENTERTAINMENT | browsing reddit | 1 shots | Browsing Reddit, specifically on the r/mildlyinteresting subreddit
+- 22:53-23:02 | WORK | Debugging Browser Automation Agent with Debugging Plugin | 2 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 23:05-23:11 | WORK | Debugging Browser Automation Agent | 3 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 23:15 | WORK | Debugging Browser Automation Agent with Debugging Plugin | 1 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 23:18 | SOCIAL | browsing reddit | 1 shots | Browsing Reddit, specifically on the r/SiliconValleyHBO subreddit
+- 23:21 | WORK | Debugging Browser Automation Agent | 1 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 23:24 | OTHER | Using a timer | 1 shots | Using a timer application, which is currently displaying a countdown of 0
+- 23:27 | OTHER | Viewing a post-workout stretch routine | 1 shots | Viewing a list of stretches and their durations
+- 23:30 | OTHER | Using a timer | 1 shots | Using a timer application, which is currently displaying a countdown of 0
+- 23:33 | OTHER | Planning a post-workout stretch routine | 1 shots | Viewing a list of stretches and their durations, titled "Post-Workout Stretch Routine"
+- 23:43 | WORK | Developing and Debugging Browser Automation Agent | 1 shots | Actively developing and debugging an AI agent system designed to automate web browsing tasks
+- 23:46 | WORK | Debugging Browser Automation Agent | 1 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+
+### 2025-12-04
+- counts: work 78, learn 10, social 21, entertainment 44, other 4
+- hours: work 3.4h, learn 0.5h, social 1h, entertainment 2.1h, other 0.1h
+- share: work 49.7%, learn 6.4%, social 13.4%, entertainment 28%, other 2.5%
+- 00:07-00:13 | WORK | Debugging Browser Automation Agent with Debugging Plugin | 3 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 00:31 | WORK | Debugging Browser Automation Agent | 1 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 00:35 | WORK | Browsing Github | 1 shots | Viewing a Github page, likely related to the AI agent they have been debugging
+- 00:38 | SOCIAL | browsing reddit | 1 shots | Browsing Reddit, specifically on the r/accelerate subreddit
+- 00:41-00:44 | WORK | Debugging Browser Automation Agent with Debugging Plugin | 2 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 00:47 | WORK | Debugging Browser Automation Agent | 1 shots | Actively debugging an AI agent system designed to automate web browsing tasks
+- 00:50-00:53 | WORK | Implementing and Debugging Page Map Auto-Generation for Browser Automation Agent | 2 shots | Implementing and debugging page map auto-generation for a browser automation agent
+- 00:57 | WORK | Developing Browser Automation Agent | 1 shots | Developing an AI agent system designed to automate web browsing tasks
+- 01:12 | SOCIAL | browsing reddit | 1 shots | Browsing Reddit, specifically viewing posts and comments in various subreddits
+- 01:15 | SOCIAL | managing email | 1 shots | In their Gmail inbox, reviewing and managing emails
+- 01:27 | OTHER | Planning a post-workout stretch routine | 1 shots | Viewing a list of stretches and their durations, titled "Post-Workout Stretch Routine"
+- 13:10 | ENTERTAINMENT | Watching TV show | 1 shots | The image shows a scene from a TV show, likely a comedy or dramedy
+- 13:17 | SOCIAL | Browsing and commenting on Reddit | 1 shots | Browsing the r/singularity subreddit on Reddit
+- 13:20 | SOCIAL | Viewing Instagram reels | 1 shots | Viewing Instagram reels on their computer
+- 13:23 | SOCIAL | Social Media Interaction | 1 shots | Browsing Instagram on their computer
+- 13:26 | ENTERTAINMENT | watching a TV show | 1 shots | Watching an episode of the TV show "Silicon Valley" on a streaming platform
+- 13:32 | SOCIAL | Discussing a TV show on Reddit | 1 shots | On Reddit, specifically in the r/SiliconValleyHBO subreddit, looking at a thread discussing the second episode of season 5
+- 13:35 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/SiliconValleyHBO subreddit
+- 13:38 | WORK | Software Development | 1 shots | Working on a software development project using Electron
+- 13:48 | OTHER | Desktop Management | 1 shots | Viewing their desktop
+- 13:57 | WORK | freelancing | 1 shots | Logging into Upwork, a freelancing platform
+- 14:03 | ENTERTAINMENT | Watching YouTube | 1 shots | Watching a YouTube video titled "過去の行先 (Kako no Yukusaki)" by Kenichiro Suehiro, likely a music track or OST
+- 14:06 | LEARN | Researching mobile nuclear reactor safety | 1 shots | On ChatGPT, researching mobile nuclear reactor safety
+- 14:49 | WORK | Software Development / Documentation | 1 shots | Working on a software development project, specifically focusing on documentation and code related to browser automation
+- 14:52-14:55 | ENTERTAINMENT | Watching and commenting on YouTube Shorts | 2 shots | On YouTube, watching a short video titled "His Getback Was Crazy | Snowfall | Nightcrawler (slowed + Instrumental) #edit #shorts" by @dal-fx
+- 14:58 | ENTERTAINMENT | watching youtube shorts and reading comments | 1 shots | On YouTube, watching a short video from the channel "@HieMount" titled "Dexter was preparing to pin everything on Dukes"
+- 15:01 | ENTERTAINMENT | Watching and interacting with TikTok videos | 1 shots | On the TikTok platform, likely watching a video
+- 15:04-15:08 | WORK | Software Development | 2 shots | Working on a software development project, specifically related to browser automation
+- 15:47 | LEARN | Reviewing Agent Development Kit (ADK) documentation | 1 shots | On a webpage titled "Code Wiki" and specifically viewing documentation for google/adk-python, which appears to be the Agent Development Kit (ADK) Core Framework
+- 15:50 | WORK | Software Development | 1 shots | Working on a software development project, specifically focusing on browser automation and page map injection
+- 15:56 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/interesting subreddit
+- 15:59 | LEARN | Reviewing Code Documentation and Asking Questions | 1 shots | Viewing documentation on a Code Wiki related to the Google ADK (Agent Development Kit) for Python, specifically tools for BigQuery integration
+- 16:02 | LEARN | Reviewing BigQuery Tools documentation | 1 shots | Viewing a documentation page for BigQuery Tools within the ADK (Agent Development Kit) for Python
+- 16:06 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/OpenAI subreddit
+- 16:09 | SOCIAL | Accessing Instagram | 1 shots | Accessing Instagram via a web browser
+- 16:12 | ENTERTAINMENT | Consuming content on Instagram | 1 shots | On Instagram, specifically viewing a reel
+- 16:15 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, likely interacting with content on the platform
+- 16:18 | ENTERTAINMENT | Watching Instagram Reels | 1 shots | On Instagram, specifically watching Reels
+- 16:22 | ENTERTAINMENT | Social Media Browsing | 1 shots | Browsing Instagram reels on their computer
+- 16:25-16:28 | WORK | Software Development and Documentation | 2 shots | Working on a software development project, specifically related to browser automation and agent integration
+- 16:31 | SOCIAL | Browsing Reddit | 1 shots | The screen displays the Reddit homepage with various posts from different subreddits
+- 16:34 | ENTERTAINMENT | Browsing Reddit and watching a video | 1 shots | Browsing Reddit and watching a video on the platform
+- 16:37 | WORK | Software Development and Refactoring | 1 shots | Engaged in software development work, specifically focused on refactoring a browser module within a larger project
+- 16:40 | LEARN | Researching and learning about agent development and Angular | 1 shots | On Reddit, specifically browsing the r/agentdevelopmentkit subreddit
+- 16:44 | WORK | Software Development and Refactoring | 1 shots | Working on a software development project, specifically refactoring a "Browser" module within an "agnt" project, which seems to involve AI agent browser interactions
+- 16:47 | SOCIAL | Reddit discussion | 1 shots | On Reddit, specifically in the r/google_antigravity subreddit
+- 16:50 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically refactoring a 'Browser Module'
+- 16:53 | WORK | Software Development and Refactoring | 1 shots | Working on a software development project, specifically refactoring a "Browser Module." The screen shows an IDE with Python code related to browser automation tools
+- 17:02 | ENTERTAINMENT | Watching music on YouTube | 1 shots | On YouTube, watching a music track titled "Kakono Yukusaki" by Kenichiro Suehiro
+- 17:06 | ENTERTAINMENT | Watching YouTube videos | 1 shots | On YouTube, watching or listening to music from the TV series "Re:ZERO - Starting Life in Another World - 2nd season"
+- 17:09 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing the r/okbuddycinephile subreddit on Reddit
+- 17:12-17:18 | WORK | Software Development | 3 shots | Working on a software development project, specifically focusing on a Python script named 'browser_agent.py'
+- 17:21 | ENTERTAINMENT | Watching YouTube video and listening to music | 1 shots | On YouTube, watching a video titled "Demon Slayer: Hashira Theme | EPIC VERSION (feat
+- 17:25 | WORK | Software Development | 1 shots | Working on a software development project, specifically focusing on debugging and modifying code related to an LLM (Large Language Model) plugin
+- 17:31 | ENTERTAINMENT | Watching TikTok and reading comments | 1 shots | On the TikTok website, as indicated by the TikTok logo and interface elements visible
+- 17:34 | ENTERTAINMENT | Watching and commenting on TikTok videos | 1 shots | On TikTok, watching a video
+- 17:37 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, specifically debugging and modifying code related to a browser agent
+- 17:40 | ENTERTAINMENT | Watching YouTube music playlist | 1 shots | Watching a YouTube video titled "Most emotional OSTs: Re:Zero - Abyss" by Lilium
+- 17:49 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, specifically focusing on debugging and refining a web automation agent
+- 17:53 | SOCIAL | Browsing and interacting on Reddit | 1 shots | Browsing Reddit, specifically the r/accelerate and r/google_antigravity subreddits
+- 17:56 | SOCIAL | Browsing Reddit | 1 shots | The main content visible is the Reddit interface with a dark theme
+- 17:59 | LEARN | Understanding gender dynamics and social interactions | 1 shots | On ChatGPT, looking at a conversation about gender roles and how men and women respond to different behaviors
+- 18:02 | LEARN | Exploring gender roles and healthy masculinity | 1 shots | On ChatGPT, exploring the topic of gender roles, specifically focusing on healthy versions of masculinity and femininity
+- 18:05 | LEARN | Learning about relationships and safe spaces | 1 shots | On ChatGPT, seemingly learning about healthy and unhealthy relationship dynamics
+- 18:08 | LEARN | Learning about relationship dynamics | 1 shots | On a ChatGPT session, reading advice about man and woman's safety role in relationships
+- 18:11 | LEARN | Reviewing content about gender roles and relationships | 1 shots | On a ChatGPT interface, reviewing a conversation about "Man woman's safety role"
+- 18:15 | ENTERTAINMENT | Listening to music on YouTube | 1 shots | On YouTube, listening to a song called "Sonne Best Part (Slowed)"
+- 18:18 | OTHER | Relationship advice seeking | 1 shots | Interacting with ChatGPT to get relationship advice
+- 18:21 | WORK | Debugging and modifying code | 1 shots | Working on a software development project, specifically debugging and modifying code
+- 18:25 | ENTERTAINMENT | Browsing Instagram | 1 shots | Browsing Instagram, specifically viewing a post by 'auliyuun' featuring an anime-style illustration
+- 18:28 | ENTERTAINMENT | Consuming social media content | 1 shots | On Instagram and appears to be watching a reel
+- 18:31 | ENTERTAINMENT | Watching Instagram Reels | 1 shots | On Instagram, specifically viewing Reels
+- 18:34 | ENTERTAINMENT | Watching Reels on Instagram | 1 shots | On Instagram and is currently watching Reels
+- 18:37 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, specifically viewing a reel
+- 18:40-18:44 | WORK | Software Development | 2 shots | Working on a software development project
+- 18:47 | ENTERTAINMENT | browsing Reddit | 1 shots | The Reddit homepage is open, and they are viewing a post from the subreddit r/nanobanana titled "4k output is INSANE"
+- 18:50 | WORK | Software Development | 1 shots | Working on a software development project, specifically refactoring browser handling in an agent
+- 18:53 | SOCIAL | Business Meeting | 1 shots | The image shows three individuals engaged in what appears to be a business meeting
+- 19:23 | WORK | Software Development | 1 shots | Working on a Python script related to data insights within the 'adk-python' project, specifically focusing on the 'data_insights_tool.py' file
+- 19:53 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically related to browser automation
+- 19:57 | WORK | Software Development | 1 shots | Working on a software development project
+- 20:00 | WORK | Software Development and Code Review | 1 shots | Working on a software development project, specifically focusing on debugging and code review
+- 20:03 | ENTERTAINMENT | Watching music video on YouTube | 1 shots | Watching a music video on YouTube
+- 20:06 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, likely related to browser automation
+- 20:09 | ENTERTAINMENT | Watching music video on YouTube | 1 shots | Watching a music video called "Love Me Again (Slowed & Ultra Slowed To Perfection)" on YouTube
+- 20:12 | WORK | Software Development and Debugging | 1 shots | Actively engaged in software development, focusing on debugging and refactoring an agent-based project
+- 20:16 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, likely related to browser automation and AI scraping
+- 20:19 | ENTERTAINMENT | watching youtube videos | 1 shots | On YouTube, watching a video titled "Skins (Slowed + Reverb)" by KREZUS
+- 20:22 | ENTERTAINMENT | Watching YouTube video | 1 shots | On YouTube, watching a video titled "Ceiling Gazing" by Mark Kozelek & Jimmy Lavalle
+- 20:25 | WORK | AI Model Prompting and Testing | 1 shots | Working with Google AI Studio, specifically using the Gemini 3 Pro Preview model
+- 20:28 | ENTERTAINMENT | Watching music video on YouTube | 1 shots | On YouTube, watching a music video titled "Audio to Break Your Limits (Pt
+- 20:31 | WORK | AI Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on a project related to automating tasks
+- 20:34 | WORK | Software Development | 1 shots | Working on a Python project, specifically writing and testing code related to API registry and MCP toolset
+- 20:37 | WORK | Software development and project management | 1 shots | Working on a software development project, likely related to browser automation
+- 20:41 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically related to an agent framework named 'agnt'
+- 20:44 | WORK | Version Control and Code Management | 1 shots | Interacting with a ChatGPT interface to understand how to manage a forked repository in the context of software development
+- 20:47 | ENTERTAINMENT | Watching music video | 1 shots | Watching a music video on YouTube
+- 20:50 | WORK | Software Development and Version Control | 1 shots | Working on a software project named 'agnt', which is a fork of Google's ADK (Agent Development Kit)
+- 20:56 | SOCIAL | Viewing Instagram reels | 1 shots | On Instagram, specifically browsing reels
+- 21:00 | WORK | AI image generation | 1 shots | Using Google AI Studio to generate an image
+- 21:03 | WORK | Software Development and Version Control | 1 shots | Working on a software development project, likely using Python, as indicated by the presence of `.py` files in the file explorer
+- 21:06 | WORK | Software Development and Documentation | 1 shots | Working on a software development project
+- 21:10 | WORK | Software Development and Version Control | 1 shots | Working on a software development project
+- 21:13 | ENTERTAINMENT | Watching and interacting with TikTok video | 1 shots | On TikTok, as indicated by the TikTok interface elements such as the "For You" page, search bar, and profile icon
+- 21:16 | ENTERTAINMENT | Watching TikTok videos and engaging with comments | 1 shots | Using TikTok, as indicated by the TikTok interface elements such as the search bar, 'For You' page, 'Explore' page, and profile icon
+- 21:19 | WORK | AI Model Interaction and Prompt Engineering | 1 shots | Interacting with Google AI Studio, specifically the Gemini 3 Pro Preview
+- 21:22 | WORK | Software Development | 1 shots | Working on a software development project, specifically modifying a Python file named 'agent.py' within a GitHub repository
+- 21:25 | OTHER | AI Agent Interaction | 1 shots | Interacting with an AI agent through a web interface
+- 21:28 | ENTERTAINMENT | Watching music video on YouTube | 1 shots | Watching a music video on YouTube
+- 21:31 | WORK | Software Development | 1 shots | Working on a software development project named 'agnt-web'
+- 21:35 | WORK | Software Development and Code Review | 1 shots | Working on a software development project, specifically reviewing and modifying code for a web application
+- 21:38 | WORK | Software Development | 1 shots | Working on a software development project, specifically focused on the frontend of a web application
+- 21:41 | WORK | AI Agent Automation | 1 shots | Interacting with an AI agent designed to automate web browsing tasks
+- 21:44 | WORK | AI Agent Web Automation | 1 shots | Interacting with an AI agent designed for web automation
+- 21:47 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, specifically debugging a frontend issue in a web application
+- 21:53 | SOCIAL | Browsing and commenting on Reddit | 1 shots | Browsing Reddit, specifically the r/pics subreddit, and engaging in discussions within a comment thread
+- 21:56 | ENTERTAINMENT | Watching Instagram Reels | 1 shots | On Instagram and appears to be watching Reels
+- 22:00 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, specifically debugging a frontend issue in a JavaScript/TypeScript application (likely React, given the file names)
+- 22:03 | WORK | Software Development | 1 shots | Actively engaged in software development, working on a project named 'agnt-web'
+- 22:06-22:12 | WORK | Software Development and Version Control | 3 shots | Working on a software development project, as evidenced by the IDE open on the right side of the screen
+- 22:15 | WORK | AI Prompt Engineering | 1 shots | Working in Google AI Studio, specifically focusing on prompt engineering for AI models
+- 22:18 | SOCIAL | Viewing memories on Google Photos | 1 shots | Viewing a memory from December 24, 2024, on Google Photos
+- 22:22 | SOCIAL | Viewing a birthday message | 1 shots | Viewing a photo on Google Photos
+- 22:25 | WORK | Software Development and Version Control | 1 shots | Working on a software development project, specifically modifying a CHANGELOG.md file
+- 22:28 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, viewing a post featuring an image
+- 22:31 | ENTERTAINMENT | watching reels on Instagram | 1 shots | On Instagram and is currently watching a reel
+- 22:34 | SOCIAL | Viewing Instagram Reels | 1 shots | Viewing an Instagram reel on their desktop
+- 22:37 | ENTERTAINMENT | Watching Instagram Reels | 1 shots | On Instagram, specifically browsing Reels
+- 22:40-22:43 | WORK | Software Development | 2 shots | Working on a software development project
+- 22:47 | WORK | Software Development and Bug Fixing | 1 shots | Working on a software development project, specifically related to an 'agnt' library
+- 22:50 | ENTERTAINMENT | Watching YouTube video and playlist | 1 shots | On YouTube, watching a video titled "Naruto Shippuden - Samidare |EXTENDED| (Early Summer Rain)" by TheWalkingAmongTheDead
+- 22:53 | WORK | Software Development and Testing | 1 shots | Working on a software development project, specifically focusing on browser automation tools
+- 22:56 | ENTERTAINMENT | Browsing Reddit | 1 shots | The main content visible is a post from the r/OnePunchMan subreddit, marked as a spoiler
+- 22:59 | WORK | Software Development and Testing | 1 shots | Working on a software development project, specifically related to browser automation tools within an agent framework
+- 23:02-23:05 | WORK | Software Development | 2 shots | Working on a software development project in an IDE (likely VS Code)
+- 23:09 | ENTERTAINMENT | watching youtube shorts and commenting | 1 shots | On YouTube, watching a short video
+- 23:12 | WORK | Debugging a web application | 1 shots | Likely debugging a web application using the Chrome DevTools
+- 23:15-23:18 | WORK | Software Development and Debugging | 2 shots | Actively engaged in software development and debugging activities
+- 23:36 | WORK | Debugging and Software Development | 1 shots | Engaged in software development and debugging
+- 23:39 | WORK | Software Development and Debugging | 1 shots | Engaged in software development and debugging
+- 23:48 | ENTERTAINMENT | Watching YouTube videos | 1 shots | On the YouTube homepage, browsing for videos to watch
+- 23:52 | ENTERTAINMENT | Watching and liking a YouTube video | 1 shots | Interacting with YouTube
+
+### 2025-12-05
+- counts: work 68, learn 6, social 17, entertainment 25, other 9
+- hours: work 3.1h, learn 0.3h, social 0.7h, entertainment 1.2h, other 0.3h
+- share: work 54.4%, learn 4.8%, social 13.6%, entertainment 20%, other 7.2%
+- 00:10 | OTHER | Desktop Customization | 1 shots | Looking at the desktop screen with a custom wallpaper and widgets
+- 13:41 | SOCIAL | Conversation | 1 shots | The image shows two individuals engaged in a conversation outdoors
+- 13:45 | SOCIAL | Social Gathering | 1 shots | The image shows a group of people gathered in what appears to be a living room or common area
+- 14:12 | OTHER | AI Interview | 1 shots | Interacting with the Anthropic AI assistant, specifically responding to a prompt asking them to shape the future of AI by sharing their thoughts via an AI interviewer
+- 14:24 | OTHER | Desktop Customization/System Monitoring | 1 shots | Viewing their desktop, which displays the current date and time (December 5, 2025, 15:24) and a temperature reading (N/A)
+- 14:27 | OTHER | desktop customization | 1 shots | The screenshot displays a desktop environment, likely a personal computer
+- 14:43 | ENTERTAINMENT | Watching YouTube music playlist | 1 shots | Watching a YouTube music playlist called "Mix - [SNS] • THAT'S MY GIRL MEP"
+- 15:10 | WORK | Logging into Upwork | 1 shots | Logging into their Upwork account
+- 15:29 | ENTERTAINMENT | Watching YouTube videos | 1 shots | Watching a YouTube video titled "[SNS] • THAT'S MY GIRL MEP" on the SuperNovaStudios channel
+- 15:32 | ENTERTAINMENT | Watching music video on YouTube | 1 shots | Watching the "Lady Gaga - Bloody Mary (tiktok remix full version)" music video on YouTube
+- 15:35 | OTHER | Reviewing Google One AI Plans | 1 shots | On the Google One website, specifically looking at the AI plans
+- 15:38 | WORK | Software Development | 1 shots | Currently working on a software development project, specifically focused on the 'agnt' project
+- 15:41 | WORK | Software development and documentation | 1 shots | Working on a software development project, specifically focusing on artifacts management within the 'agnt' project
+- 15:44 | WORK | Project Planning and Brainstorming | 1 shots | In the process of planning a project related to AI, specifically agentic AI
+- 15:47 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically focusing on artifacts management
+- 16:21 | WORK | Software Development and Documentation | 1 shots | Working on a software development project named 'agnt'
+- 16:24 | WORK | Software Development & Documentation | 1 shots | Working on a software development project, specifically focused on artifacts management within the 'agnt' project
+- 16:27 | WORK | Software Development and Documentation | 1 shots | Working on a software project, specifically related to browser automation agents
+- 16:30 | SOCIAL | Browsing Reddit | 1 shots | The main content visible is a post from r/SideProject about a real-time architecture visualizer
+- 16:33 | SOCIAL | Browsing Reddit and seeking feedback on a project | 1 shots | On Reddit, specifically in the r/SideProject subreddit
+- 16:36 | WORK | Software Architecture Visualization Tool Development | 1 shots | On Reddit, specifically on the r/SideProject subreddit, viewing a post about a tool the author developed
+- 16:39 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing the Reddit website, specifically the "okbuddycinephile" subreddit
+- 16:43 | ENTERTAINMENT | Watching YouTube Music | 1 shots | On YouTube, watching a music video or listening to music
+- 16:46 | WORK | software development | 1 shots | Working on software development, specifically modifying Python code related to browser automation
+- 16:49 | LEARN | Researching and discussing software architecture on Reddit | 1 shots | Browsing a Reddit post in the r/SideProject subreddit about a real-time architecture visualizer
+- 16:52 | SOCIAL | Browsing Reddit | 1 shots | Browsing Reddit, specifically viewing a post on the r/mac subreddit
+- 16:55 | ENTERTAINMENT | Watching TikTok and reading comments | 1 shots | On TikTok, watching a video and reading the comments
+- 16:58 | ENTERTAINMENT | Watching and interacting with TikTok videos | 1 shots | On TikTok, watching a video featuring two cups of coffee
+- 17:01 | LEARN | Reviewing documentation and Q&A on an AI framework | 1 shots | On a page titled 'Code Wiki' reviewing documentation for 'google/adk-python', which appears to be an Agent Development Kit (ADK) Core Framework
+- 17:05 | OTHER | Browsing Reddit | 1 shots | The main content visible is a post from the r/automation subreddit about replacing a $3k/mo SEO retainer with a modular workflow costing $50/mo
+- 17:08 | SOCIAL | Browsing Instagram Reels | 1 shots | Browsing Instagram Reels on their computer
+- 17:11 | ENTERTAINMENT | Consuming social media content | 1 shots | On Instagram, specifically viewing a reel
+- 17:14 | WORK | Software Development | 1 shots | Working on a software development project
+- 17:17 | SOCIAL | Browsing and interacting on Reddit | 1 shots | On Reddit, specifically browsing the r/automation subreddit
+- 17:20 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, focusing on implementing browser screenshot artifacts
+- 17:23 | WORK | Software Development | 1 shots | Working on a software development project, likely a web application, using an IDE (likely VS Code)
+- 17:26 | ENTERTAINMENT | Watching a cat livestream and interacting in chat | 1 shots | Watching a livestream of a cat or cats, specifically on a website called "feed-the.cat"
+- 17:30 | ENTERTAINMENT | Watching YouTube video | 1 shots | Watching a YouTube video titled "[SNS] • Like We're Gonna Die Young MEP" by SuperNovaStudios
+- 17:33 | ENTERTAINMENT | Watching and interacting with TikTok videos | 1 shots | On TikTok, watching a video and interacting with the content
+- 17:36 | ENTERTAINMENT | Watching and commenting on TikTok videos | 1 shots | On TikTok, watching a video posted by the user 'physicstrick'
+- 17:39 | WORK | Software Development | 1 shots | Working on a software development project, specifically focusing on the backend component of a web application named 'agnt-web'
+- 17:42 | WORK | Software Development and Debugging | 1 shots | Working on a software development project named "agnt-web" with backend written in Python and frontend in React
+- 17:45 | WORK | Software Development | 1 shots | Engaged in software development, working on a project named "agnt-web"
+- 17:49 | ENTERTAINMENT | Watching YouTube video and browsing the suggested videos | 1 shots | Watching a YouTube video titled "[SNS] • Like We're Gonna Die Young MEP" by SuperNovaStudios
+- 17:52 | WORK | Debugging and developing a browser automation agent | 1 shots | Working on debugging and developing a browser automation agent
+- 17:55 | OTHER | AI agent interaction and debugging | 1 shots | Interacting with an AI agent through a web interface
+- 17:58 | WORK | software development | 1 shots | Actively engaged in software development, working within a development environment
+- 18:01 | WORK | Debugging software | 1 shots | Debugging a software application, likely related to browser automation
+- 18:04 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, viewing a reel and interacting with the comments section
+- 18:07 | ENTERTAINMENT | Watching Instagram Reels | 1 shots | Watching an Instagram Reel on their computer
+- 18:10 | ENTERTAINMENT | Browsing Instagram content | 1 shots | Browsing Instagram on their computer
+- 18:14 | WORK | AI Agent Browser Automation | 1 shots | Interacting with an AI agent designed for browser automation
+- 18:17 | WORK | Software Development and Debugging | 1 shots | Actively engaged in software development, specifically working on a project named 'agnt-web' which seems to involve frontend (React) and backend (Python) components
+- 18:20 | ENTERTAINMENT | watching reels on Instagram | 1 shots | Watching reels on Instagram
+- 18:23 | ENTERTAINMENT | Social Media Entertainment | 1 shots | On Instagram, specifically viewing an Instagram Reel
+- 18:26 | ENTERTAINMENT | Browsing TikTok | 1 shots | Browsing TikTok, specifically searching for "lynda el oued"
+- 18:29 | ENTERTAINMENT | Watching YouTube video | 1 shots | Watching a YouTube video titled "Suzune Horikita - Without Me [AMV]" on YouTube
+- 18:32 | ENTERTAINMENT | Watching YouTube | 1 shots | Watching a YouTube video titled "[YDS] • BURN IT UP!
+- 18:38 | WORK | Software Development | 1 shots | Working on a software development project
+- 18:41 | SOCIAL | Browsing and interacting on Reddit | 1 shots | Browsing Reddit, specifically the r/sideprojects subreddit
+- 18:45 | WORK | Software Development | 1 shots | Working on a software development project, specifically focused on browser automation tools for AI agents
+- 18:48 | WORK | Software Development and Code Review | 1 shots | Currently engaged in software development, specifically working with Python code in an IDE
+- 18:51 | ENTERTAINMENT | watching youtube videos | 1 shots | Watching YouTube videos
+- 18:54 | WORK | Software Development | 1 shots | Working on a software development project, specifically related to browser automation
+- 18:57 | WORK | Debugging and developing an agent automation tool | 1 shots | Working on an agent automation tool, likely debugging or developing new features
+- 19:00 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically focused on browser automation and web scraping
+- 19:03-19:13 | WORK | Software Development and Debugging | 4 shots | Working on a software development project, specifically debugging and modifying Python code
+- 19:16-19:22 | WORK | Software Development | 3 shots | Working on a software development project, specifically focused on browser automation using Python
+- 19:26 | WORK | Software Development and Documentation | 1 shots | Working on a software development project named 'agnt-web'
+- 19:29 | ENTERTAINMENT | Searching for PewDiePie on YouTube | 1 shots | Interacting with an AI agent to automate web browsing tasks
+- 19:32 | WORK | Software Development | 1 shots | On GitHub, viewing the repository 'agnt' under the user 'njraladdin.' The repository is forked from 'google/adk-python' and is described as an open-source, code-first Python toolki
+- 19:35 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working within Google AI Studio, likely developing and testing prompts for an AI model
+- 19:38 | WORK | AI Agent Development | 1 shots | Working on an AI agent development project within Google AI Studio
+- 19:41 | WORK | AI Model Development and Experimentation | 1 shots | Working with Google AI Studio, likely developing or experimenting with an AI model
+- 19:44 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working in Google AI Studio, likely developing or testing AI models
+- 19:47 | WORK | AI Model Development and Experimentation | 1 shots | Working within Google AI Studio, likely developing and experimenting with AI models, specifically using the Gemini 3 Pro Preview
+- 19:51 | LEARN | Researching capability analysis | 1 shots | Conducting a Google search on "capabilité générale" (general capability), a term related to capability analysis, likely in a manufacturing or process improvement context
+- 19:54 | WORK | AI Model Development | 1 shots | Working on a project within Google AI Studio, specifically focusing on "Aladdin's Project Motivations." The screen displays a text-based interface with notes about a development ap
+- 19:57 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working within the Google AI Studio environment, specifically on a project named "Aladdin's Project Motivations." They appear to be developing or refining prompts for the Gemini 3
+- 20:00 | ENTERTAINMENT | Social media browsing | 1 shots | Browsing Instagram reels and viewing comments on a video featuring a dog
+- 20:03 | ENTERTAINMENT | Watching and interacting with Instagram Reels | 1 shots | On Instagram, specifically watching a Reel
+- 20:06 | WORK | AI Model Interaction and Prompt Engineering | 1 shots | Interacting with Google AI Studio, specifically working on a project named 'Aladdin's Project Motivations'
+- 20:09 | SOCIAL | Browsing and interacting with Reddit | 1 shots | On Reddit, browsing the r/Tunisia subreddit and viewing a post discussing the country's energy deficit and sovereignty
+- 20:13 | WORK | AI Model Interaction and Prompting | 1 shots | Interacting with Google AI Studio, likely for work or research purposes
+- 20:22 | WORK | AI Model Development and Documentation | 1 shots | Working within Google AI Studio, likely developing or refining an AI model
+- 20:25 | OTHER | general computer use | 1 shots | On a new tab in Chrome
+- 20:28-20:31 | SOCIAL | Social Media Interaction | 2 shots | On Instagram, viewing and interacting with posts
+- 20:34 | SOCIAL | Browsing Instagram | 1 shots | Browsing Instagram on their computer
+- 20:37 | ENTERTAINMENT | Watching YouTube videos | 1 shots | Instructed the agent to navigate to YouTube, search for "pewdiepie", and click on the first video
+- 20:41 | LEARN | AI Model Prompting and Debugging | 1 shots | Interacting with Google AI Studio, specifically focusing on 'Aladdin's Project Motivations'
+- 20:44 | WORK | AI Model Interaction and Prompt Engineering | 1 shots | Interacting with Google AI Studio, specifically working on a project titled "Aladdin's Project Motivations." They are engaging in prompt engineering, refining the model's responses
+- 20:47 | WORK | AI Prompt Engineering | 1 shots | Working on AI prompt engineering using Google AI Studio
+- 21:02 | LEARN | Language Translation | 1 shots | Using Google Translate to translate the French phrase "capabilité générale" into Arabic
+- 21:38 | SOCIAL | Browsing Reddit | 1 shots | The main focus of the screen is on the Reddit homepage, displaying posts from various subreddits
+- 21:41 | LEARN | Genealogy and History Research | 1 shots | Conducting research on Hermann Göring and his family using Google search
+- 21:44 | SOCIAL | Email Management | 1 shots | Managing their Gmail inbox
+- 22:05 | SOCIAL | Email Management | 1 shots | Managing their Gmail inbox
+- 22:15 | OTHER | Workout planning | 1 shots | Viewing a workout summary card on their computer
+- 22:18 | WORK | Software Development | 1 shots | Working on a Python project related to AI scraping
+- 22:21 | WORK | Software Development: AI Agent Configuration | 1 shots | Working on a software development task, specifically configuring an AI agent for web scraping
+- 22:39 | SOCIAL | Browsing and commenting on Reddit | 1 shots | Browsing Reddit, specifically the r/singularity subreddit
+- 22:42 | WORK | AI Scraping Agent Development | 1 shots | Working on developing an AI scraping agent
+- 22:45 | WORK | AI Agent Development and Prompt Engineering | 1 shots | Working on AI agent development, specifically focusing on prompt engineering
+- 22:48 | WORK | Software Development | 1 shots | Working on software development, specifically related to AI scraping agents
+- 22:52-22:55 | WORK | AI Agent Development | 2 shots | Working on developing an AI scraping agent
+- 23:07-23:10 | WORK | AI Agent Development | 2 shots | Developing an AI scraping agent, working on code related to data extraction and orchestration
+- 23:13-23:20 | WORK | Software Development | 3 shots | On GitHub, reviewing a pull request that has been merged
+- 23:23 | WORK | Software Development and Code Analysis | 1 shots | Working on a software development project, specifically analyzing and modifying Python code within an IDE (likely VS Code)
+- 23:26-23:42 | WORK | Software Development | 5 shots | Working on software development, specifically working within the 'agnt' project
+- 23:54 | WORK | Software Development and Documentation | 1 shots | Working on a software development project, specifically implementing a JavaScript execution tool within a Python-based browser automation framework
+- 23:57 | WORK | Software Development | 1 shots | Working on a software development project, specifically focusing on Python code within an IDE
+
+### 2025-12-06
+- counts: work 47, learn 33, social 9, entertainment 25, other 6
+- hours: work 1.8h, learn 1.7h, social 0.4h, entertainment 1.2h, other 0.2h
+- share: work 39.2%, learn 27.5%, social 7.5%, entertainment 20.8%, other 5%
+- 00:00-00:03 | WORK | Software Development | 2 shots | Working on a software development project, specifically focused on JavaScript code
+- 00:06 | WORK | Software Development and Code Review | 1 shots | Working on a software development task, specifically related to data extraction and processing in Python and Javascript
+- 00:27-00:37 | WORK | Software Development | 4 shots | Working on a software development task, specifically related to data extraction using JavaScript within a Python environment
+- 00:40 | WORK | Software Development and Code Review | 1 shots | Working on a software development project, specifically related to browser automation and agent management
+- 00:46 | WORK | Software Development | 1 shots | Working on a software development project, specifically related to the 'agnt-web' project
+- 00:49 | WORK | Web scraping automation | 1 shots | Interacting with an AI agent designed to automate web browsing tasks, specifically to extract data from the website 'quotes.toscrape.com'
+- 01:02 | WORK | Web scraping and data extraction | 1 shots | Using an AI agent to automate web browsing tasks, specifically to extract quotes from the website 'quotes.toscrape.com'
+- 01:05 | WORK | Software Development | 1 shots | Engaged in software development, working on a project named 'agnt-web'
+- 01:08 | WORK | Debugging and Investigating Artifact Content Display | 1 shots | Working on a software development project, specifically debugging and investigating how artifact content is displayed in a web application
+- 01:20 | WORK | Software Development | 1 shots | Working on a software development project named 'agnt-web' using an IDE (likely VS Code)
+- 01:41 | WORK | Software Development | 1 shots | Working on a software development project, specifically within the 'agnt-web' directory
+- 01:44-01:50 | WORK | Software Development and Debugging | 2 shots | Working on a software development project, likely a web application, using an IDE
+- 02:21 | WORK | Software Development and Debugging | 1 shots | Working on a software development project, specifically debugging and potentially refactoring code within the 'agnt-web' project, which appears to be a web application
+- 02:24 | WORK | Software Development | 1 shots | Working on a software development project
+- 02:27 | WORK | Web scraping and data extraction | 1 shots | Interacting with an AI agent designed to automate web browsing tasks
+- 02:39-02:45 | OTHER | Viewing a post-workout stretch routine | 2 shots | Viewing an image of a post-workout stretch routine
+- 02:48 | OTHER | Viewing post-workout stretch routine | 1 shots | Viewing an image of a post-workout stretch routine
+- 13:14 | SOCIAL | Interview | 1 shots | The image shows two men sitting at a table, likely during an interview or discussion
+- 13:20 | WORK | Office Environment | 1 shots | The image depicts an office environment with several individuals present
+- 13:41 | ENTERTAINMENT | Watching a TV show | 1 shots | Watching an episode of the TV show "Silicon Valley" on a streaming platform called flixbaba.is
+- 13:44 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/SiliconValleyHBO subreddit
+- 13:47 | OTHER | Desktop Customization | 1 shots | Viewing their desktop environment, which appears to be customized with a scenic wallpaper featuring mountains and a forest
+- 13:53 | ENTERTAINMENT | Watching YouTube shorts and reading comments | 1 shots | On YouTube, watching a short video titled "Avengers hunting Captain" by @xCROSSx3
+- 13:57 | WORK | Project Planning and File Management | 1 shots | Interacting with a file explorer window titled "planning" within the "agnt-web" project directory
+- 14:00 | SOCIAL | Social Media Interaction | 1 shots | On Instagram, viewing a post from the account 'mammamia.partymotto'
+- 14:03 | WORK | AI Model Prompt Engineering | 1 shots | Working within Google AI Studio, specifically interacting with the Gemini 3 Pro Preview
+- 14:06 | ENTERTAINMENT | Watching TikTok video | 1 shots | On TikTok, watching a video, and is currently on the comments section, with over 200 comments
+- 14:09 | WORK | AI Development | 1 shots | Working on Google AI Studio
+- 14:12 | WORK | AI Model Prompt Engineering | 1 shots | Working within Google AI Studio, specifically on a project named "The Golden Pull" Architect
+- 14:15 | ENTERTAINMENT | watching YouTube | 1 shots | Watching a YouTube video, specifically "Lady Gaga - Bloody Mary (tiktok remix full version)" by Relaxing Trap
+- 14:18 | WORK | AI Agent Development and Architecture | 1 shots | Working within Google AI Studio, specifically on a project titled "The 'Golden Pull' Architect." The interface shows a document or report that seems to outline the architecture and
+- 14:22 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/interestingasfuck subreddit
+- 14:25 | LEARN | Researching taxonomy | 1 shots | Conducting a Google search for "Taxonomy." The search results page is displayed, showing definitions, related questions, and links to resources like Wikipedia and the National Inst
+- 14:28 | LEARN | Researching animal classification | 1 shots | On a ChatGPT page, engaged in a conversation about animal classification
+- 14:31 | LEARN | Learning about taxonomy | 1 shots | On a ChatGPT page, learning about taxonomy
+- 14:34 | LEARN | Research and learning about taxonomy | 1 shots | Interacting with ChatGPT to learn about taxonomy, specifically its history and applications outside of biology
+- 14:37 | LEARN | Researching and understanding taxonomies | 1 shots | On a ChatGPT page discussing taxonomies, likely for learning or research purposes
+- 14:40 | LEARN | Researching and discussing taxonomy using a chatbot | 1 shots | Interacting with a ChatGPT chatbot, discussing the concept of taxonomy, particularly in relation to biology and software
+- 14:43 | LEARN | Researching taxonomy and its applications | 1 shots | On ChatGPT, engaged in a conversation about taxonomy
+- 14:47 | LEARN | Researching and discussing ontologies and taxonomies using ChatGPT | 1 shots | Interacting with ChatGPT, specifically discussing the concepts of ontologies and taxonomies
+- 14:50 | LEARN | Researching animal evolution | 1 shots | On ChatGPT, seemingly researching animal evolution
+- 14:53 | LEARN | Researching evolution and ontology using a chatbot | 1 shots | Interacting with a chatbot (ChatGPT) to learn about evolution and ontology
+- 14:56 | ENTERTAINMENT | watching YouTube videos | 1 shots | Watching a YouTube video titled "STARLY (Slowed) - LONOWN, riserayss | TikTok Version x Ellie (Xyuk Official Video)" on the YouTube website
+- 14:59 | ENTERTAINMENT | Watching music video on YouTube | 1 shots | On YouTube and appears to be watching a music video titled "STARLY (Slowed) - LONOWN, riserayss | TikTok Version x Ellie (Xyuk Official Video)"
+- 15:05 | LEARN | Researching and discussing ontology and taxonomy using ChatGPT | 1 shots | Engaged in a learning activity, specifically researching and discussing the concepts of ontology and taxonomy
+- 15:08 | LEARN | Researching and discussing ontology | 1 shots | Interacting with ChatGPT, seemingly to learn about ontology and its applications
+- 15:12 | LEARN | Watching ontology lecture | 1 shots | On YouTube and has searched for "ontology harvard lecture"
+- 15:15 | LEARN | Watching an Epistemology lecture on YouTube | 1 shots | Watching a YouTube video titled "Epistemology" by Robert Jensen
+- 15:18 | LEARN | Researching business processes and their relation to human needs | 1 shots | On ChatGPT and is reading an explanation about why businesses need consistent records
+- 15:21 | LEARN | AI and Systems Thinking Discussion on ChatGPT | 1 shots | Interacting with ChatGPT, seemingly engaged in a discussion about AI, systems thinking, and their applications to human systems
+- 15:24 | LEARN | AI Assisted Learning | 1 shots | Using ChatGPT to explore concepts related to human behavior and societal structures
+- 15:27-15:30 | WORK | AI Model Development | 2 shots | Working on an AI project within Google AI Studio, specifically focusing on "The Golden Pull" Architect
+- 15:33 | WORK | AI Model Development and Taxonomy Definition | 1 shots | Working on Google AI Studio, specifically focusing on "The 'Golden Pull' Architect", which appears to be a taxonomy for an AI ecosystem
+- 15:37 | WORK | AI Model Development/Taxonomy Design | 1 shots | Working within Google AI Studio, specifically on defining and designing a taxonomy for an AI agent architecture, named the "Golden Pull" Architect
+- 15:52 | WORK | AI Model Development and Documentation | 1 shots | Working with Google AI Studio, specifically interacting with a project titled "The 'Golden Pull' Architect." The screen shows the project's documentation or architecture, detailing
+- 15:55 | LEARN | Watching an Epistemology lecture on YouTube | 1 shots | Watching a YouTube video titled "Epistemology" by Robert Jensen
+- 15:58 | SOCIAL | Browsing Reddit and searching for information on Google Jules | 1 shots | Browsing Reddit, specifically the r/vibecoding subreddit
+- 16:01 | WORK | AI Model Development | 1 shots | Working with Google AI Studio, likely developing or testing an AI model
+- 16:04 | LEARN | Watching an epistemology lecture on YouTube | 1 shots | Watching a YouTube video titled "Epistemology" by Robert Jensen
+- 16:07 | ENTERTAINMENT | Watching TikTok video and interacting with comments | 1 shots | Watching a TikTok video and is on the comments section
+- 16:10 | ENTERTAINMENT | Watching and interacting with TikTok content | 1 shots | On TikTok, watching a video posted by the user 'im_riteej'
+- 16:14 | WORK | AI Model Development and Taxonomy Refinement | 1 shots | Working with Google AI Studio, specifically focusing on refining the taxonomy for an AI model architecture named "The Golden Pull" Architect
+- 16:17 | WORK | AI Model Documentation and Configuration | 1 shots | Working with Google AI Studio, likely documenting and configuring an AI model
+- 16:23 | SOCIAL | Browsing Reddit | 1 shots | Browsing the Reddit website
+- 16:26 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working with Google AI Studio, likely developing and testing AI models or prompts
+- 16:41 | WORK | AI Model Interaction and Documentation | 1 shots | Interacting with Google AI Studio, specifically working with "The 'Golden Pull' Architect" project
+- 16:44 | WORK | AI Model Prompt Engineering | 1 shots | Working with Google AI Studio, specifically on prompt engineering for the "Golden Pull" Architect
+- 16:51 | LEARN | AI Learning and Research | 1 shots | Interacting with ChatGPT to learn about the fundamental roots of technology
+- 16:55 | LEARN | AI and Technology Concepts Exploration | 1 shots | Interacting with ChatGPT, exploring fundamental concepts related to technology
+- 16:58 | LEARN | Researching and learning about AI and cognitive load | 1 shots | Interacting with ChatGPT and appears to be researching or learning about the complexities of reality, the need for models and simplifications, and the concept of cognitive load
+- 17:01 | SOCIAL | Instagram browsing and commenting | 1 shots | Browsing Instagram, specifically viewing a post from mammamia.partymotto
+- 17:04 | ENTERTAINMENT | Viewing Instagram Reels and comments | 1 shots | On Instagram, specifically viewing a reel
+- 17:07 | ENTERTAINMENT | Social Media Entertainment | 1 shots | On Instagram, specifically viewing a reel
+- 17:10 | ENTERTAINMENT | Watching Instagram Reels | 1 shots | Watching Instagram Reels on their computer
+- 17:13 | LEARN | Researching software architecture and system design concepts | 1 shots | On ChatGPT and appears to be discussing software architecture and system design concepts
+- 17:16 | LEARN | AI learning and problem-solving | 1 shots | Interacting with ChatGPT, likely to learn about or solve a problem related to system design and scaling
+- 17:20 | SOCIAL | Browsing Reddit | 1 shots | Browsing the Reddit website
+- 17:23 | LEARN | AI Learning and Cognitive Load Reduction | 1 shots | Interacting with ChatGPT, likely to learn about AI and cognitive load reduction
+- 17:26 | ENTERTAINMENT | Watching TikTok and engaging with comments | 1 shots | Watching a TikTok video on their computer
+- 17:29 | ENTERTAINMENT | Watching TikTok video and interacting with comments | 1 shots | On TikTok, watching a video labeled as AI-generated
+- 17:32 | SOCIAL | Browsing Instagram | 1 shots | Browsing Instagram on a desktop computer
+- 17:35 | SOCIAL | Browsing Reddit | 1 shots | The Reddit homepage is visible, with various posts from different subreddits
+- 17:38-17:41 | LEARN | Learning about engine types | 2 shots | On ChatGPT, asking about car engines, specifically V8 engines
+- 17:44 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working in Google AI Studio, specifically on "The Golden Pull" Architect project
+- 17:48 | ENTERTAINMENT | Watching TikTok video | 1 shots | Watching a TikTok video on their computer
+- 17:51 | ENTERTAINMENT | Watching TikTok video and reading comments | 1 shots | Watching a TikTok video on their computer
+- 17:54 | ENTERTAINMENT | Browsing Reddit | 1 shots | Browsing Reddit, specifically the r/mildlyinteresting subreddit
+- 17:57 | WORK | AI Model Development and Prompt Engineering | 1 shots | Working with Google AI Studio, specifically on a project titled "The Golden Pull" Architect
+- 19:32 | SOCIAL | Viewing Instagram stories | 1 shots | Currently viewing Instagram stories
+- 19:35 | ENTERTAINMENT | Watching and commenting on YouTube shorts | 1 shots | Watching a YouTube short from the channel @ToxicCouple-Alg-Ua titled "The Dark Knight | Batman Vs The Joker." The short appears to be a clip from one of the Batman movies, featurin
+- 19:38 | ENTERTAINMENT | Watching YouTube video | 1 shots | Watching a YouTube video titled "Bat Cave Ambience | Dark Knight Trilogy Music (One Hour)" by Wade Wojcik
+- 19:56 | WORK | AI model development and prompt engineering | 1 shots | Working on a Google AI Studio project, specifically focusing on "The 'Golden Pull' Architect"
+- 19:59 | LEARN | Research and AI interaction | 1 shots | Interacting with the ChatGPT interface, exploring the concept of software as crystallized human psychology
+- 20:02 | LEARN | Researching and planning a simulation game | 1 shots | On ChatGPT, likely researching or brainstorming ideas for a simulation game, possibly related to economics or resource management
+- 20:05 | LEARN | AI and Language Model Research | 1 shots | Interacting with ChatGPT, likely for research or learning purposes, focused on understanding how real-world layers can be integrated with simulated economies to create a hybrid rea
+- 20:09-20:12 | LEARN | AI Research and Discussion | 2 shots | Interacting with ChatGPT, likely for research or learning purposes
+- 20:15 | WORK | Analyzing monetization strategies for a simulation game | 1 shots | Viewing a ChatGPT interface outlining potential monetization strategies for a simulation game
+- 20:18 | ENTERTAINMENT | Browsing Reddit | 1 shots | The main content visible is a video titled "Skier narrowly avoids a crevasse" from the r/youtube subreddit
+- 20:21 | OTHER | Idea Generation and Note Taking | 1 shots | Using a text editor to jot down ideas and notes
+- 20:24 | ENTERTAINMENT | Watching and interacting with TikTok content | 1 shots | On TikTok, watching a video of a person performing what they describe as a cardiac massage on a kitten
+- 20:27 | WORK | Brainstorming and Idea Generation | 1 shots | Using ChatGPT to brainstorm and generate ideas related to real-earth simulations
+- 20:30 | LEARN | AI research and development | 1 shots | Interacting with ChatGPT, likely exploring AI concepts for real-world simulations
+- 20:33 | OTHER | Idea generation and note-taking | 1 shots | Using a text editor (ideas.txt) to jot down various ideas and concepts
+- 20:37 | WORK | AI Model Development and Experimentation | 1 shots | Working in Google AI Studio, experimenting with the "Golden Pull" architecture
+- 20:40 | ENTERTAINMENT | Watching and commenting on YouTube video | 1 shots | On YouTube, watching a video titled "batman vbat cave ambiance." The video appears to be related to Batman, specifically featuring Harley Quinn
+- 20:43 | ENTERTAINMENT | watching youtube shorts | 1 shots | Watching YouTube shorts
+- 20:46 | WORK | Software Development and Project Management | 1 shots | On GitHub, likely managing software development projects
+- 20:49 | WORK | AI Model Development and Documentation | 1 shots | Working within Google AI Studio, specifically interacting with "The Golden Pull" architecture
+- 20:52 | WORK | AI model development | 1 shots | Working with Google AI Studio, specifically on a project titled "The Golden Pull" Architect
+- 20:55 | ENTERTAINMENT | Listening to music on YouTube | 1 shots | On YouTube and appears to be listening to a music mix titled "Mix - SKYFALL Adele (slowed)"
+- 20:58 | WORK | AI model development | 1 shots | Working with Google AI Studio, apparently developing and experimenting with AI models, specifically Gemini 3 Pro
+
+## Monthly Stats
+### 2025-11
+- avg_share: work 49.1%, learn 11%, social 14%, entertainment 21.7%, other 4.2%
+- total_hours: work 17.1h, learn 3.9h, social 5.1h, entertainment 8.2h, other 1.2h
+- days_with_data: 6
