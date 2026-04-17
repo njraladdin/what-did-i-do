@@ -30,6 +30,7 @@ interface ExportMetadata {
     };
     rangeType: string;
     screenshotCount: number;
+    noteCount?: number;
     categories: readonly string[];
     version: string;
 }
@@ -40,6 +41,13 @@ interface ExportScreenshot {
     category: Category;
     activity: string;
     description?: string;
+}
+
+interface ExportNote {
+    id: string | number;
+    date: string;
+    timestamp: string;
+    content: string;
 }
 
 interface DailyStat {
@@ -64,6 +72,7 @@ interface ExportStatistics {
 interface ExportJson {
     metadata: ExportMetadata;
     screenshots: ExportScreenshot[];
+    notes: ExportNote[];
     statistics: ExportStatistics;
 }
 
@@ -74,6 +83,11 @@ interface Session {
     end: Date;
     count: number;
     descriptions: string[];
+}
+
+interface NotesByDayEntry {
+    time: string;
+    content: string;
 }
 
 function roundValue(value: number, digits: number = 1): string {
@@ -162,6 +176,14 @@ function formatStatsLine(values: Partial<Record<Category, number>>, unit: string
     return parts.join(', ');
 }
 
+function compactNoteContent(text: string): string {
+    return text
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 240)
+        .replace(/[ .,;]+$/, '');
+}
+
 function collectTopActivities(screenshots: ExportScreenshot[], limit: number = 8): string {
     const counts = new Map<string, number>();
 
@@ -228,8 +250,28 @@ function mergeSessions(screenshots: ExportScreenshot[], mergeGapMinutes: number 
     return sessionsByDay;
 }
 
+function collectNotesByDay(notes: ExportNote[]): Map<string, NotesByDayEntry[]> {
+    const notesByDay = new Map<string, NotesByDayEntry[]>();
+
+    for (const note of [...notes].sort((a, b) => a.timestamp.localeCompare(b.timestamp))) {
+        const timestamp = new Date(note.timestamp);
+        const dayKey = note.date || timestamp.toISOString().slice(0, 10);
+        const dayNotes = notesByDay.get(dayKey) || [];
+
+        dayNotes.push({
+            time: timestamp.toISOString().slice(11, 16),
+            content: compactNoteContent(note.content)
+        });
+
+        notesByDay.set(dayKey, dayNotes);
+    }
+
+    return notesByDay;
+}
+
 export function buildCompactMarkdown(exportJson: ExportJson): string {
     const sessionsByDay = mergeSessions(exportJson.screenshots);
+    const notesByDay = collectNotesByDay(exportJson.notes || []);
     const lines: string[] = ['# Compact Activity Export', '', '## Overview'];
 
     lines.push(`- export_date: ${exportJson.metadata.exportDate}`);
@@ -237,14 +279,21 @@ export function buildCompactMarkdown(exportJson: ExportJson): string {
         `- date_range: ${exportJson.metadata.dateRange.startDate} to ${exportJson.metadata.dateRange.endDate}`
     );
     lines.push(`- screenshots: ${exportJson.metadata.screenshotCount}`);
+    lines.push(`- notes: ${exportJson.metadata.noteCount ?? exportJson.notes.length}`);
     lines.push(`- top_activities: ${collectTopActivities(exportJson.screenshots)}`);
     lines.push('');
 
     const dailyStats = exportJson.statistics.dailyStats || {};
-    if (sessionsByDay.size > 0) {
+    const days = new Set<string>([
+        ...sessionsByDay.keys(),
+        ...notesByDay.keys(),
+        ...Object.keys(dailyStats)
+    ]);
+
+    if (days.size > 0) {
         lines.push('## Daily Summaries');
 
-        for (const day of [...sessionsByDay.keys()].sort()) {
+        for (const day of [...days].sort()) {
             lines.push(`### ${day}`);
 
             const stats = dailyStats[day];
@@ -269,6 +318,10 @@ export function buildCompactMarkdown(exportJson: ExportJson): string {
                 lines.push(
                     `- ${formatTimeRange(session.start, session.end)} | ${session.category} | ${session.activity} | ${session.count} shots${summary ? ` | ${summary}` : ''}`
                 );
+            }
+
+            for (const note of notesByDay.get(day) || []) {
+                lines.push(`- note ${note.time}: ${note.content}`);
             }
 
             lines.push('');

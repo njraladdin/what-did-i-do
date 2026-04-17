@@ -33,6 +33,7 @@ interface WindowExtended extends Window {
     ipcRenderer: any;
     DOM: any;
     deleteScreenshot: (id: number) => void;
+    retryScreenshot: (id: number) => void;
     showEditNoteModal: (note: Note) => void;
     deleteNote: (id: number) => void;
     loadPreviousNotesInModal: (excludeId?: number | null) => void;
@@ -98,6 +99,17 @@ function displayScreenshots(): void {
                   screenshot.tags.map(tag => `<span class="screenshot-tag">${tag}</span>`).join('') + 
                   `</div>`
                 : '';
+            
+            const categoryValue = (screenshot.category || '').toString();
+            const activityValue = (screenshot.activity || '').toString();
+            const isFailedAnalysis = categoryValue.toUpperCase() === 'UNKNOWN' ||
+                activityValue.toLowerCase().includes('analysis unavailable');
+
+            const retryButtonHTML = isFailedAnalysis
+                ? `<button class="retry-screenshot" data-retry-id="${screenshot.id}" onclick="typedWindow.retryScreenshot(${screenshot.id})" title="Retry analysis">
+                        <i class="fas fa-rotate-right"></i>
+                   </button>`
+                : '';
 
             if (screenshotDiv) {
                 screenshotDiv.innerHTML = `
@@ -112,9 +124,12 @@ function displayScreenshots(): void {
                         <div class="screenshot-time">Time: ${date.toLocaleString()}</div>
                         ${tagsHTML}
                     </div>
-                    <button class="delete-screenshot" onclick="typedWindow.deleteScreenshot(${screenshot.id})">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <div class="screenshot-actions">
+                        ${retryButtonHTML}
+                        <button class="delete-screenshot" onclick="typedWindow.deleteScreenshot(${screenshot.id})" title="Delete screenshot">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 `;
                 if (historyContainer) {
                     historyContainer.appendChild(screenshotDiv);

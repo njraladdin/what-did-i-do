@@ -81,6 +81,17 @@
                         >
                     </div>
                 </div>
+                <div class="setting-item">
+                    <label for="geminiFallbackModel" class="setting-label">Gemini Fallback Model:</label>
+                    <div class="model-select-wrapper">
+                        <input
+                            type="text"
+                            id="geminiFallbackModel"
+                            class="model-input"
+                            placeholder="gemini-flash-lite-latest"
+                        >
+                    </div>
+                </div>
                 <div id="modelLoadingStatus" class="model-status"></div>
                 <button onclick="saveGeminiModel()" id="saveModelBtn" class="save-model-btn">Save Model</button>
             </div>
@@ -411,7 +422,19 @@
 
                 <!-- History Section -->
                 <div class="stats-section">
-                    <h2>Screenshot History</h2>
+                    <div class="section-header">
+                        <h2>Screenshot History</h2>
+                        <div class="section-header-actions">
+                            <button id="retryAllFailedBtn" class="retry-all-btn" onclick="retryAllFailedScreenshots()">
+                                <i class="fas fa-rotate-right"></i>
+                                Retry failed (this day)
+                            </button>
+                            <button id="retryAllFailedHistoryBtn" class="retry-all-btn" onclick="retryAllFailedScreenshotsAcrossHistory()">
+                                <i class="fas fa-layer-group"></i>
+                                Retry failed (all days)
+                            </button>
+                        </div>
+                    </div>
                     <div id="screenshotHistory"></div>
                     <div class="show-more-wrapper">
                         <button id="showMoreBtn" class="show-more-btn" onclick="loadMoreScreenshots()"

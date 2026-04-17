@@ -44,6 +44,14 @@ interface ExportData {
         image_data?: Buffer;
         thumbnail_data?: Buffer;
     }>;
+    notes: Array<{
+        id: number;
+        date: string;
+        timestamp: string;
+        content: string;
+        created_at?: string;
+        updated_at?: string;
+    }>;
     statistics?: {
         dailyStats: {
             [date: string]: {
@@ -124,14 +132,18 @@ export async function exportData(
     includeStats: boolean = false
 ): Promise<ExportData> {
     try {
-        const screenshotsData = await screenshots.getScreenshotsForExport(startDate, endDate, includeMedia);
+        const [screenshotsData, notesData] = await Promise.all([
+            screenshots.getScreenshotsForExport(startDate, endDate, includeMedia),
+            notes.getNotesInRange(startDate, endDate)
+        ]);
         
         const result: ExportData = {
             dateRange: {
                 startDate,
                 endDate
             },
-            screenshots: screenshotsData
+            screenshots: screenshotsData,
+            notes: notesData
         };
 
         if (includeStats) {

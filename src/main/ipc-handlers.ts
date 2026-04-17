@@ -6,6 +6,7 @@ import { categories } from './db/core';
 import { buildCompactMarkdown } from './export-utils';
 
 const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite-preview';
+const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-flash-lite-latest';
 
 
 interface Dependencies {
@@ -30,6 +31,7 @@ interface Dependencies {
     initializeGeminiAPI: (apiKey: string) => Promise<any>;
     pauseTracking: () => void;
     captureAndAnalyze: () => Promise<void>;
+    retryScreenshotAnalysis: (id: number) => Promise<boolean>;
     getCurrentDate: () => Date;
     setCurrentDate: (date: Date) => void;
     getIsTracking: () => boolean;
@@ -75,6 +77,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
         initializeGeminiAPI,
         pauseTracking,
         captureAndAnalyze,
+        retryScreenshotAnalysis,
         getCurrentDate,
         setCurrentDate,
         getIsTracking,
@@ -291,6 +294,24 @@ function initializeIpcHandlers(dependencies: Dependencies) {
         } catch (error) {
             console.error('Error deleting screenshot:', error);
             return false;
+        }
+    });
+
+    ipcMain.handle('retry-screenshot-analysis', async (event: IpcMainInvokeEvent, id: number) => {
+        try {
+            return await retryScreenshotAnalysis(id);
+        } catch (error) {
+            console.error('Error retrying screenshot analysis:', error);
+            return false;
+        }
+    });
+
+    ipcMain.handle('get-failed-screenshot-retry-candidates', async () => {
+        try {
+            return await database.screenshots.getFailedScreenshotRetryCandidates();
+        } catch (error) {
+            console.error('Error getting failed screenshot retry candidates:', error);
+            return [];
         }
     });
 
@@ -533,6 +554,7 @@ function initializeIpcHandlers(dependencies: Dependencies) {
                     },
                     rangeType,
                     screenshotCount: exportData.screenshots.length,
+                    noteCount: exportData.notes.length,
                     categories: categories,
                     version: "1.0"
                 },
@@ -542,6 +564,17 @@ function initializeIpcHandlers(dependencies: Dependencies) {
                     category: screenshot.category,
                     activity: screenshot.activity,
                     description: screenshot.description
+                })),
+                notes: exportData.notes.map((note: {
+                    id: number;
+                    date: string;
+                    timestamp: string;
+                    content: string;
+                }) => ({
+                    id: note.id,
+                    date: note.date,
+                    timestamp: note.timestamp,
+                    content: note.content
                 })),
                 statistics: exportData.statistics || {}
             };
@@ -590,6 +623,24 @@ function initializeIpcHandlers(dependencies: Dependencies) {
             return { success: true };
         } catch (error) {
             console.error('Error setting Gemini model:', error);
+            return { success: false, error: getErrorMessage(error) };
+        }
+    });
+
+    ipcMain.handle('get-gemini-fallback-model', () => {
+        return store.get('geminiFallbackModel') || DEFAULT_GEMINI_FALLBACK_MODEL;
+    });
+
+    ipcMain.handle('set-gemini-fallback-model', (event: IpcMainInvokeEvent, model: string) => {
+        try {
+            const trimmedModel = model.trim();
+            if (!trimmedModel) {
+                return { success: false, error: 'Fallback model name cannot be empty' };
+            }
+            store.set('geminiFallbackModel', trimmedModel);
+            return { success: true };
+        } catch (error) {
+            console.error('Error setting Gemini fallback model:', error);
             return { success: false, error: getErrorMessage(error) };
         }
     });

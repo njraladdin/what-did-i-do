@@ -24,6 +24,7 @@ interface WindowWithCustomProps extends Window {
     ipcRenderer: any;
     DOM: any;
     deleteScreenshot: (id: number) => void;
+    retryScreenshot: (id: number) => void;
     showEditNoteModal: (note: Note) => void;
     deleteNote: (id: number) => void;
     loadPreviousNotesInModal: (excludeId?: number | null) => void;
@@ -42,6 +43,8 @@ interface WindowWithCustomProps extends Window {
     dismissError: () => void;
     saveNote: () => void;
     loadMoreScreenshots: () => void;
+    retryAllFailedScreenshots: () => void;
+    retryAllFailedScreenshotsAcrossHistory: () => void;
     quitApp: () => void;
     openExternalLink: (url: string) => void;
     toggleSettings: () => void;
@@ -63,6 +66,11 @@ interface Screenshot {
     activity?: string;
     category?: string;
     description?: string;
+}
+
+interface RetryCandidate {
+    id: number;
+    timestamp: string;
 }
 
 interface Note {
@@ -105,6 +113,7 @@ let productivityByHourChart: any = null;
 let previewCache: { [key: string]: any } = {};
 
 const SCREENSHOTS_PER_PAGE = 5;
+const RETRY_ALL_FAILED_INTERVAL_MS = 10_000;
 
 // Make global variables accessible to DOM module
 win.currentDate = currentDate;
@@ -128,6 +137,9 @@ win.saveGeminiModel = Settings.saveGeminiModel;
 win.openLogsFile = Settings.openLogsFile;
 win.showRecentLogs = Settings.showRecentLogs;
 win.exportData = Settings.exportData;
+win.retryScreenshot = retryScreenshot;
+win.retryAllFailedScreenshots = retryAllFailedScreenshots;
+win.retryAllFailedScreenshotsAcrossHistory = retryAllFailedScreenshotsAcrossHistory;
 
 // Add local functions to the window object
 win.changeDate = changeDate;
@@ -443,6 +455,129 @@ async function deleteScreenshot(id: number) {
 
 // Make deleteScreenshot available globally
 win.deleteScreenshot = deleteScreenshot;
+
+async function retryScreenshot(id: number) {
+    const retryButton = document.querySelector(`button[data-retry-id="${id}"]`) as HTMLButtonElement | null;
+    const originalHtml = retryButton?.innerHTML || '';
+
+    if (retryButton) {
+        retryButton.disabled = true;
+        retryButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    try {
+        const success = await ipcRenderer.invoke('retry-screenshot-analysis', id);
+        if (success) {
+            await updateStats();
+        } else {
+            alert('Retry failed. Please try again later.');
+        }
+    } catch (error) {
+        console.error('Error retrying screenshot analysis:', error);
+        alert('Retry failed. Please try again later.');
+    } finally {
+        if (retryButton) {
+            retryButton.disabled = false;
+            retryButton.innerHTML = originalHtml;
+        }
+    }
+}
+
+function isFailedScreenshot(screenshot: Screenshot): boolean {
+    const categoryValue = (screenshot.category || '').toString();
+    const activityValue = (screenshot.activity || '').toString();
+
+    if (categoryValue.toUpperCase() === 'UNKNOWN') {
+        return true;
+    }
+
+    return activityValue.toLowerCase().includes('analysis unavailable');
+}
+
+function sleepMs(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function setBulkRetryButtonsDisabled(disabled: boolean): void {
+    const buttonIds = ['retryAllFailedBtn', 'retryAllFailedHistoryBtn'];
+    buttonIds.forEach(buttonId => {
+        const button = document.getElementById(buttonId) as HTMLButtonElement | null;
+        if (button) {
+            button.disabled = disabled;
+        }
+    });
+}
+
+async function runBulkRetry(
+    retryButtonId: string,
+    emptyMessage: string,
+    getScreenshotIds: () => Promise<number[]>
+): Promise<void> {
+    const retryButton = document.getElementById(retryButtonId) as HTMLButtonElement | null;
+    const originalHtml = retryButton?.innerHTML || '';
+
+    setBulkRetryButtonsDisabled(true);
+
+    try {
+        const screenshotIds = await getScreenshotIds();
+        if (screenshotIds.length === 0) {
+            alert(emptyMessage);
+            return;
+        }
+
+        for (let i = 0; i < screenshotIds.length; i++) {
+            const screenshotId = screenshotIds[i];
+            if (retryButton) {
+                retryButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Retrying ${i + 1}/${screenshotIds.length}`;
+            }
+
+            try {
+                await ipcRenderer.invoke('retry-screenshot-analysis', screenshotId);
+            } catch (error) {
+                console.error('Retry failed for screenshot:', screenshotId, error);
+            }
+
+            if (i < screenshotIds.length - 1) {
+                await sleepMs(RETRY_ALL_FAILED_INTERVAL_MS);
+            }
+        }
+
+        await updateStats();
+    } catch (error) {
+        console.error('Error running bulk retry:', error);
+        alert('Bulk retry failed. Please try again later.');
+    } finally {
+        if (retryButton) {
+            retryButton.innerHTML = originalHtml;
+        }
+        setBulkRetryButtonsDisabled(false);
+    }
+}
+
+async function retryAllFailedScreenshots() {
+    await runBulkRetry(
+        'retryAllFailedBtn',
+        'No failed screenshots to retry for this day.',
+        async () => allScreenshots.filter(isFailedScreenshot).map(screenshot => screenshot.id)
+    );
+}
+
+async function retryAllFailedScreenshotsAcrossHistory() {
+    await runBulkRetry(
+        'retryAllFailedHistoryBtn',
+        'No failed screenshots with stored images were found.',
+        async () => {
+            const candidates = await ipcRenderer.invoke('get-failed-screenshot-retry-candidates') as RetryCandidate[];
+            if (!Array.isArray(candidates)) {
+                return [];
+            }
+
+            return candidates
+                .filter(candidate => typeof candidate?.id === 'number')
+                .map(candidate => candidate.id);
+        }
+    );
+}
 
 // Date Management Functions
 async function changeDate(offset: number) {
@@ -1121,6 +1256,9 @@ win.saveGeminiModel = Settings.saveGeminiModel;
 win.openLogsFile = Settings.openLogsFile;
 win.showRecentLogs = Settings.showRecentLogs;
 win.exportData = Settings.exportData;
+win.retryScreenshot = retryScreenshot;
+win.retryAllFailedScreenshots = retryAllFailedScreenshots;
+win.retryAllFailedScreenshotsAcrossHistory = retryAllFailedScreenshotsAcrossHistory;
 win.changeDate = changeDate;
 win.changeMonth = changeMonth;
 win.dismissError = dismissError;

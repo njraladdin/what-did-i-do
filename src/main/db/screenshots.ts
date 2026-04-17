@@ -29,6 +29,17 @@ interface ScreenshotTiming {
     next_timestamp?: string;
 }
 
+interface ScreenshotImageRecord {
+    id: number;
+    timestamp: string;
+    image_data: Buffer;
+}
+
+interface FailedScreenshotRetryCandidate {
+    id: number;
+    timestamp: string;
+}
+
 /**
  * Save a new screenshot to the database
  * @param timestamp - Screenshot timestamp
@@ -90,6 +101,88 @@ export function deleteScreenshot(id: number): Promise<boolean> {
         db.run('DELETE FROM screenshots WHERE id = ?', [id], function(err) {
             if (err) {
                 console.error('Error deleting screenshot:', err);
+                reject(err);
+                return;
+            }
+            resolve(this.changes > 0);
+        });
+    });
+}
+
+/**
+ * Get a screenshot image and timestamp by ID (used for retrying analysis)
+ * @param id - Screenshot ID
+ * @returns Screenshot image record or null if not found
+ */
+export function getScreenshotImageById(id: number): Promise<ScreenshotImageRecord | null> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        db.get<ScreenshotImageRecord>(`
+            SELECT id, timestamp, image_data
+            FROM screenshots
+            WHERE id = ?
+        `, [id], (err, row) => {
+            if (err) {
+                console.error('Error getting screenshot image:', err);
+                reject(err);
+                return;
+            }
+            resolve(row || null);
+        });
+    });
+}
+
+/**
+ * Get failed screenshots that still have source image data available for retry.
+ * @returns Array of retry candidate IDs ordered by most recent first
+ */
+export function getFailedScreenshotRetryCandidates(): Promise<FailedScreenshotRetryCandidate[]> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        db.all<FailedScreenshotRetryCandidate>(`
+            SELECT id, timestamp
+            FROM screenshots
+            WHERE image_data IS NOT NULL
+              AND (
+                  category = 'UNKNOWN'
+                  OR LOWER(activity) LIKE '%analysis unavailable%'
+              )
+            ORDER BY timestamp DESC
+        `, (err, rows) => {
+            if (err) {
+                console.error('Error getting failed screenshot retry candidates:', err);
+                reject(err);
+                return;
+            }
+            resolve(rows || []);
+        });
+    });
+}
+
+/**
+ * Update analysis data for a screenshot
+ * @param id - Screenshot ID
+ * @param category - Activity category
+ * @param activity - Activity description
+ * @param description - Screenshot description
+ * @param tags - Screenshot tags
+ */
+export function updateScreenshotAnalysis(
+    id: number,
+    category: Category,
+    activity: string,
+    description: string,
+    tags: string[]
+): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        const db = getConnection();
+        db.run(`
+            UPDATE screenshots
+            SET category = ?, activity = ?, description = ?, tags = ?
+            WHERE id = ?
+        `, [category, activity, description, JSON.stringify(tags), id], function(err) {
+            if (err) {
+                console.error('Error updating screenshot analysis:', err);
                 reject(err);
                 return;
             }

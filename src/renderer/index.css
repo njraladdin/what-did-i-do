@@ -158,7 +158,81 @@
     
      .screenshot-category { font-size: 13px; color: var(--color-primary); font-weight: 500; letter-spacing: -0.1px; }
     
-     .screenshot-time { font-size: 13px; color: var(--color-text-muted); letter-spacing: -0.1px; margin-top: 2px; }
+    .screenshot-time { font-size: 13px; color: var(--color-text-muted); letter-spacing: -0.1px; margin-top: 2px; }
+
+    .retry-all-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-primary);
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .retry-all-btn:hover {
+        border-color: var(--color-primary);
+        background: var(--color-bg-elevated);
+    }
+
+    .retry-all-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .section-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+     .screenshot-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+     }
+
+     .retry-screenshot,
+     .delete-screenshot {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-surface);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        transition: all 0.15s ease;
+     }
+
+     .retry-screenshot:hover {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+        background: var(--color-bg-elevated);
+     }
+
+     .delete-screenshot:hover {
+        border-color: #dc2626;
+        color: #dc2626;
+        background: var(--color-bg-elevated);
+     }
+
+     .retry-screenshot:disabled,
+     .delete-screenshot:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+     }
      
      .screenshot-tags {
         margin-top: 8px;

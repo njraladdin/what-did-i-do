@@ -16,13 +16,17 @@ import { Category, categories, initializeDatabase, closeDatabase } from './db/co
 const store = new Store<{
     interval: number;
     geminiModel: string;
+    geminiFallbackModel: string;
     apiKey?: string;
 }>({
     defaults: {
         interval: 1, // Default to 1 minute
-        geminiModel: 'gemini-3.1-flash-lite-preview'
+        geminiModel: 'gemini-3.1-flash-lite-preview',
+        geminiFallbackModel: 'gemini-flash-lite-latest'
     }
 });
+
+const FALLBACK_GEMINI_MODEL = 'gemini-flash-lite-latest';
 
 // Initialize app state
 const state: AppState = {
@@ -106,10 +110,10 @@ async function initializeGeminiAPI(apiKey: string): Promise<GeminiApiResponse> {
         state.ai = new GoogleGenAI({apiKey});
         
         // Test the API key with a simple request
-        const result = await state.ai.models.generateContent({
+        const result = await generateContentWithFallback({
             model: store.get('geminiModel') || 'gemini-3.1-flash-lite-preview',
             contents: 'Hello, this is a test message.'
-        });
+        }, 'initializeGeminiAPI');
         
         if (result && result.text) {
             store.set('apiKey', apiKey);
@@ -137,79 +141,20 @@ async function initializeGeminiAPI(apiKey: string): Promise<GeminiApiResponse> {
     }
 }
 
+async function buildRecentHistoryContext(): Promise<string> {
+    const recentScreenshots = await database.screenshots.getLastNScreenshotsMetadata(20);
+    if (recentScreenshots.length === 0) {
+        return '';
+    }
 
-// Modify the captureAndAnalyze function
-async function captureAndAnalyze() {
-    try {
-        state.appLogger.info('Starting capture and analyze process...');
-        
-        const now = new Date();
-        const timestamp = now.toISOString();
-        state.appLogger.info('Created timestamp:', timestamp);
+    return `\nRecent activity history (last ${recentScreenshots.length} screenshots, from newest to oldest) as helpful context to what the user have been doing. if you notice a pattern or a shared thing in the recent history, mention it in the context. if the user is still doing the same thing, only mention what's new about it, don't repeat the same thing:\n` +
+        recentScreenshots.map((ss) =>
+            `- [${new Date(ss.timestamp).toLocaleTimeString()}] Category: ${ss.category}, Activity: ${ss.activity}\n  Description: ${ss.description || ''}`
+        ).join('\n');
+}
 
-        // Check if screenshotCapture is initialized
-        if (!state.screenshotCapture) {
-            throw new Error('Screenshot capture module not initialized');
-        }
-
-        // Capture screenshot and thumbnail using the new module
-        const { imgBuffer, thumbnailBuffer } = await state.screenshotCapture.captureWithThumbnail();
-        
-        state.appLogger.info('Processing screenshot with Gemini...');
-        
-        // Default response in case of any failure
-        let response: AnalysisResponse = {
-            category: 'UNKNOWN',  // Changed from 'WORK' to 'UNKNOWN' to avoid misleading categorization
-            activity: 'screenshot captured (analysis unavailable)',
-            description: 'No description available due to analysis failure.',
-            tags: []
-        };
-
-        // Try Gemini analysis with full error isolation
-        let tempFilePath = null;
-        try {
-            // Create a temporary file with a safe filename
-            const safeTimestamp = timestamp.replace(/[:.]/g, '-');
-            tempFilePath = path.join(
-                app.getPath('temp'), 
-                `temp-screenshot-${safeTimestamp}.png`
-            );
-
-            fs.mkdirSync(path.dirname(tempFilePath), { recursive: true });
-            fs.writeFileSync(tempFilePath, imgBuffer);
-
-            // Try uploading to Gemini
-            state.appLogger.info('Attempting file upload to Gemini...', { filePath: tempFilePath });
-            // Update AI initialization check and file upload
-            if (!state.ai) {
-                throw new Error('AI is not initialized');
-            }
-            // At this point TypeScript knows state.ai is not null
-            const uploadResult = await state.ai.files.upload({
-                file: tempFilePath,
-                config: {
-                    mimeType: 'image/png',
-                    displayName: `screenshot-${safeTimestamp}.png`
-                }
-            });
-
-            state.appLogger.info('Gemini file upload successful', { 
-                uri: uploadResult.uri,
-                name: uploadResult.name,
-                mimeType: uploadResult.mimeType
-            });
-
-            // Get last 10 screenshots for context
-            const recentScreenshots = await database.screenshots.getLastNScreenshotsMetadata(20);
-            // Update the recentScreenshots mapping
-            const recentHistoryContext = recentScreenshots.length > 0 
-                ? `\nRecent activity history (last ${recentScreenshots.length} screenshots, from newest to oldest) as helpful context to what the user have been doing. if you notice a pattern or a shared thing in the recent history, mention it in the context. if the user is still doing the same thing, only mention what's new about it, don't repeat the same thing:\n` +
-                  recentScreenshots.map((ss) => 
-                    `- [${new Date(ss.timestamp).toLocaleTimeString()}] Category: ${ss.category}, Activity: ${ss.activity}\n  Description: ${ss.description || ''}`
-                  ).join('\n')
-                : '';
-            console.log(recentHistoryContext);
-            const prompt = `Analyze this screenshot and categorize the activity based on the user's apparent task.
+function buildScreenshotAnalysisPrompt(recentHistoryContext: string): string {
+    return `Analyze this screenshot and categorize the activity based on the user's apparent task.
             Return a JSON object with "category", "activity", "description", and "tags" fields, where category must be EXACTLY one of these values: 
             ${categories.join(', ')}. 
             
@@ -254,136 +199,202 @@ async function captureAndAnalyze() {
             }
               
             ${recentHistoryContext}`;
-            
-            try {
-                state.appLogger.info('Starting Gemini analysis...');
-                
-                // Update AI initialization check
-                if (!state.ai) {
-                    throw new Error('AI is not initialized');
-                }
-                
-                const result = await state.ai.models.generateContent({
-                    model: store.get('geminiModel') || 'gemini-3.1-flash-lite-preview',
-                    contents: [
-                        {
-                            parts: [
-                                {
-                                    fileData: {
-                                        mimeType: 'image/png',
-                                        fileUri: uploadResult.uri
-                                    }
-                                },
-                                { text: prompt }
-                            ]
-                        }
-                    ],
-                    config: {
-                        temperature: 0.6,
-                        maxOutputTokens: 8192,
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                category: {
-                                    type: "STRING",
-                                    enum: categories,
-                                    description: "The category of the activity, must be one of: " + categories.join(", ")
-                                },
-                                activity: {
-                                    type: "STRING",
-                                    description: "Brief description of the specific activity being performed (software development, browsing reddit, etc.)"
-                                },
-                                description: {
-                                    type: "STRING",
-                                    description: "Detailed description of what the user is doing, what's visible on screen, and context about the activity (150-200 words)"
-                                },
-                                tags: {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "STRING"
-                                    },
-                                    description: "An array of 10-15 detailed tags about the activity."
-                                }
-                            },
-                            required: ["category", "activity", "description", "tags"]
-                        }
-                    }
-                });
+}
 
-                state.appLogger.info('Received Gemini response');
-                
-                // Update error handling
-                try {
-                    state.appLogger.info('Raw Gemini response:', { responseText: result.text });
-                    const parsedResponse = JSON.parse(result.text || '{}');
-                    
-                    // Simple normalization to ensure consistent category casing
-                    if (parsedResponse.category && parsedResponse.activity) {
-                        const normalizedCategory = categories.find((cat: Category) => 
-                            cat.toUpperCase() === parsedResponse.category.toUpperCase());
-                        
-                        if (normalizedCategory) {
-                            response = {
-                                category: normalizedCategory,
-                                activity: parsedResponse.activity,
-                                description: parsedResponse.description || 'No description available.',
-                                tags: parsedResponse.tags || []
-                            };
-                            state.appLogger.info('Successfully parsed Gemini response:', response);
-                        } else {
-                            // Keep default response if category not found
-                            state.appLogger.error('Invalid category in response:', {
-                                receivedCategory: parsedResponse.category,
-                                validCategories: categories,
-                                fullResponse: parsedResponse
-                            });
+function parseGeminiAnalysisResponse(responseText: string | undefined): AnalysisResponse | null {
+    if (!responseText) {
+        return null;
+    }
+
+    let parsedResponse: any;
+    try {
+        parsedResponse = JSON.parse(responseText);
+    } catch {
+        return null;
+    }
+
+    if (!parsedResponse.category || !parsedResponse.activity) {
+        return null;
+    }
+
+    const normalizedCategory = categories.find((cat: Category) =>
+        cat.toUpperCase() === String(parsedResponse.category).toUpperCase()
+    );
+
+    if (!normalizedCategory) {
+        return null;
+    }
+
+    return {
+        category: normalizedCategory,
+        activity: parsedResponse.activity,
+        description: parsedResponse.description || 'No description available.',
+        tags: parsedResponse.tags || []
+    };
+}
+
+async function analyzeScreenshotWithGemini(
+    imgBuffer: Buffer,
+    timestamp: string,
+    logContext: string
+): Promise<AnalysisResponse | null> {
+    let tempFilePath: string | null = null;
+
+    try {
+        const safeTimestamp = timestamp.replace(/[:.]/g, '-');
+        tempFilePath = path.join(
+            app.getPath('temp'),
+            `temp-screenshot-${safeTimestamp}.png`
+        );
+
+        fs.mkdirSync(path.dirname(tempFilePath), { recursive: true });
+        fs.writeFileSync(tempFilePath, imgBuffer);
+
+        state.appLogger.info('Attempting file upload to Gemini...', { filePath: tempFilePath, context: logContext });
+        if (!state.ai) {
+            throw new Error('AI is not initialized');
+        }
+
+        const uploadResult = await state.ai.files.upload({
+            file: tempFilePath,
+            config: {
+                mimeType: 'image/png',
+                displayName: `screenshot-${safeTimestamp}.png`
+            }
+        });
+
+        state.appLogger.info('Gemini file upload successful', {
+            uri: uploadResult.uri,
+            name: uploadResult.name,
+            mimeType: uploadResult.mimeType,
+            context: logContext
+        });
+
+        const recentHistoryContext = await buildRecentHistoryContext();
+        const prompt = buildScreenshotAnalysisPrompt(recentHistoryContext);
+
+        state.appLogger.info('Starting Gemini analysis...', { context: logContext });
+
+        const result = await generateContentWithFallback({
+            model: store.get('geminiModel') || 'gemini-3.1-flash-lite-preview',
+            contents: [
+                {
+                    parts: [
+                        {
+                            fileData: {
+                                mimeType: 'image/png',
+                                fileUri: uploadResult.uri
+                            }
+                        },
+                        { text: prompt }
+                    ]
+                }
+            ],
+            config: {
+                temperature: 0.6,
+                maxOutputTokens: 8192,
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        category: {
+                            type: "STRING",
+                            enum: categories,
+                            description: "The category of the activity, must be one of: " + categories.join(", ")
+                        },
+                        activity: {
+                            type: "STRING",
+                            description: "Brief description of the specific activity being performed (software development, browsing reddit, etc.)"
+                        },
+                        description: {
+                            type: "STRING",
+                            description: "Detailed description of what the user is doing, what's visible on screen, and context about the activity (150-200 words)"
+                        },
+                        tags: {
+                            type: "ARRAY",
+                            items: {
+                                type: "STRING"
+                            },
+                            description: "An array of 10-15 detailed tags about the activity."
                         }
-                    } else {
-                        state.appLogger.error('Missing required fields in response:', {
-                            hasCategory: !!parsedResponse.category,
-                            hasActivity: !!parsedResponse.activity,
-                            fullResponse: parsedResponse
-                        });
-                    }
-                } catch (error) {
-                    if (error instanceof Error) {
-                        state.appLogger.error('Error parsing JSON response:', {
-                            error: error.message,
-                            rawResponse: result.text,
-                            stack: error.stack
-                        });
-                    }
-                }
-            } catch (geminiError) {
-                if (geminiError instanceof Error) {
-                    state.appLogger.error('Error in Gemini content generation:', {
-                        message: geminiError.message,
-                        stack: geminiError.stack,
-                        fullError: geminiError
-                    });
+                    },
+                    required: ["category", "activity", "description", "tags"]
                 }
             }
-        } catch (geminiError) {
-            if (geminiError instanceof Error) {
-                state.appLogger.error('Error in Gemini analysis (outer catch):', {
-                    message: geminiError.message,
-                    stack: geminiError.stack,
-                    fullError: geminiError
-                });
-            }
-            // Keep the default response - don't throw error
-        } finally {
-            // Clean up temp file
-            if (tempFilePath && fs.existsSync(tempFilePath)) {
-                try {
-                    fs.unlinkSync(tempFilePath);
-                } catch (error) {
-                    if (error instanceof Error) {
-                        state.appLogger.error('Error cleaning up temp file:', error.message);
-                    }
+        }, logContext);
+
+        state.appLogger.info('Received Gemini response', { context: logContext });
+        state.appLogger.info('Raw Gemini response:', { responseText: result.text, context: logContext });
+
+        const parsedResponse = parseGeminiAnalysisResponse(result.text);
+        if (parsedResponse) {
+            state.appLogger.info('Successfully parsed Gemini response:', parsedResponse);
+            return parsedResponse;
+        }
+
+        state.appLogger.error('Invalid or incomplete Gemini response', {
+            responseText: result.text,
+            context: logContext
+        });
+    } catch (error) {
+        if (error instanceof Error) {
+            state.appLogger.error('Error in Gemini content generation:', {
+                message: error.message,
+                stack: error.stack,
+                fullError: error,
+                context: logContext
+            });
+        }
+    } finally {
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+            try {
+                fs.unlinkSync(tempFilePath);
+            } catch (error) {
+                if (error instanceof Error) {
+                    state.appLogger.error('Error cleaning up temp file:', error.message);
                 }
             }
+        }
+    }
+
+    return null;
+}
+
+
+// Modify the captureAndAnalyze function
+async function captureAndAnalyze() {
+    try {
+        state.appLogger.info('Starting capture and analyze process...');
+        
+        const now = new Date();
+        const timestamp = now.toISOString();
+        state.appLogger.info('Created timestamp:', timestamp);
+
+        // Check if screenshotCapture is initialized
+        if (!state.screenshotCapture) {
+            throw new Error('Screenshot capture module not initialized');
+        }
+
+        // Capture screenshot and thumbnail using the new module
+        const { imgBuffer, thumbnailBuffer } = await state.screenshotCapture.captureWithThumbnail();
+        
+        state.appLogger.info('Processing screenshot with Gemini...');
+        
+        // Default response in case of any failure
+        let response: AnalysisResponse = {
+            category: 'UNKNOWN',  // Changed from 'WORK' to 'UNKNOWN' to avoid misleading categorization
+            activity: 'screenshot captured (analysis unavailable)',
+            description: 'No description available due to analysis failure.',
+            tags: []
+        };
+
+        const analysisResult = await analyzeScreenshotWithGemini(
+            imgBuffer,
+            timestamp,
+            'captureAndAnalyze'
+        );
+        if (analysisResult) {
+            response = analysisResult;
         }
 
         const analysisSucceeded = response.category !== 'UNKNOWN' ||
@@ -456,6 +467,53 @@ async function captureAndAnalyze() {
     }
 }
 
+async function retryScreenshotAnalysis(id: number): Promise<boolean> {
+    try {
+        state.appLogger.info('Retrying screenshot analysis', { id });
+
+        const record = await database.screenshots.getScreenshotImageById(id);
+        if (!record || !record.image_data) {
+            state.appLogger.error('Screenshot not found for retry', { id });
+            return false;
+        }
+
+        const analysisResult = await analyzeScreenshotWithGemini(
+            record.image_data,
+            record.timestamp,
+            `retryScreenshot:${id}`
+        );
+
+        if (!analysisResult) {
+            state.appLogger.error('Retry analysis failed', { id });
+            return false;
+        }
+
+        const updated = await database.screenshots.updateScreenshotAnalysis(
+            id,
+            analysisResult.category as Category,
+            analysisResult.activity,
+            analysisResult.description,
+            analysisResult.tags
+        );
+
+        if (updated) {
+            state.appLogger.info('Screenshot analysis updated after retry', { id });
+        }
+
+        return updated;
+    } catch (error) {
+        if (error instanceof Error) {
+            state.appLogger.error('Error retrying screenshot analysis:', {
+                message: error.message,
+                stack: error.stack,
+                fullError: error,
+                id
+            });
+        }
+        return false;
+    }
+}
+
 // Add this after captureAndAnalyze function
 async function generateDayAnalysis(date: string): Promise<string> {
     try {
@@ -522,14 +580,14 @@ When analyzing trends and progress:
 6. Use the category statistics to identify any shifts in time allocation patterns`;
 
         state.appLogger.info('Sending request to Gemini API', { prompt: (prompt) });
-        const result = await state.ai.models.generateContent({
+        const result = await generateContentWithFallback({
              model: selectedModel,
              contents: prompt,
              config: {
                 temperature: 0.7,
                 maxOutputTokens: 8192,
             }
-        });
+        }, 'generateDayAnalysis');
         state.appLogger.info('Received response from Gemini API');
 
         if (!result || !result.text) {
@@ -620,6 +678,74 @@ function clearAnalysisError() {
 // Add this helper function for the countdown
 function sleep(ms: number): Promise<void> {
   return new Promise<void>(resolve => setTimeout(resolve, ms));
+}
+
+function getFallbackModel(): string {
+    return store.get('geminiFallbackModel') || FALLBACK_GEMINI_MODEL;
+}
+
+function isGeminiModelOverloaded(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+        return false;
+    }
+
+    const anyError = error as { message?: unknown; code?: number | string; status?: unknown };
+    const message = typeof anyError.message === 'string' ? anyError.message : '';
+    const code = anyError.code;
+    const status = anyError.status;
+    const statusText = typeof status === 'string' ? status : (status == null ? '' : String(status));
+
+    if (code === 503 || code === '503') {
+        return true;
+    }
+
+    if (statusText && statusText.toUpperCase() === 'UNAVAILABLE') {
+        return true;
+    }
+
+    if (message.includes('\"code\":503') || message.includes('status\":\"UNAVAILABLE\"')) {
+        return true;
+    }
+
+    if (message.includes('503') && message.toLowerCase().includes('high demand')) {
+        return true;
+    }
+
+    return false;
+}
+
+async function generateContentWithFallback(
+    params: Parameters<GoogleGenAI['models']['generateContent']>[0],
+    logContext: string
+) {
+    if (!state.ai) {
+        throw new Error('AI is not initialized');
+    }
+
+    try {
+        return await state.ai.models.generateContent(params);
+    } catch (error) {
+        if (!isGeminiModelOverloaded(error)) {
+            throw error;
+        }
+
+        const primaryModel = params.model;
+        const fallbackModel = getFallbackModel();
+        if (primaryModel === fallbackModel) {
+            throw error;
+        }
+
+        state.appLogger.info('Primary Gemini model unavailable (503). Retrying with fallback model.', {
+            context: logContext,
+            primaryModel,
+            fallbackModel
+        });
+
+        return await state.ai.models.generateContent({
+            ...params,
+            model: fallbackModel
+        });
+    }
 }
 
 // Add this near your other initialization code (in app.whenReady())
@@ -788,6 +914,7 @@ app.whenReady().then(async () => {
             initializeGeminiAPI,
             pauseTracking,
             captureAndAnalyze,
+            retryScreenshotAnalysis,
             getCurrentDate,
             setCurrentDate,
             getIsTracking,

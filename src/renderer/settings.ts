@@ -3,6 +3,7 @@
 const { ipcRenderer: ipc } = require('electron');
 const settingsWin = (window as any);
 const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite-preview';
+const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-flash-lite-latest';
 
 // API Key Management
 async function checkExistingApiKey(): Promise<void> {
@@ -139,21 +140,34 @@ async function toggleAutoLaunch(event: Event) {
 
 // Model Management
 async function initializeGeminiModel() {
-    const currentModel = await ipcRenderer.invoke('get-gemini-model');
+    const [currentModel, currentFallbackModel] = await Promise.all([
+        ipcRenderer.invoke('get-gemini-model'),
+        ipcRenderer.invoke('get-gemini-fallback-model')
+    ]);
     const modelInput = document.getElementById('geminiModel') as HTMLInputElement | null;
+    const fallbackModelInput = document.getElementById('geminiFallbackModel') as HTMLInputElement | null;
     if (modelInput) {
         modelInput.value = currentModel || DEFAULT_GEMINI_MODEL;
+    }
+    if (fallbackModelInput) {
+        fallbackModelInput.value = currentFallbackModel || DEFAULT_GEMINI_FALLBACK_MODEL;
     }
 }
 
 async function saveGeminiModel() {
     const modelInput = document.getElementById('geminiModel') as HTMLInputElement | null;
+    const fallbackModelInput = document.getElementById('geminiFallbackModel') as HTMLInputElement | null;
     const saveButton = document.getElementById('saveModelBtn') as HTMLButtonElement;
     const statusEl = document.getElementById('modelLoadingStatus');
     const model = modelInput?.value.trim() || '';
+    const fallbackModel = fallbackModelInput?.value.trim() || '';
 
     if (!model) {
         alert('Please enter a valid model name');
+        return;
+    }
+    if (!fallbackModel) {
+        alert('Please enter a valid fallback model name');
         return;
     }
 
@@ -169,14 +183,17 @@ async function saveGeminiModel() {
     }
 
     try {
-        const result = await ipcRenderer.invoke('set-gemini-model', model);
+        const [result, fallbackResult] = await Promise.all([
+            ipcRenderer.invoke('set-gemini-model', model),
+            ipcRenderer.invoke('set-gemini-fallback-model', fallbackModel)
+        ]);
         
-        if (result.success) {
+        if (result.success && fallbackResult.success) {
             if (saveButton) {
                 saveButton.textContent = 'Saved!';
             }
             if (statusEl) {
-                statusEl.textContent = 'Model saved successfully.';
+                statusEl.textContent = 'Models saved successfully.';
                 statusEl.className = 'model-status success';
             }
             setTimeout(() => {
@@ -190,8 +207,12 @@ async function saveGeminiModel() {
                 }
             }, 2000);
         } else {
+            const combinedError = [
+                result?.error ? `Primary: ${result.error}` : null,
+                fallbackResult?.error ? `Fallback: ${fallbackResult.error}` : null
+            ].filter(Boolean).join(' | ');
             if (statusEl) {
-                statusEl.textContent = 'Error saving model: ' + result.error;
+                statusEl.textContent = 'Error saving model: ' + (combinedError || 'Unknown error');
                 statusEl.className = 'model-status error';
             }
             if (saveButton) {
